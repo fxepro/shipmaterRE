@@ -1,0 +1,21 @@
+# Next.js
+.next/
+out/
+node_modules/
+.env
+.env.local
+.env.*.local
+tsconfig.tsbuildinfo
+
+# Laravel API
+api/vendor/
+api/.env
+api/storage/logs/*.log
+api/storage/framework/cache/data/*
+api/storage/framework/sessions/*
+api/storage/framework/views/*
+api/bootstrap/cache/*.php
+
+# OS
+.DS_Store
+Thumbs.db

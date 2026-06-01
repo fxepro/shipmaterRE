@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Primary palette */
+  --color-slate:       #0F1923;
+  --color-slate-80:    #1E2D3D;
+  --color-slate-60:    #2E4257;
+
+  --color-sage:        #5C7A6B;
+  --color-sage-light:  #8FAF9F;
+  --color-sage-pale:   #D4E5DD;
+
+  /* Teal replaces gold as action accent */
+  --color-teal:        #2A8C8A;
+  --color-teal-light:  #4DB5B2;
+  --color-teal-pale:   #D0EEEC;
+
+  --color-cream:       #F5F2EC;
+  --color-cream-dark:  #EAE6DE;
+  --color-white:       #FDFCFA;
+
+  /* Semantic */
+  --color-text:        #0F1923;
+  --color-text-muted:  #4A5568;
+  --color-text-faint:  #8A9BB0;
+  --color-success:     #2E7D5B;
+  --color-danger:      #C0392B;
+  --color-warning:     #A06B00;
+
+  /* Typography */
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-cream-dark) 25%,
+    #f0ece4 50%,
+    var(--color-cream-dark) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* GPS marker pulse */
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.gps-pulse {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+/* MapLibre GL base styles */
+.maplibregl-map {
+  font-family: var(--font-body) !important;
+}

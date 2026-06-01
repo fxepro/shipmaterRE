@@ -1,0 +1,66 @@
+# ShipMaster — Navigation Structure
+
+---
+
+## Dispatcher View
+
+### Dashboard
+- Active shipments count
+- In-transit map overview
+- Recent activity
+
+---
+
+### Shipments
+- **My Shipments** — all shipments, tabbed: Contracted / Open / All
+- **New Shipment** — create contracted shipment, picks contract, auto-fills carrier and rate, calculates estimated cost via Google Distance Matrix
+
+---
+
+### Contracts
+- **Agreements** — list of all contracts, status: Active / Expiring / Draft / Expired
+- **New Agreement** — create contract, assign carrier, assign receiver (auto-invited on sign), set rate structure, sign digitally
+
+---
+
+### Carriers
+- **My Carriers** — contracted carriers, verification status, active contracts per carrier, lifetime shipments
+
+---
+
+### Tracking
+- **Live Map** — all in-transit shipments on one map, carrier dots moving in real time
+- **Route Planner** — enter pickup and delivery, get distance and estimated cost before creating a shipment
+
+---
+
+### Finances
+- **Payments** — invoices, escrow balances, released payments
+- **Cost Reports** — per shipment cost breakdown, mileage × rate, totals by carrier and period
+
+---
+
+### Account
+- **Settings** — company profile, notification preferences
+- **Users** — manage dispatcher accounts within the organization
+
+---
+
+## Carrier Mobile App Sidebar *(separate app)*
+
+- **My Jobs** — assigned shipments, status
+- **Active Job** — current shipment, route, Start Tracking / Mark Delivered
+- **Earnings** — per shipment payouts, total
+- **Profile** — DOT, insurance, vehicle
+
+---
+
+## Receiver Web Sidebar *(minimal)*
+
+- **My Deliveries** — pending and active shipments
+- **Live Tracking** — map view for active shipment, ETA
+- **History** — past deliveries
+
+---
+
+> Confirm this and I build the contracts schema and creation form next.
