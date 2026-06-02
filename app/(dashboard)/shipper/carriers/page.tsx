@@ -515,7 +515,7 @@ export default function ShipperCarriersPage() {
                           </p>
                         </div>
                         {carrier.insuranceVerified && (
-                          <Shield size={12} className="text-emerald-500 shrink-0" title="Verified" />
+                          <span title="Verified"><Shield size={12} className="text-emerald-500 shrink-0" /></span>
                         )}
                       </div>
                     </td>
