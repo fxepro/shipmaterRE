@@ -37,10 +37,10 @@ export default function ReceiverDashboard() {
         <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-cream-dark)]">
             <div>
-              <p className="font-medium text-[var(--color-text)]">{inTransit.item_name}</p>
+              <p className="font-medium text-[var(--color-text)]">{inTransit.item_description}</p>
               <p className="text-xs text-[var(--color-text-muted)]">
                 {inTransit.pickup_city} → {inTransit.delivery_city}
-                {inTransit.eta && ` · ETA ${formatEta(inTransit.eta)}`}
+                {inTransit.latest_ping?.eta && ` · ETA ${formatEta(inTransit.latest_ping.eta)}`}
               </p>
             </div>
             <StatusPill status={inTransit.status} />
@@ -51,7 +51,7 @@ export default function ReceiverDashboard() {
             pickupCoordinates={{ lat: inTransit.pickup_lat, lng: inTransit.pickup_lng }}
             deliveryCoordinates={{ lat: inTransit.delivery_lat, lng: inTransit.delivery_lng }}
             deliveryAddress={inTransit.delivery_address}
-            eta={inTransit.eta}
+            eta={inTransit.latest_ping?.eta}
             className="h-[300px] w-full"
           />
         </div>
@@ -71,13 +71,13 @@ export default function ReceiverDashboard() {
             {shipments.map((s) => (
               <div key={s.id} className="flex items-center justify-between px-5 py-4">
                 <div>
-                  <p className="font-medium text-sm text-[var(--color-text)]">{s.item_name}</p>
+                  <p className="font-medium text-sm text-[var(--color-text)]">{s.item_description}</p>
                   <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 mt-0.5">
                     {s.pickup_city} <ArrowRight size={10} /> {s.delivery_city}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {s.eta && <span className="text-xs text-[var(--color-text-faint)]">ETA {formatEta(s.eta)}</span>}
+                  {s.latest_ping?.eta && <span className="text-xs text-[var(--color-text-faint)]">ETA {formatEta(s.latest_ping.eta)}</span>}
                   <StatusPill status={s.status} />
                 </div>
               </div>

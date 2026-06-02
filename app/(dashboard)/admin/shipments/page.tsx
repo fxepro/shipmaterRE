@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ShipmentTable } from '@/components/shipments/ShipmentTable';
@@ -14,6 +15,7 @@ const FILTERS: { label: string; value: ShipmentStatus | 'all' }[] = [
 ];
 
 export default function AdminShipmentsPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<ShipmentStatus | 'all'>('all');
   const [search, setSearch] = useState('');
 
@@ -25,7 +27,7 @@ export default function AdminShipmentsPage() {
   const all: Shipment[] = res?.data?.data ?? [];
   const filtered = all
     .filter((s) => filter === 'all' || s.status === filter)
-    .filter((s) => !search || s.item_name.toLowerCase().includes(search.toLowerCase()));
+    .filter((s) => !search || s.item_description.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-5">
@@ -53,7 +55,7 @@ export default function AdminShipmentsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={Package} title="No shipments found" />
       ) : (
-        <ShipmentTable shipments={filtered} basePath="/admin/shipments" />
+        <ShipmentTable shipments={filtered} onView={(id) => router.push(`/admin/shipments/${id}`)} />
       )}
     </div>
   );

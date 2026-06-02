@@ -1,12 +1,14 @@
 ﻿'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { StatCard } from '@/components/shared/StatCard';
 import { ShipmentTable } from '@/components/shipments/ShipmentTable';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { data: metricsRes } = useQuery({
     queryKey: ['admin-metrics'],
     queryFn: () => api.get('/api/v1/admin/metrics'),
@@ -59,7 +61,7 @@ export default function AdminDashboard() {
         <div className="px-5 py-4 border-b border-[var(--color-cream-dark)]">
           <p className="font-medium text-[var(--color-text)]">Recent Shipments</p>
         </div>
-        {isLoading ? <div className="skeleton h-48 m-4 rounded-lg" /> : <div className="p-1"><ShipmentTable shipments={shipments} basePath="/admin/shipments" /></div>}
+        {isLoading ? <div className="skeleton h-48 m-4 rounded-lg" /> : <div className="p-1"><ShipmentTable shipments={shipments} onView={(id) => router.push(`/admin/shipments/${id}`)} /></div>}
       </div>
     </div>
   );

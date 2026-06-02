@@ -58,13 +58,13 @@ export default function CarrierDashboard() {
         ) : (
           <div className="divide-y divide-[var(--color-cream-dark)]">
             {jobs.slice(0, 5).map((job: {
-              id: number; item_name: string; pickup_city: string; pickup_state: string;
+              id: number; item_description: string; pickup_city: string; pickup_state: string;
               delivery_city: string; delivery_state: string; weight_lbs: number; status: string;
               budget_min?: number; budget_max?: number;
             }) => (
               <div key={job.id} className="flex items-center justify-between px-5 py-3.5">
                 <div>
-                  <p className="text-sm font-medium text-[var(--color-text)]">{job.item_name}</p>
+                  <p className="text-sm font-medium text-[var(--color-text)]">{job.item_description}</p>
                   <p className="text-sm text-[var(--color-text-muted)]">{job.pickup_city}, {job.pickup_state} → {job.delivery_city}, {job.delivery_state} · {job.weight_lbs} lbs</p>
                 </div>
                 <div className="flex items-center gap-3">
