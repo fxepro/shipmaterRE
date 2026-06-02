@@ -641,7 +641,7 @@ function NewShipmentInner() {
                   ['Delivery', form.deliveryResolved ?? form.deliveryAddress],
                   ['Delivery date', `${form.deliveryDate} · ${form.deliveryWindow}`],
                   form.routeDistanceM ? ['Distance', `${fmtDist(form.routeDistanceM)} · ${fmtTime(form.routeDurationS!)}`] : null,
-                ].filter(Boolean).map(([k, v]) => (
+                ].filter((x): x is string[] => x !== null).map(([k, v]) => (
                   <div key={k as string} className="flex justify-between gap-4 text-sm">
                     <span className="text-[var(--color-text-faint)] shrink-0">{k}</span>
                     <span className="text-right text-[var(--color-text)] font-medium">{v}</span>
