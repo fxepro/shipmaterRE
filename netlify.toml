@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Netlify's Essential Next.js plugin handles SSR, ISR, image optimization.
+# It is auto-injected for Next.js 14+ — no manual plugin entry needed.

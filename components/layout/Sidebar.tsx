@@ -135,7 +135,17 @@ export function Sidebar({ role, userName, orgName, onLogout }: SidebarProps) {
             </p>
             <ul className="space-y-0.5">
               {items.map((item) => {
-                const isActive = pathname === item.href || (item.href !== `/${role}` && pathname.startsWith(item.href));
+                const allItems = sections.flatMap((s) => s.items);
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== `/${role}` &&
+                    pathname.startsWith(item.href + '/') &&
+                    !allItems.some(
+                      (other) =>
+                        other.href !== item.href &&
+                        other.href.length > item.href.length &&
+                        (pathname === other.href || pathname.startsWith(other.href + '/'))
+                    ));
                 return (
                   <li key={item.href}>
                     <Link

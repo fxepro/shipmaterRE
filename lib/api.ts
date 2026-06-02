@@ -2,22 +2,36 @@ import axios from 'axios';
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
+  withCredentials: false,          // Bearer token auth — no cookies needed
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 });
 
-api.interceptors.request.use(async (config) => {
-  // Fetch CSRF cookie before mutating requests (Sanctum requirement)
-  if (['post', 'put', 'patch', 'delete'].includes(config.method ?? '')) {
-    await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/sanctum/csrf-cookie`, {
-      withCredentials: true,
-    });
-  }
-  return config;
-});
+// ── Bearer-token helpers ──────────────────────────────────────────────
+const TOKEN_KEY = 'sm_token';
+
+export function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}
+
+export function clearStoredToken(): void {
+  if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
+  delete api.defaults.headers.common['Authorization'];
+}
+
+// Restore token on module init (handles page refresh in the browser)
+if (typeof window !== 'undefined') {
+  const t = localStorage.getItem(TOKEN_KEY);
+  if (t) api.defaults.headers.common['Authorization'] = `Bearer ${t}`;
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────
 export const authApi = {

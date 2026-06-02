@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { authApi } from '@/lib/api';
+import { authApi, setStoredToken } from '@/lib/api';
 import { getRolePath } from '@/lib/auth';
 type RegisterRole = 'shipper' | 'carrier' | 'receiver';
 
@@ -44,7 +44,9 @@ export default function RegisterPage() {
   async function onSubmit(data: FormData) {
     setError('');
     try {
-      await authApi.register(data);
+      const res = await authApi.register(data);
+      const { token } = res.data as { token: string };
+      setStoredToken(token);
       router.replace(getRolePath(data.role));
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;

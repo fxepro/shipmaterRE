@@ -36,10 +36,11 @@ class AuthController extends Controller
             CarrierProfile::create(['user_id' => $user->id]);
         }
 
-        Auth::login($user);
+        $token = $user->createToken('web')->plainTextToken;
 
         return response()->json([
-            'data' => new UserResource($user),
+            'token' => $token,
+            'data'  => new UserResource($user),
         ], 201);
     }
 
@@ -51,13 +52,11 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (! Auth::attempt($credentials, remember: true)) {
+        if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],
             ]);
         }
-
-        $request->session()->regenerate();
 
         /** @var User $user */
         $user = Auth::user();
@@ -65,17 +64,24 @@ class AuthController extends Controller
             $user->load('carrierProfile');
         }
 
+        // Revoke old tokens so only one session is active at a time
+        $user->tokens()->delete();
+        $token = $user->createToken('web')->plainTextToken;
+
         return response()->json([
-            'data' => new UserResource($user),
+            'token' => $token,
+            'data'  => new UserResource($user),
         ]);
     }
 
     // POST /api/v1/auth/logout
     public function logout(Request $request): JsonResponse
     {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Delete the Bearer token that authenticated this request
+        $accessToken = $request->user()->currentAccessToken();
+        if ($accessToken instanceof \Laravel\Sanctum\PersonalAccessToken) {
+            $accessToken->delete();
+        }
 
         return response()->json(['message' => 'Logged out.']);
     }
