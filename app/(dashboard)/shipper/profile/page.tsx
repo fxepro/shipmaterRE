@@ -409,7 +409,7 @@ function PaymentTab() {
   const cards = methods.filter((m) => m.type === 'card');
   const banks = methods.filter((m) => m.type === 'bank');
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
-  const addMutation     = useMutation({ mutationFn: (p: NewCardPayload | NewBankPayload) => paymentApi.create(p as Record<string, unknown>) });
+  const addMutation     = useMutation({ mutationFn: (p: NewCardPayload | NewBankPayload) => paymentApi.create(p as unknown as Record<string, unknown>) });
   const deleteMutation  = useMutation({ mutationFn: (id: number) => paymentApi.destroy(id), onSuccess: invalidate });
   const defaultMutation = useMutation({ mutationFn: (id: number) => paymentApi.setDefault(id), onSuccess: invalidate });
   const handleAddCard = (p: NewCardPayload) => addMutation.mutate(p, { onSuccess: () => { invalidate(); setShowAddCard(false); } });
