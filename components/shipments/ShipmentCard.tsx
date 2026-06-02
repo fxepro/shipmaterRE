@@ -18,7 +18,7 @@ export function ShipmentCard({ shipment, href }: ShipmentCardProps) {
             <Package size={16} className="text-[var(--color-text-muted)]" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[var(--color-text)]">{shipment.item_name}</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{shipment.item_description}</p>
             <p className="text-xs text-[var(--color-text-faint)]">{shipment.weight_lbs} lbs</p>
           </div>
         </div>
@@ -31,8 +31,8 @@ export function ShipmentCard({ shipment, href }: ShipmentCardProps) {
         <span>{shipment.delivery_city}, {shipment.delivery_state}</span>
       </div>
 
-      {shipment.eta && (
-        <p className="mt-2 text-xs text-[var(--color-text-faint)]">ETA {formatDate(shipment.eta)}</p>
+      {shipment.latest_ping?.eta && (
+        <p className="mt-2 text-xs text-[var(--color-text-faint)]">ETA {shipment.latest_ping.eta}</p>
       )}
     </div>
   );
