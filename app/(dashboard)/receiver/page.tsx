@@ -33,7 +33,7 @@ export default function ReceiverDashboard() {
       </div>
 
       {/* Live map if something en route */}
-      {inTransit && inTransit.pickup_lat && (
+      {inTransit && inTransit.pickup_lat && inTransit.pickup_lng && inTransit.delivery_lat && inTransit.delivery_lng && (
         <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-cream-dark)]">
             <div>
