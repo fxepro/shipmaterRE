@@ -83,10 +83,10 @@ export default function HomePage() {
           <span className="text-xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
             Shipmater
           </span>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
-              Sign in
-            </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/features" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden sm:block">Features</Link>
+            <Link href="/industries" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden sm:block">Industries</Link>
+            <Link href="/login" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">Sign in</Link>
             <Link
               href="/register"
               className="rounded-lg bg-[var(--color-slate)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-slate-80)] transition-colors"
@@ -309,6 +309,8 @@ export default function HomePage() {
           <span className="text-sm text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Shipmater</span>
           <p className="text-xs text-[var(--color-text-faint)]">© 2026 Shipmater. All rights reserved.</p>
           <div className="flex gap-5 text-xs text-[var(--color-text-faint)]">
+            <Link href="/features" className="hover:text-[var(--color-text)]">Features</Link>
+            <Link href="/industries" className="hover:text-[var(--color-text)]">Industries</Link>
             <Link href="/login" className="hover:text-[var(--color-text)]">Sign in</Link>
             <Link href="/register" className="hover:text-[var(--color-text)]">Register</Link>
           </div>
