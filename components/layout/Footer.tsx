@@ -13,16 +13,12 @@ export function Footer() {
           Shipmater
         </span>
 
-        <div className="flex items-center gap-6 text-sm text-[var(--color-text-muted)]">
-          <Link href="/privacy" className="hover:text-[var(--color-teal)] transition-colors">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="hover:text-[var(--color-teal)] transition-colors">
-            Terms of Use
-          </Link>
-          <Link href="/cookies" className="hover:text-[var(--color-teal)] transition-colors">
-            Cookie Policy
-          </Link>
+        <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-text-muted)]">
+          <Link href="/features" className="hover:text-[var(--color-teal)] transition-colors">Features</Link>
+          <Link href="/industries" className="hover:text-[var(--color-teal)] transition-colors">Industries</Link>
+          <Link href="/privacy" className="hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
+          <Link href="/cookies" className="hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
         </div>
 
         <p className="text-xs text-[var(--color-text-faint)]">
