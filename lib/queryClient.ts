@@ -11,11 +11,15 @@ function errorMessage(error: unknown): string {
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401) return; // not authenticated — handled by auth flow
       toast.error(`API error: ${errorMessage(error)}`);
     },
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401) return;
       toast.error(`API error: ${errorMessage(error)}`);
     },
   }),

@@ -18,20 +18,23 @@ export function getStoredToken(): string | null {
 }
 
 export function setStoredToken(token: string): void {
-  if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, token);
+  if (typeof window !== 'undefined' && token && token !== 'undefined' && token !== 'null') {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
 }
 
 export function clearStoredToken(): void {
   if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
 }
 
+
 // ── Request interceptor: attach token on every request ────────────────
-// Reading from localStorage each time is intentional — it survives
-// Next.js module re-initialisation, HMR, and client hydration.
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (token) config.headers['Authorization'] = `Bearer ${token}`;
+    if (token && token !== 'undefined' && token !== 'null') {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   return config;
 });
