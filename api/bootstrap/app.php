@@ -14,10 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Sanctum stateful SPA domains
-        $middleware->statefulApi();
-
-        // CORS handled by fruitcake/php-cors (config/cors.php)
+        // Pure Bearer-token API — no session, no CSRF.
+        // Sanctum's auth:sanctum guard validates tokens via the
+        // Authorization: Bearer header without needing statefulApi().
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
