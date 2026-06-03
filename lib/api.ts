@@ -36,16 +36,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Response interceptor: redirect to login on 401 ───────────────────
+// ── Response interceptor: pass errors through ────────────────────────
+// Do NOT auto-redirect on 401 here — getUser() already handles that.
+// A global redirect would break demo mode and cause redirect loops.
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
-      clearStoredToken();
-      window.location.href = '/login';
-    }
-    return Promise.reject(err);
-  }
+  (err) => Promise.reject(err)
 );
 
 // ── Auth ──────────────────────────────────────────────────────────────
