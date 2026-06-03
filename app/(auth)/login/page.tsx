@@ -28,8 +28,16 @@ export default function LoginPage() {
     try {
       const user = await login(data.email, data.password);
       router.replace(getRolePath(user.role));
-    } catch {
-      setError('Invalid email or password.');
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      const msg    = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (status === 422 || status === 401) {
+        setError(msg ?? 'Invalid email or password.');
+      } else if (!status) {
+        setError('Cannot reach the API. Check NEXT_PUBLIC_API_URL and that the backend is running.');
+      } else {
+        setError(`Login failed (${status}): ${msg ?? 'unknown error'}`);
+      }
     }
   }
 

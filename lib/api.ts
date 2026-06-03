@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: false,          // Bearer token auth — no cookies needed
+  withCredentials: false,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -18,20 +18,35 @@ export function getStoredToken(): string | null {
 }
 
 export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  if (typeof window !== 'undefined') localStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearStoredToken(): void {
   if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY);
-  delete api.defaults.headers.common['Authorization'];
 }
 
-// Restore token on module init (handles page refresh in the browser)
-if (typeof window !== 'undefined') {
-  const t = localStorage.getItem(TOKEN_KEY);
-  if (t) api.defaults.headers.common['Authorization'] = `Bearer ${t}`;
-}
+// ── Request interceptor: attach token on every request ────────────────
+// Reading from localStorage each time is intentional — it survives
+// Next.js module re-initialisation, HMR, and client hydration.
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ── Response interceptor: redirect to login on 401 ───────────────────
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && typeof window !== 'undefined') {
+      clearStoredToken();
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
+  }
+);
 
 // ── Auth ──────────────────────────────────────────────────────────────
 export const authApi = {
