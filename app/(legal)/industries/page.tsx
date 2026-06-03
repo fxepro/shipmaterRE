@@ -119,20 +119,20 @@ export default function IndustriesPage() {
       </div>
 
       {/* Industry cards */}
-      <div className="mx-auto max-w-6xl px-6 py-24 space-y-8">
+      <div className="mx-auto max-w-6xl px-6 py-24 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         {INDUSTRIES.map(({ icon: Icon, color, iconColor, tag, title, headline, description, bullets }) => (
           <div
             key={title}
             className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
           >
-            <div className="flex flex-col gap-6 md:flex-row md:items-start">
+            <div className="flex flex-col gap-5">
 
               {/* Icon + tag */}
-              <div className="shrink-0">
-                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${color}`}>
-                  <Icon size={24} className={iconColor} />
+              <div className="flex items-center gap-3">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${color}`}>
+                  <Icon size={22} className={iconColor} />
                 </div>
-                <span className="mt-3 inline-block rounded-full bg-[var(--color-cream)] px-3 py-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                <span className="rounded-full bg-[var(--color-cream)] px-3 py-1 text-xs font-semibold text-[var(--color-text-muted)]">
                   {tag}
                 </span>
               </div>
