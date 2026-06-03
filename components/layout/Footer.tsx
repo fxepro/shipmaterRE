@@ -5,25 +5,50 @@ export function Footer() {
 
   return (
     <footer className="border-t border-[var(--color-cream-dark)] bg-[var(--color-white)]">
-      <div className="mx-auto max-w-5xl px-6 py-8 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
-        <span
-          className="text-sm font-semibold text-[var(--color-slate)]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          Shipmater
-        </span>
+      <div className="mx-auto max-w-6xl px-6 py-10 space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-8">
 
-        <div className="flex flex-wrap items-center gap-6 text-sm text-[var(--color-text-muted)]">
-          <Link href="/features" className="hover:text-[var(--color-teal)] transition-colors">Features</Link>
-          <Link href="/industries" className="hover:text-[var(--color-teal)] transition-colors">Industries</Link>
-          <Link href="/privacy" className="hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
-          <Link href="/terms" className="hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
-          <Link href="/cookies" className="hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
+          <div>
+            <span className="text-base font-semibold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+              Shipmater
+            </span>
+            <p className="mt-1 text-xs text-[var(--color-text-faint)] max-w-[200px]">
+              Freight tracking and dispatch, built for every role.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-10 text-sm">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Product</p>
+              <div className="space-y-1.5">
+                <Link href="/features"   className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Features</Link>
+                <Link href="/industries" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Industries</Link>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Account</p>
+              <div className="space-y-1.5">
+                <Link href="/login"    className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Sign in</Link>
+                <Link href="/register" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Register</Link>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Legal</p>
+              <div className="space-y-1.5">
+                <Link href="/privacy" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
+                <Link href="/terms"   className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
+                <Link href="/cookies" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <p className="text-xs text-[var(--color-text-faint)]">
-          © {year} Shipmater. All rights reserved.
-        </p>
+        <div className="border-t border-[var(--color-cream-dark)] pt-6">
+          <p className="text-xs text-[var(--color-text-faint)]">© {year} Shipmater. All rights reserved.</p>
+        </div>
       </div>
     </footer>
   );

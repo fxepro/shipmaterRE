@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ArrowRight, Package, Truck, MapPin, ShieldCheck, Zap, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
 
 const FEATURES = [
   {
@@ -77,25 +79,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[var(--color-cream)]">
 
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-[var(--color-cream-dark)] bg-[var(--color-cream)]/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="text-xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-            Shipmater
-          </span>
-          <div className="flex items-center gap-6">
-            <Link href="/features" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden sm:block">Features</Link>
-            <Link href="/industries" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors hidden sm:block">Industries</Link>
-            <Link href="/login" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">Sign in</Link>
-            <Link
-              href="/register"
-              className="rounded-lg bg-[var(--color-slate)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-slate-80)] transition-colors"
-            >
-              Get started
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-20 pb-24 text-center">
@@ -303,24 +287,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--color-cream-dark)] py-10">
-        <div className="mx-auto max-w-6xl px-6 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <span className="text-base font-semibold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Shipmater</span>
-            <div className="flex flex-wrap gap-6 text-sm text-[var(--color-text-muted)]">
-              <Link href="/features"   className="hover:text-[var(--color-teal)] transition-colors">Features</Link>
-              <Link href="/industries" className="hover:text-[var(--color-teal)] transition-colors">Industries</Link>
-              <Link href="/login"      className="hover:text-[var(--color-teal)] transition-colors">Sign in</Link>
-              <Link href="/register"   className="hover:text-[var(--color-teal)] transition-colors">Register</Link>
-              <Link href="/privacy"    className="hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
-              <Link href="/terms"      className="hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
-              <Link href="/cookies"    className="hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
-            </div>
-          </div>
-          <p className="text-xs text-[var(--color-text-faint)]">© 2026 Shipmater. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
