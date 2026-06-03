@@ -304,16 +304,21 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--color-cream-dark)] py-8">
-        <div className="mx-auto max-w-6xl px-6 flex items-center justify-between flex-wrap gap-4">
-          <span className="text-sm text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Shipmater</span>
-          <p className="text-xs text-[var(--color-text-faint)]">© 2026 Shipmater. All rights reserved.</p>
-          <div className="flex gap-5 text-xs text-[var(--color-text-faint)]">
-            <Link href="/features" className="hover:text-[var(--color-text)]">Features</Link>
-            <Link href="/industries" className="hover:text-[var(--color-text)]">Industries</Link>
-            <Link href="/login" className="hover:text-[var(--color-text)]">Sign in</Link>
-            <Link href="/register" className="hover:text-[var(--color-text)]">Register</Link>
+      <footer className="border-t border-[var(--color-cream-dark)] py-10">
+        <div className="mx-auto max-w-6xl px-6 space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <span className="text-base font-semibold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Shipmater</span>
+            <div className="flex flex-wrap gap-6 text-sm text-[var(--color-text-muted)]">
+              <Link href="/features"   className="hover:text-[var(--color-teal)] transition-colors">Features</Link>
+              <Link href="/industries" className="hover:text-[var(--color-teal)] transition-colors">Industries</Link>
+              <Link href="/login"      className="hover:text-[var(--color-teal)] transition-colors">Sign in</Link>
+              <Link href="/register"   className="hover:text-[var(--color-teal)] transition-colors">Register</Link>
+              <Link href="/privacy"    className="hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
+              <Link href="/terms"      className="hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
+              <Link href="/cookies"    className="hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
+            </div>
           </div>
+          <p className="text-xs text-[var(--color-text-faint)]">© 2026 Shipmater. All rights reserved.</p>
         </div>
       </footer>
     </div>
