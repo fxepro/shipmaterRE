@@ -464,7 +464,7 @@ export default function ShipperPaymentsPage() {
                     {/* Carrier */}
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-slate)] text-[10px] font-bold text-white">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--color-slate)] text-xs font-bold text-white">
                           {tx.carrierAvatar}
                         </div>
                         <div>

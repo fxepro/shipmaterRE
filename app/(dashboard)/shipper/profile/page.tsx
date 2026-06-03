@@ -338,8 +338,8 @@ function AddCardModal({ onClose, onAdd, isPending }: { onClose: () => void; onAd
         <div className="mb-5 rounded-xl bg-gradient-to-br from-[var(--color-slate)] to-[#1e3a5f] p-4 text-white select-none">
           <p className="font-mono text-lg tracking-widest">{num || '•••• •••• •••• ••••'}</p>
           <div className="mt-3 flex items-end justify-between text-xs">
-            <div><p className="mb-0.5 opacity-50 uppercase tracking-wider text-[10px]">Cardholder</p><p className="font-medium">{name || 'Your name'}</p></div>
-            <div className="text-right"><p className="mb-0.5 opacity-50 uppercase tracking-wider text-[10px]">Expires</p><p className="font-medium">{exp || 'MM / YY'}</p></div>
+            <div><p className="mb-0.5 opacity-50 uppercase tracking-wider text-xs">Cardholder</p><p className="font-medium">{name || 'Your name'}</p></div>
+            <div className="text-right"><p className="mb-0.5 opacity-50 uppercase tracking-wider text-xs">Expires</p><p className="font-medium">{exp || 'MM / YY'}</p></div>
           </div>
         </div>
         <div className="space-y-4">
@@ -553,7 +553,7 @@ function SubscriptionTab() {
         <div className="flex gap-3">
           {(['monthly', 'yearly'] as BillingCycle[]).map((c) => (
             <button key={c} onClick={() => setCycle(c)} className={`relative flex-1 rounded-xl border-2 p-4 text-left transition-all ${cycle === c ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]' : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]/50'}`}>
-              {c === 'yearly' && <span className="absolute -top-2.5 right-3 rounded-full bg-[var(--color-teal)] px-2.5 py-0.5 text-[10px] font-bold text-white">Save ${yearlySaving}</span>}
+              {c === 'yearly' && <span className="absolute -top-2.5 right-3 rounded-full bg-[var(--color-teal)] px-2.5 py-0.5 text-xs font-bold text-white">Save ${yearlySaving}</span>}
               <p className="text-lg font-bold text-[var(--color-slate)]">{PLANS[c].label}<span className="text-sm font-normal text-[var(--color-text-faint)]">/{PLANS[c].period}</span></p>
               <p className="mt-0.5 text-xs text-[var(--color-text-faint)]">{c === 'yearly' ? `${PLANS.yearly.total} · billed yearly` : 'Billed monthly'}</p>
               {c === currentCycle && <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-teal)]"><Check size={11} /> Current plan</span>}

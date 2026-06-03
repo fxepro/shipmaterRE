@@ -164,7 +164,7 @@ export default function HomePage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[['Active Shipments', '4'], ['Bids Received', '9'], ['Delivered', '38'], ['Total Spent', '$14,200']].map(([label, val]) => (
                   <div key={label} className="rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-cream)] p-3">
-                    <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-faint)]">{label}</p>
+                    <p className="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">{label}</p>
                     <p className="mt-1 text-lg text-[var(--color-text)]" style={{ fontFamily: 'var(--font-display)' }}>{val}</p>
                   </div>
                 ))}
