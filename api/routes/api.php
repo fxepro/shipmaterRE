@@ -14,9 +14,10 @@ use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
 
-// ── Public: tracking by token ──────────────────────────────────────────
-Route::get('/track/{token}',  [TrackController::class, 'show']);
-Route::post('/track/{token}', [TrackController::class, 'confirm']);
+Route::prefix('/api/v1')->group(function () {
+    // ── Public: tracking by token ──────────────────────────────────────────
+    Route::get('/track/{token}',  [TrackController::class, 'show']);
+    Route::post('/track/{token}', [TrackController::class, 'confirm']);
 
 // ── Stripe webhook (public — Stripe signs it) ──────────────────────────
 Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
@@ -91,4 +92,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/contracts',             [ContractController::class, 'store']);
     Route::put('/contracts/{contract}',   [ContractController::class, 'update']);
     Route::delete('/contracts/{contract}',[ContractController::class, 'destroy']);
+});
 });
