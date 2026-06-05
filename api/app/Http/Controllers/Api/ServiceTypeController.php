@@ -10,29 +10,36 @@ use Illuminate\Http\JsonResponse;
 class ServiceTypeController extends Controller
 {
     // GET /api/v1/service-types
+    // Returns categories with their children nested
     public function index(): JsonResponse
     {
-        $types = ServiceType::where('active', true)
+        $categories = ServiceType::with('children')
+            ->whereNull('parent_id')
+            ->where('active', true)
             ->orderBy('sort_order')
             ->get();
 
         return response()->json([
-            'data' => $types->map(fn($t) => [
-                'id'              => $t->id,
-                'key'             => $t->key,
-                'name'            => $t->name,
-                'description'     => $t->description,
-                'icon'            => $t->icon,
-                'category'        => $t->category,
-                'requires_dot'    => $t->requires_dot,
-                'requires_mc'     => $t->requires_mc,
-                'requires_cdl'    => $t->requires_cdl,
-                'requires_hazmat' => $t->requires_hazmat,
+            'data' => $categories->map(fn($cat) => [
+                'id'       => $cat->id,
+                'key'      => $cat->key,
+                'name'     => $cat->name,
+                'icon'     => $cat->icon,
+                'category' => $cat->category,
+                'children' => $cat->children->map(fn($child) => [
+                    'id'              => $child->id,
+                    'key'             => $child->key,
+                    'name'            => $child->name,
+                    'requires_dot'    => $child->requires_dot,
+                    'requires_mc'     => $child->requires_mc,
+                    'requires_cdl'    => $child->requires_cdl,
+                    'requires_hazmat' => $child->requires_hazmat,
+                ]),
             ]),
         ]);
     }
 
-    // GET /api/v1/service-types/rules?types[]=freight&types[]=hazmat
+    // GET /api/v1/service-types/rules?types[]=general_freight&types[]=medical_courier
     public function rules(): JsonResponse
     {
         $keys = request()->query('types', []);

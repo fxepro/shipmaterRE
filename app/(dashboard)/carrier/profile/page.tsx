@@ -31,7 +31,7 @@ interface Vehicle {
   is_primary: boolean;
 }
 
-type Tab = 'personal' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles';
+type Tab = 'personal' | 'services' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -471,6 +471,7 @@ export default function CarrierProfilePage() {
 
   const ALL_TABS: { id: Tab; label: string; profileTab: ProfileTab | null }[] = [
     { id: 'personal',   label: 'Personal',        profileTab: 'personal' },
+    { id: 'services',   label: 'Services',         profileTab: null },
     { id: 'dot',        label: 'DOT-Commercial',   profileTab: 'dot_commercial' },
     { id: 'insurance',  label: 'Insurance',        profileTab: 'insurance' },
     { id: 'medical',    label: 'Medical',          profileTab: 'medical' },
@@ -480,7 +481,7 @@ export default function CarrierProfilePage() {
   ];
 
   const tabs = ALL_TABS.filter(t =>
-    t.profileTab === null || relevantTabs.includes(t.profileTab)
+    t.id === 'services' || t.profileTab === null || relevantTabs.includes(t.profileTab)
   );
 
   const initials = (() => {
@@ -526,25 +527,6 @@ export default function CarrierProfilePage() {
         </div>
       </div>
 
-      {/* Service type selector */}
-      <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-xl p-6">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">What do you transport?</h2>
-          {serviceTypesSaving && (
-            <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1">
-              <Loader2 size={12} className="animate-spin" /> Saving…
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-[var(--color-text-muted)] mb-4">
-          Select all that apply. This determines your required certifications and helps shippers find you.
-        </p>
-        <ServiceTypeSelector
-          selected={serviceTypeKeys}
-          onChange={saveServiceTypes}
-        />
-      </div>
-
       {/* Tabs */}
       <div className="border-b border-[var(--color-cream-dark)]">
         <div className="flex gap-8">
@@ -563,6 +545,27 @@ export default function CarrierProfilePage() {
 
       {/* Tab panels */}
       <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-xl p-8">
+
+        {/* ── SERVICES ──────────────────────────────────────────────────── */}
+        {activeTab === 'services' && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)] mb-1">What do you transport?</p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-4">
+                Select all that apply. This determines your required certifications, guides your profile completion, and helps shippers find and filter you.
+              </p>
+            </div>
+            {serviceTypesSaving && (
+              <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-faint)]">
+                <Loader2 size={12} className="animate-spin" /> Saving…
+              </div>
+            )}
+            <ServiceTypeSelector
+              selected={serviceTypeKeys}
+              onChange={saveServiceTypes}
+            />
+          </div>
+        )}
 
         {/* ── PERSONAL ──────────────────────────────────────────────────── */}
         {activeTab === 'personal' && (

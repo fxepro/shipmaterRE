@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ServiceType extends Model
 {
     protected $fillable = [
-        'key', 'name', 'description', 'icon', 'category',
+        'parent_id', 'key', 'name', 'description', 'icon', 'category',
         'requires_dot', 'requires_mc', 'requires_cdl', 'requires_hazmat',
         'active', 'sort_order',
     ];
@@ -24,8 +26,23 @@ class ServiceType extends Model
         ];
     }
 
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(ServiceType::class, 'parent_id')->orderBy('sort_order');
+    }
+
     public function carrierProfiles(): BelongsToMany
     {
         return $this->belongsToMany(CarrierProfile::class, 'carrier_profile_service_types');
+    }
+
+    public function isCategory(): bool
+    {
+        return $this->parent_id === null;
     }
 }
