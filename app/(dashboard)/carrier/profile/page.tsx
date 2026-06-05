@@ -451,24 +451,16 @@ export default function CarrierProfilePage() {
 
   const save = (data: any) => updateMutation.mutate(data);
 
-  const relevantTabs = serviceTypeKeys.length > 0
-    ? getRelevantTabs(serviceTypeKeys)
-    : (['personal', 'dot_commercial', 'insurance', 'financial', 'background', 'medical'] as ProfileTab[]);
-
-  const ALL_TABS: { id: Tab; label: string; profileTab: ProfileTab | null }[] = [
-    { id: 'personal',   label: 'Personal',        profileTab: 'personal' },
-    { id: 'services',   label: 'Services',         profileTab: null },
-    { id: 'dot',        label: 'DOT-Commercial',   profileTab: 'dot_commercial' },
-    { id: 'insurance',  label: 'Insurance',        profileTab: 'insurance' },
-    { id: 'medical',    label: 'Medical',          profileTab: 'medical' },
-    { id: 'financial',  label: 'Financial',        profileTab: 'financial' },
-    { id: 'background', label: 'Background',       profileTab: 'background' },
-    { id: 'vehicles',   label: 'Vehicles',         profileTab: null },
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'personal',   label: 'Personal' },
+    { id: 'services',   label: 'Services' },
+    { id: 'dot',        label: 'DOT-Commercial' },
+    { id: 'insurance',  label: 'Insurance' },
+    { id: 'medical',    label: 'Medical' },
+    { id: 'financial',  label: 'Financial' },
+    { id: 'background', label: 'Background' },
+    { id: 'vehicles',   label: 'Vehicles' },
   ];
-
-  const tabs = ALL_TABS.filter(t =>
-    t.id === 'services' || t.profileTab === null || relevantTabs.includes(t.profileTab)
-  );
 
   const initials = (() => {
     const parts = profile.name.trim().split(/\s+/);
