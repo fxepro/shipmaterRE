@@ -23,9 +23,10 @@ RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8080
 
-# Cache config+routes, run migrations, then serve.
+# Cache config+routes, run migrations, seed reference data, then serve.
 # Shell form so ${PORT:-8080} expands correctly.
 CMD php artisan config:cache \
     && php artisan route:cache \
     && php artisan migrate --force \
+    && php artisan db:seed --class=ServiceTypeSeeder --force \
     && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
