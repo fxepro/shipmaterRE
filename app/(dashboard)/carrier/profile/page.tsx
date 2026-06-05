@@ -454,12 +454,12 @@ export default function CarrierProfilePage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'personal',   label: 'Personal' },
     { id: 'services',   label: 'Services' },
-    { id: 'dot',        label: 'DOT-Commercial' },
     { id: 'insurance',  label: 'Insurance' },
     { id: 'medical',    label: 'Medical' },
     { id: 'financial',  label: 'Financial' },
     { id: 'background', label: 'Background' },
     { id: 'vehicles',   label: 'Vehicles' },
+    { id: 'dot',        label: 'Commercial' },
   ];
 
   const initials = (() => {
