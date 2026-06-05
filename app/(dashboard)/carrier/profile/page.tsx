@@ -293,7 +293,6 @@ export default function CarrierProfilePage() {
   }, [searchParams]); // eslint-disable-line
 
   const [serviceTypeKeys, setServiceTypeKeys] = useState<string[]>([]);
-  const [serviceTypesSaving, setServiceTypesSaving] = useState(false);
 
   const [personalForm, setPersonalForm] = useState({
     first_name: '', middle_name: '', last_name: '', suffix: '',
@@ -394,19 +393,6 @@ export default function CarrierProfilePage() {
     }
   }, [profile?.service_type_keys]);
 
-  async function saveServiceTypes(keys: string[]) {
-    setServiceTypeKeys(keys);
-    setServiceTypesSaving(true);
-    try {
-      await api.put('/api/v1/carrier/profile', { service_type_keys: keys });
-      qc.invalidateQueries({ queryKey: ['carrier-profile'] });
-      toast.success('Service types saved');
-    } catch {
-      toast.error('Failed to save service types');
-    } finally {
-      setServiceTypesSaving(false);
-    }
-  }
 
   useEffect(() => {
     if (profile) {
@@ -555,14 +541,14 @@ export default function CarrierProfilePage() {
                 Select all that apply. This determines your required certifications, guides your profile completion, and helps shippers find and filter you.
               </p>
             </div>
-            {serviceTypesSaving && (
-              <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-faint)]">
-                <Loader2 size={12} className="animate-spin" /> Saving…
-              </div>
-            )}
             <ServiceTypeSelector
               selected={serviceTypeKeys}
-              onChange={saveServiceTypes}
+              onChange={setServiceTypeKeys}
+            />
+            <SaveBar
+              saved={saved}
+              onSave={() => save({ service_type_keys: serviceTypeKeys })}
+              isPending={updateMutation.isPending}
             />
           </div>
         )}
