@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class CarrierProfile extends Model
 {
@@ -106,5 +107,11 @@ class CarrierProfile extends Model
     public function verifications(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(CarrierVerification::class);
+    }
+
+    public function serviceTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceType::class, 'carrier_profile_service_types')
+                    ->withTimestamps();
     }
 }

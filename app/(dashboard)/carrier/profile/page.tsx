@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star } from 'lucide-react';
+import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
+import { getRelevantTabs, isFieldRequired, type ProfileTab } from '@/lib/serviceTypeRules';
 
 // ── Vehicle types ─────────────────────────────────────────────────────────────
 interface Vehicle {
@@ -290,6 +292,9 @@ export default function CarrierProfilePage() {
     }
   }, [searchParams]); // eslint-disable-line
 
+  const [serviceTypeKeys, setServiceTypeKeys] = useState<string[]>([]);
+  const [serviceTypesSaving, setServiceTypesSaving] = useState(false);
+
   const [personalForm, setPersonalForm] = useState({
     first_name: '', middle_name: '', last_name: '', suffix: '',
     date_of_birth: '', ssn: '', phone: '',
@@ -384,6 +389,26 @@ export default function CarrierProfilePage() {
   });
 
   useEffect(() => {
+    if (profile?.service_type_keys) {
+      setServiceTypeKeys(profile.service_type_keys);
+    }
+  }, [profile?.service_type_keys]);
+
+  async function saveServiceTypes(keys: string[]) {
+    setServiceTypeKeys(keys);
+    setServiceTypesSaving(true);
+    try {
+      await api.put('/api/v1/carrier/profile', { service_type_keys: keys });
+      qc.invalidateQueries({ queryKey: ['carrier-profile'] });
+      toast.success('Service types saved');
+    } catch {
+      toast.error('Failed to save service types');
+    } finally {
+      setServiceTypesSaving(false);
+    }
+  }
+
+  useEffect(() => {
     if (profile) {
       const parts = (profile.name || '').trim().split(/\s+/);
       setPersonalForm(prev => ({
@@ -440,15 +465,23 @@ export default function CarrierProfilePage() {
 
   const save = (data: any) => updateMutation.mutate(data);
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'personal',    label: 'Personal' },
-    { id: 'dot',         label: 'DOT-Commercial' },
-    { id: 'financial',   label: 'Financial' },
-    { id: 'background',  label: 'Background' },
-    { id: 'medical',     label: 'Medical' },
-    { id: 'insurance',   label: 'Insurance' },
-    { id: 'vehicles',    label: 'Vehicles' },
+  const relevantTabs = serviceTypeKeys.length > 0
+    ? getRelevantTabs(serviceTypeKeys)
+    : (['personal', 'dot_commercial', 'insurance', 'financial', 'background', 'medical'] as ProfileTab[]);
+
+  const ALL_TABS: { id: Tab; label: string; profileTab: ProfileTab | null }[] = [
+    { id: 'personal',   label: 'Personal',        profileTab: 'personal' },
+    { id: 'dot',        label: 'DOT-Commercial',   profileTab: 'dot_commercial' },
+    { id: 'insurance',  label: 'Insurance',        profileTab: 'insurance' },
+    { id: 'medical',    label: 'Medical',          profileTab: 'medical' },
+    { id: 'financial',  label: 'Financial',        profileTab: 'financial' },
+    { id: 'background', label: 'Background',       profileTab: 'background' },
+    { id: 'vehicles',   label: 'Vehicles',         profileTab: null },
   ];
+
+  const tabs = ALL_TABS.filter(t =>
+    t.profileTab === null || relevantTabs.includes(t.profileTab)
+  );
 
   const initials = (() => {
     const parts = profile.name.trim().split(/\s+/);
@@ -491,6 +524,25 @@ export default function CarrierProfilePage() {
             {profile.verification_status === 'verified' ? 'Verified' : 'Incomplete'}
           </span>
         </div>
+      </div>
+
+      {/* Service type selector */}
+      <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-xl p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">What do you transport?</h2>
+          {serviceTypesSaving && (
+            <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1">
+              <Loader2 size={12} className="animate-spin" /> Saving…
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] mb-4">
+          Select all that apply. This determines your required certifications and helps shippers find you.
+        </p>
+        <ServiceTypeSelector
+          selected={serviceTypeKeys}
+          onChange={saveServiceTypes}
+        />
       </div>
 
       {/* Tabs */}

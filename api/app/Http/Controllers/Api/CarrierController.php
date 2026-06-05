@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\CarrierDocument;
 use App\Models\CarrierProfile;
 use App\Models\CarrierVehicle;
+use App\Models\ServiceType;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\ServiceTypeRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -79,6 +81,15 @@ class CarrierController extends Controller
             'rating'                  => (float) ($profile?->rating ?? 0),
             'total_deliveries'        => $profile?->total_deliveries ?? 0,
             'member_since'            => $user->created_at->format('M Y'),
+
+            // Service types
+            'service_type_keys'       => $profile?->serviceTypes->pluck('key')->toArray() ?? [],
+            'required_fields'         => ServiceTypeRules::requiredFields(
+                $profile?->serviceTypes->pluck('key')->toArray() ?? []
+            ),
+            'relevant_tabs'           => ServiceTypeRules::relevantTabs(
+                $profile?->serviceTypes->pluck('key')->toArray() ?? []
+            ),
         ];
     }
 
@@ -109,7 +120,7 @@ class CarrierController extends Controller
     public function show(Request $request): JsonResponse
     {
         abort_unless($request->user()->isCarrier(), 403);
-        $request->user()->load('carrierProfile');
+        $request->user()->load('carrierProfile.serviceTypes');
 
         return response()->json(['data' => $this->shape($request)]);
     }
@@ -161,6 +172,10 @@ class CarrierController extends Controller
             'dot_medical_expiry'    => ['sometimes', 'nullable', 'date'],
             'drug_test_date'        => ['sometimes', 'nullable', 'date'],
             'drug_test_result'      => ['sometimes', 'nullable', 'string', 'max:20'],
+
+            // Service types
+            'service_type_keys'     => ['sometimes', 'array'],
+            'service_type_keys.*'   => ['string'],
         ]);
 
         // Update users table fields
@@ -169,13 +184,20 @@ class CarrierController extends Controller
             $user->update($userFields);
         }
 
+        // Handle service types separately (pivot)
+        $serviceTypeKeys = $validated['service_type_keys'] ?? null;
+        $profileData = array_diff_key($validated, array_flip(['name', 'email', 'service_type_keys']));
+
         // Update profile table fields
-        $profileData = array_diff_key($validated, array_flip(['name', 'email']));
-        if ($profileData) {
-            CarrierProfile::updateOrCreate(['user_id' => $user->id], $profileData);
+        $profile = CarrierProfile::updateOrCreate(['user_id' => $user->id], $profileData ?: []);
+
+        // Sync service types if provided
+        if ($serviceTypeKeys !== null) {
+            $ids = ServiceType::whereIn('key', $serviceTypeKeys)->pluck('id');
+            $profile->serviceTypes()->sync($ids);
         }
 
-        $user->load('carrierProfile');
+        $user->load('carrierProfile.serviceTypes');
 
         return response()->json(['data' => $this->shape($request)]);
     }
@@ -451,7 +473,7 @@ class CarrierController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = User::where('role', 'carrier')->with('carrierProfile');
+        $query = User::where('role', 'carrier')->with('carrierProfile.serviceTypes');
 
         // Search: name, company, DOT, MC
         if ($search = $request->query('search')) {
@@ -498,9 +520,15 @@ class CarrierController extends Controller
             );
         }
 
-        // Carrier type
+        // Carrier type (business structure)
         if ($type = $request->query('carrier_type')) {
             $query->whereHas('carrierProfile', fn ($q) => $q->where('carrier_type', $type));
+        }
+
+        // Service types filter (what they transport)
+        if ($serviceTypes = $request->query('service_types')) {
+            $keys = is_array($serviceTypes) ? $serviceTypes : explode(',', $serviceTypes);
+            $query->whereHas('carrierProfile.serviceTypes', fn ($q) => $q->whereIn('key', $keys));
         }
 
         // Sorting
@@ -543,6 +571,11 @@ class CarrierController extends Controller
                     'total_deliveries'     => $profile?->total_deliveries ?? 0,
                     'member_since'         => $c->created_at->format('M Y'),
                     'avatar'               => $avatar,
+                    'service_types'        => $profile?->serviceTypes->map(fn($t) => [
+                        'key'  => $t->key,
+                        'name' => $t->name,
+                        'icon' => $t->icon,
+                    ])->toArray() ?? [],
                 ];
             }),
         ]);

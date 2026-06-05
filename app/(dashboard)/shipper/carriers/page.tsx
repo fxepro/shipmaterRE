@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { preferredCarrierApi, carrierApi, api } from '@/lib/api';
+import { preferredCarrierApi, carrierApi, api, serviceTypeApi } from '@/lib/api';
 import {
   Truck, Star, Search, Plus, X, Shield, Hash,
   CheckCircle2, Clock, Package, ChevronRight, Trash2,
@@ -31,6 +31,7 @@ interface Carrier {
   total_deliveries: number;
   member_since: string;
   avatar: string;
+  service_types?: { key: string; name: string; icon: string }[];
   // preferred network extras
   carrierId?: number;
   completedTogether?: number;
@@ -262,12 +263,24 @@ function CarrierRow({ carrier, onClick }: { carrier: Carrier; onClick: () => voi
       </td>
       <td className="px-4 py-4">
         <div className="flex gap-1 flex-wrap">
-          {carrier.hazmat_endorsement    && <EndorsementTag label="HazMat" />}
-          {carrier.tanker_endorsement    && <EndorsementTag label="Tanker" />}
-          {carrier.passenger_endorsement && <EndorsementTag label="Passenger" />}
-          {!carrier.hazmat_endorsement && !carrier.tanker_endorsement && !carrier.passenger_endorsement && (
-            <span className="text-xs text-[var(--color-text-faint)]">—</span>
-          )}
+          {carrier.service_types && carrier.service_types.length > 0
+            ? carrier.service_types.slice(0, 3).map(t => (
+                <span key={t.key} title={t.name}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--color-cream)] text-[var(--color-text-muted)] text-xs">
+                  {t.icon} {t.name}
+                </span>
+              ))
+            : (
+              <>
+                {carrier.hazmat_endorsement    && <EndorsementTag label="HazMat" />}
+                {carrier.tanker_endorsement    && <EndorsementTag label="Tanker" />}
+                {carrier.passenger_endorsement && <EndorsementTag label="Passenger" />}
+                {!carrier.hazmat_endorsement && !carrier.tanker_endorsement && !carrier.passenger_endorsement && (
+                  <span className="text-xs text-[var(--color-text-faint)]">—</span>
+                )}
+              </>
+            )
+          }
         </div>
       </td>
       <td className="px-4 py-4">
@@ -338,8 +351,14 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
     tanker: false,
     passenger: false,
     carrier_type: '',
+    service_types: [] as string[],
     min_rating: '',
     sort: 'rating',
+  });
+
+  const { data: serviceTypesData } = useQuery({
+    queryKey: ['service-types'],
+    queryFn: () => serviceTypeApi.list().then(r => r.data.data),
   });
 
   const f = (k: string, v: any) => setFilters(p => ({ ...p, [k]: v }));
@@ -353,6 +372,7 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
     ...(filters.passenger && { passenger: 1 }),
     ...(filters.carrier_type && { carrier_type: filters.carrier_type }),
     ...(filters.min_rating   && { min_rating: filters.min_rating }),
+    ...(filters.service_types.length > 0 && { service_types: filters.service_types }),
   };
 
   const { data: res, isLoading } = useQuery({
@@ -409,7 +429,7 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 grid grid-cols-2 gap-x-8 gap-y-4">
+        <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Status</p>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -442,16 +462,48 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
             </div>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Minimum Rating</p>
-            <select value={filters.min_rating} onChange={e => f('min_rating', e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
-              <option value="">Any rating</option>
-              <option value="3">3+ stars</option>
-              <option value="4">4+ stars</option>
-              <option value="4.5">4.5+ stars</option>
-            </select>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Minimum Rating</p>
+              <select value={filters.min_rating} onChange={e => f('min_rating', e.target.value)}
+                className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
+                <option value="">Any rating</option>
+                <option value="3">3+ stars</option>
+                <option value="4">4+ stars</option>
+                <option value="4.5">4.5+ stars</option>
+              </select>
+            </div>
           </div>
+
+          {/* Service types filter */}
+          {serviceTypesData?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Service Type</p>
+              <div className="flex flex-wrap gap-2">
+                {serviceTypesData.map((t: any) => {
+                  const active = filters.service_types.includes(t.key);
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => f('service_types', active
+                        ? filters.service_types.filter((k: string) => k !== t.key)
+                        : [...filters.service_types, t.key]
+                      )}
+                      className={[
+                        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                        active
+                          ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]'
+                          : 'border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]/50',
+                      ].join(' ')}
+                    >
+                      <span>{t.icon}</span> {t.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

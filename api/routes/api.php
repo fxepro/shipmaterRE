@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\PreferredCarrierController;
 use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\ShipperProfileController;
+use App\Http\Controllers\Api\ServiceTypeController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,10 @@ Route::post('/track/{token}', [TrackController::class, 'confirm']);
 
 // ── Stripe webhook (public — Stripe signs it) ──────────────────────────
 Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
+
+// ── Service types (public) ─────────────────────────────────────────────
+Route::get('/service-types',       [ServiceTypeController::class, 'index']);
+Route::get('/service-types/rules', [ServiceTypeController::class, 'rules']);
 
 // ── Auth (public) ──────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);

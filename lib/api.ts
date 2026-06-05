@@ -122,6 +122,12 @@ export const contractApi = {
   destroy: (id: number) => api.delete(`/api/v1/contracts/${id}`),
 };
 
+// ── Service Types ──────────────────────────────────────────────────────
+export const serviceTypeApi = {
+  list:  () => api.get('/api/v1/service-types'),
+  rules: (keys: string[]) => api.get('/api/v1/service-types/rules', { params: { types: keys } }),
+};
+
 // ── Profile (shipper + carrier) ────────────────────────────────────────
 export const profileApi = {
   getShipper:    () => api.get('/api/v1/shipper/profile'),
