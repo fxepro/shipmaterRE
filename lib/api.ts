@@ -128,6 +128,12 @@ export const serviceTypeApi = {
   rules: (keys: string[]) => api.get('/api/v1/service-types/rules', { params: { types: keys } }),
 };
 
+// ── Certifications ─────────────────────────────────────────────────────
+export const certificationApi = {
+  list: () => api.get('/api/v1/certifications'),
+  sync: (keys: string[]) => api.put('/api/v1/carrier/certifications', { certification_keys: keys }),
+};
+
 // ── Profile (shipper + carrier) ────────────────────────────────────────
 export const profileApi = {
   getShipper:    () => api.get('/api/v1/shipper/profile'),

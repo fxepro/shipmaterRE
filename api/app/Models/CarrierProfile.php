@@ -114,4 +114,10 @@ class CarrierProfile extends Model
         return $this->belongsToMany(ServiceType::class, 'carrier_profile_service_types')
                     ->withTimestamps();
     }
+
+    public function certifications(): BelongsToMany
+    {
+        return $this->belongsToMany(Certification::class, 'carrier_profile_certifications')
+                    ->withTimestamps();
+    }
 }

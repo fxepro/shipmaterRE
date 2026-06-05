@@ -7,7 +7,8 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
-import { getRelevantTabs, isFieldRequired, type ProfileTab } from '@/lib/serviceTypeRules';
+import CertificationSelector from '@/components/carrier/CertificationSelector';
+import { certificationApi } from '@/lib/api';
 
 // ── Vehicle types ─────────────────────────────────────────────────────────────
 interface Vehicle {
@@ -31,7 +32,7 @@ interface Vehicle {
   is_primary: boolean;
 }
 
-type Tab = 'personal' | 'services' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles';
+type Tab = 'personal' | 'services' | 'certifications' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -292,7 +293,8 @@ export default function CarrierProfilePage() {
     }
   }, [searchParams]); // eslint-disable-line
 
-  const [serviceTypeKeys, setServiceTypeKeys] = useState<string[]>([]);
+  const [serviceTypeKeys, setServiceTypeKeys]       = useState<string[]>([]);
+  const [certificationKeys, setCertificationKeys]   = useState<string[]>([]);
 
   const [personalForm, setPersonalForm] = useState({
     first_name: '', middle_name: '', last_name: '', suffix: '',
@@ -388,10 +390,9 @@ export default function CarrierProfilePage() {
   });
 
   useEffect(() => {
-    if (profile?.service_type_keys) {
-      setServiceTypeKeys(profile.service_type_keys);
-    }
-  }, [profile?.service_type_keys]);
+    if (profile?.service_type_keys)   setServiceTypeKeys(profile.service_type_keys);
+    if (profile?.certification_keys)  setCertificationKeys(profile.certification_keys);
+  }, [profile?.service_type_keys, profile?.certification_keys]);
 
 
   useEffect(() => {
@@ -452,14 +453,15 @@ export default function CarrierProfilePage() {
   const save = (data: any) => updateMutation.mutate(data);
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'personal',   label: 'Personal' },
-    { id: 'services',   label: 'Services' },
-    { id: 'insurance',  label: 'Insurance' },
-    { id: 'medical',    label: 'Medical' },
-    { id: 'financial',  label: 'Financial' },
-    { id: 'background', label: 'Background' },
-    { id: 'vehicles',   label: 'Vehicles' },
-    { id: 'dot',        label: 'Commercial' },
+    { id: 'personal',        label: 'Personal' },
+    { id: 'services',        label: 'Services' },
+    { id: 'certifications',  label: 'Certifications' },
+    { id: 'insurance',       label: 'Insurance' },
+    { id: 'medical',         label: 'Medical' },
+    { id: 'financial',       label: 'Financial' },
+    { id: 'background',      label: 'Background' },
+    { id: 'vehicles',        label: 'Vehicles' },
+    { id: 'dot',             label: 'Commercial' },
   ];
 
   const initials = (() => {
@@ -540,6 +542,32 @@ export default function CarrierProfilePage() {
             <SaveBar
               saved={saved}
               onSave={() => save({ service_type_keys: serviceTypeKeys })}
+              isPending={updateMutation.isPending}
+            />
+          </div>
+        )}
+
+        {/* ── CERTIFICATIONS ────────────────────────────────────────────── */}
+        {activeTab === 'certifications' && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)] mb-1">Your Certifications</p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-4">
+                Select all certifications you hold. This builds trust with shippers and may be required for certain service types.
+              </p>
+            </div>
+            <CertificationSelector
+              selected={certificationKeys}
+              onChange={setCertificationKeys}
+            />
+            <SaveBar
+              saved={saved}
+              onSave={async () => {
+                await certificationApi.sync(certificationKeys);
+                qc.invalidateQueries({ queryKey: ['carrier-profile'] });
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+              }}
               isPending={updateMutation.isPending}
             />
           </div>

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\PreferredCarrierController;
 use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\ShipperProfileController;
+use App\Http\Controllers\Api\CertificationController;
 use App\Http\Controllers\Api\ServiceTypeController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
@@ -25,6 +26,9 @@ Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 // ── Service types (public) ─────────────────────────────────────────────
 Route::get('/service-types',       [ServiceTypeController::class, 'index']);
 Route::get('/service-types/rules', [ServiceTypeController::class, 'rules']);
+
+// ── Certifications (public list) ───────────────────────────────────────
+Route::get('/certifications', [CertificationController::class, 'index']);
 
 // ── Auth (public) ──────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -71,6 +75,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/carrier/vehicles/{id}',       [CarrierController::class, 'updateVehicle']);
     Route::delete('/carrier/vehicles/{id}',    [CarrierController::class, 'deleteVehicle']);
     Route::get('/carriers',                    [CarrierController::class, 'index']);
+
+    // Certifications
+    Route::put('/carrier/certifications', [CertificationController::class, 'sync']);
 
     // Shipper profile
     Route::get('/shipper/profile',   [ShipperProfileController::class, 'show']);

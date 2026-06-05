@@ -29,4 +29,5 @@ CMD php artisan config:cache \
     && php artisan route:cache \
     && php artisan migrate --force \
     && php artisan db:seed --class=ServiceTypeSeeder --force \
+    && php artisan db:seed --class=CertificationSeeder --force \
     && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}

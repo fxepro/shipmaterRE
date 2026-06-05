@@ -84,6 +84,7 @@ class CarrierController extends Controller
 
             // Service types
             'service_type_keys'       => $profile?->serviceTypes->pluck('key')->toArray() ?? [],
+            'certification_keys'      => $profile?->certifications->pluck('key')->toArray() ?? [],
             'required_fields'         => ServiceTypeRules::requiredFields(
                 $profile?->serviceTypes->pluck('key')->toArray() ?? []
             ),
@@ -120,7 +121,7 @@ class CarrierController extends Controller
     public function show(Request $request): JsonResponse
     {
         abort_unless($request->user()->isCarrier(), 403);
-        $request->user()->load('carrierProfile.serviceTypes');
+        $request->user()->load('carrierProfile.serviceTypes', 'carrierProfile.certifications');
 
         return response()->json(['data' => $this->shape($request)]);
     }
