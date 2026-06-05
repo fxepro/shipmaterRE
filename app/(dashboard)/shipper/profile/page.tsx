@@ -8,21 +8,38 @@ import {
   Camera, Check, ChevronDown, Plus, Trash2,
   Mail, Phone, MapPin, Globe, Hash, Shield,
   AlertCircle, Landmark, X, Loader2, Star,
-  CalendarDays, RefreshCw, ChevronRight,
+  CalendarDays, RefreshCw, ChevronRight, Upload, FileCheck,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'business' | 'payment' | 'subscription' | 'notifications';
+type Tab = 'profile' | 'business' | 'compliance' | 'payment' | 'subscription' | 'notifications';
 
 interface ShipperProfile {
-  name: string; email: string; phone: string;
+  name: string; email: string; phone: string; member_since: string;
   street: string; city: string; state: string; zip: string; country: string;
-  company: string; business_type: string; ein: string; industry: string; website: string;
+  // business
+  company: string; dba: string; business_type: string; ein: string;
+  state_of_incorporation: string; year_established: string; employee_count: string;
+  industry: string; website: string; business_phone: string; business_email: string;
+  sam_gov_number: string;
+  // registered address
   biz_street: string; biz_city: string; biz_state: string; biz_zip: string;
+  // operating address
+  ops_same_as_biz: boolean;
+  ops_street: string; ops_city: string; ops_state: string; ops_zip: string;
+  // verification
+  verification_status: string; email_verified: boolean; phone_verified: boolean; ein_verified: boolean;
+  // shipping defaults
+  default_pickup_contact_name: string; default_pickup_contact_phone: string;
+  internal_ref_format: string; preferred_categories: string[]; notif_recipients: string[];
+  // compliance
+  coi_url: string; coi_expiry: string;
+  hipaa_baa_url: string; hipaa_baa_expiry: string;
+  hazmat_reg_url: string; hazmat_reg_expiry: string;
+  // notifications
   notif_email: Record<string, boolean>;
   notif_sms:   Record<string, boolean>;
-  member_since: string;
 }
 
 interface PaymentMethod {
@@ -138,25 +155,32 @@ function SaveBar({ saved, onSave, isPending }: { saved: boolean; onSave: () => v
 
 function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
   const qc = useQueryClient();
+  const parts = initialData.name.trim().split(/\s+/);
   const [form, setForm] = useState({
-    name:    initialData.name,
-    email:   initialData.email,
-    phone:   initialData.phone,
-    street:  initialData.street,
-    city:    initialData.city,
-    state:   initialData.state,
-    zip:     initialData.zip,
-    country: initialData.country,
+    first_name:  parts[0] || '',
+    middle_name: parts.length > 2 ? parts.slice(1, -1).join(' ') : '',
+    last_name:   parts.length > 1 ? parts[parts.length - 1] : '',
+    suffix:      '',
+    email:       initialData.email,
+    phone:       initialData.phone,
+    street:      initialData.street,
+    city:        initialData.city,
+    state:       initialData.state,
+    zip:         initialData.zip,
+    country:     initialData.country,
+    // Shipping defaults
+    default_pickup_contact_name:  initialData.default_pickup_contact_name,
+    default_pickup_contact_phone: initialData.default_pickup_contact_phone,
+    internal_ref_format:          initialData.internal_ref_format,
   });
   const [saved, setSaved] = useState(false);
-
-  const set = (k: keyof typeof form) => (v: string) => {
-    setForm((f) => ({ ...f, [k]: v }));
-    setSaved(false);
-  };
+  const set = (k: keyof typeof form) => (v: string) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
   const saveMutation = useMutation({
-    mutationFn: () => profileApi.updateShipper(form),
+    mutationFn: () => {
+      const fullName = [form.first_name, form.middle_name, form.last_name, form.suffix].filter(Boolean).join(' ');
+      return profileApi.updateShipper({ ...form, name: fullName });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['shipper-profile'] });
       setSaved(true);
@@ -164,38 +188,64 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
     },
   });
 
-  const initials = form.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+  const initials = [form.first_name[0], form.last_name[0]].filter(Boolean).join('').toUpperCase() || '?';
 
   return (
     <div className="space-y-6">
+      {/* Avatar + name */}
       <div className="flex items-center gap-5">
         <div className="relative">
           <div className="h-20 w-20 rounded-2xl bg-[var(--color-slate)] flex items-center justify-center text-2xl font-bold text-white select-none">
             {initials}
           </div>
-          <button className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-teal)] text-white shadow-md hover:bg-[var(--color-teal-dark)] transition-colors">
+          <button className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-teal)] text-white shadow-md hover:bg-[var(--color-teal-light)] transition-colors">
             <Camera size={13} />
           </button>
         </div>
         <div>
-          <p className="text-base font-semibold text-[var(--color-text)]">{form.name}</p>
+          <p className="text-base font-semibold text-[var(--color-text)]">
+            {[form.first_name, form.last_name].filter(Boolean).join(' ') || '—'}
+          </p>
           <p className="text-sm text-[var(--color-text-faint)]">Shipper account</p>
           <p className="mt-1 text-xs text-[var(--color-text-faint)]">Member since {initialData.member_since}</p>
         </div>
       </div>
 
+      {/* Legal name */}
       <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <User size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Personal information</p>
+          <p className="text-sm font-semibold text-[var(--color-text)]">Legal name</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Full name"     value={form.name}  onChange={set('name')}  icon={User} placeholder="Your full name" />
-          <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@example.com" />
+          <Field label="First name"  value={form.first_name}  onChange={set('first_name')}  placeholder="Alex" />
+          <Field label="Middle name" value={form.middle_name} onChange={set('middle_name')} placeholder="Optional" />
+          <Field label="Last name"   value={form.last_name}   onChange={set('last_name')}   placeholder="Morgan" />
+          <div>
+            <Label>Suffix</Label>
+            <select value={form.suffix} onChange={e => set('suffix')(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20">
+              <option value="">None</option>
+              <option>Jr.</option><option>Sr.</option>
+              <option>II</option><option>III</option><option>IV</option>
+            </select>
+          </div>
         </div>
-        <Field label="Phone number" value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" />
       </div>
 
+      {/* Contact */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Mail size={14} className="text-[var(--color-teal)]" />
+          <p className="text-sm font-semibold text-[var(--color-text)]">Contact</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@company.com" />
+          <Field label="Phone number"  value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" />
+        </div>
+      </div>
+
+      {/* Default ship-from address */}
       <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <MapPin size={14} className="text-[var(--color-teal)]" />
@@ -213,6 +263,25 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
         <Field label="Country" value={form.country} onChange={set('country')} icon={Globe} placeholder="United States" />
       </div>
 
+      {/* Shipping defaults */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Zap size={14} className="text-[var(--color-teal)]" />
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">Shipment defaults</p>
+            <p className="text-xs text-[var(--color-text-faint)]">Pre-filled on every new shipment</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Default pickup contact — name"  value={form.default_pickup_contact_name}  onChange={set('default_pickup_contact_name')}  placeholder="Warehouse manager" />
+          <Field label="Default pickup contact — phone" value={form.default_pickup_contact_phone} onChange={set('default_pickup_contact_phone')} type="tel" placeholder="+1 (555) 000-0000" />
+        </div>
+        <div>
+          <Field label="Internal reference format" value={form.internal_ref_format} onChange={set('internal_ref_format')} placeholder="e.g. PO-{number} or CC-{code}" />
+          <p className="mt-1 text-xs text-[var(--color-text-faint)]">Appears on every shipment for your own record-keeping (PO number, job code, cost center)</p>
+        </div>
+      </div>
+
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
   );
@@ -223,22 +292,215 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
 function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    company:      initialData.company,
-    business_type: initialData.business_type,
-    ein:          initialData.ein,
-    industry:     initialData.industry,
-    website:      initialData.website,
-    biz_street:   initialData.biz_street,
-    biz_city:     initialData.biz_city,
-    biz_state:    initialData.biz_state,
-    biz_zip:      initialData.biz_zip,
+    company:                initialData.company,
+    dba:                    initialData.dba,
+    business_type:          initialData.business_type,
+    ein:                    initialData.ein,
+    state_of_incorporation: initialData.state_of_incorporation,
+    year_established:       initialData.year_established,
+    employee_count:         initialData.employee_count,
+    industry:               initialData.industry,
+    website:                initialData.website,
+    business_phone:         initialData.business_phone,
+    business_email:         initialData.business_email,
+    sam_gov_number:         initialData.sam_gov_number,
+    biz_street:             initialData.biz_street,
+    biz_city:               initialData.biz_city,
+    biz_state:              initialData.biz_state,
+    biz_zip:                initialData.biz_zip,
+    ops_same_as_biz:        initialData.ops_same_as_biz,
+    ops_street:             initialData.ops_street,
+    ops_city:               initialData.ops_city,
+    ops_state:              initialData.ops_state,
+    ops_zip:                initialData.ops_zip,
   });
   const [saved, setSaved] = useState(false);
+  const set = (k: keyof typeof form) => (v: string | boolean) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
 
-  const set = (k: keyof typeof form) => (v: string) => {
-    setForm((f) => ({ ...f, [k]: v }));
-    setSaved(false);
-  };
+  const saveMutation = useMutation({
+    mutationFn: () => profileApi.updateShipper(form),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shipper-profile'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+  });
+
+  const verificationItems = [
+    { label: 'Email address',  verified: initialData.email_verified },
+    { label: 'Phone number',   verified: initialData.phone_verified },
+    { label: 'Business (EIN)', verified: initialData.ein_verified   },
+  ];
+
+  return (
+    <div className="space-y-6">
+
+      {/* Company identity */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Building2 size={14} className="text-[var(--color-teal)]" />
+          <p className="text-sm font-semibold text-[var(--color-text)]">Company identity</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Legal business name" value={form.company}       onChange={v => set('company')(v)} icon={Building2} placeholder="Acme Corp LLC" />
+          <Field label="DBA (if applicable)"  value={form.dba}          onChange={v => set('dba')(v)}     placeholder="Trading as…" />
+          <Select label="Business type" value={form.business_type} onChange={v => set('business_type')(v)} options={[
+            'Limited Liability Company (LLC)', 'S-Corporation', 'C-Corporation',
+            'Sole Proprietor', 'Partnership', 'Non-Profit',
+          ]} />
+          <Select label="Industry" value={form.industry} onChange={v => set('industry')(v)} options={[
+            'Freight & Logistics', 'Healthcare / Pharma', 'Automotive',
+            'Food & Beverage', 'Construction', 'Retail / E-Commerce',
+            'Manufacturing', 'Technology', 'Government', 'Other',
+          ]} />
+          <Field label="EIN / Tax ID"           value={form.ein}                    onChange={v => set('ein')(v)}                    icon={Hash} placeholder="XX-XXXXXXX" />
+          <Field label="State of incorporation" value={form.state_of_incorporation} onChange={v => set('state_of_incorporation')(v)} placeholder="CO" />
+          <Field label="Year established"       value={form.year_established}       onChange={v => set('year_established')(v)}       placeholder="2018" />
+          <Select label="Number of employees" value={form.employee_count} onChange={v => set('employee_count')(v)} options={[
+            '', '1–10', '11–50', '51–200', '201–500', '500+',
+          ]} />
+          <Field label="Business phone"  value={form.business_phone}  onChange={v => set('business_phone')(v)}  icon={Phone} type="tel" placeholder="+1 (555) 000-0000" />
+          <Field label="Business email"  value={form.business_email}  onChange={v => set('business_email')(v)}  icon={Mail}  type="email" placeholder="ops@company.com" />
+          <Field label="Website"         value={form.website}         onChange={v => set('website')(v)}         icon={Globe} type="url" placeholder="https://company.com" />
+          <Field label="SAM.gov number"  value={form.sam_gov_number}  onChange={v => set('sam_gov_number')(v)}  placeholder="Optional — for government contracts" />
+        </div>
+      </div>
+
+      {/* Registered address */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <MapPin size={14} className="text-[var(--color-teal)]" />
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">Registered address</p>
+            <p className="text-xs text-[var(--color-text-faint)]">Legal registration address for billing and compliance</p>
+          </div>
+        </div>
+        <Field label="Street" value={form.biz_street} onChange={v => set('biz_street')(v)} placeholder="123 Commerce St" />
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="City"  value={form.biz_city}  onChange={v => set('biz_city')(v)}  placeholder="Denver" />
+          <Field label="State" value={form.biz_state} onChange={v => set('biz_state')(v)} placeholder="CO" />
+          <Field label="ZIP"   value={form.biz_zip}   onChange={v => set('biz_zip')(v)}   placeholder="80216" />
+        </div>
+      </div>
+
+      {/* Operating address */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-[var(--color-teal)]" />
+            <p className="text-sm font-semibold text-[var(--color-text)]">Operating address</p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={form.ops_same_as_biz}
+              onChange={e => set('ops_same_as_biz')(e.target.checked)}
+              className="w-4 h-4 rounded accent-[var(--color-teal)]" />
+            <span className="text-xs text-[var(--color-text-muted)]">Same as registered address</span>
+          </label>
+        </div>
+        {!form.ops_same_as_biz && (
+          <>
+            <Field label="Street" value={form.ops_street} onChange={v => set('ops_street')(v)} placeholder="456 Operations Blvd" />
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="City"  value={form.ops_city}  onChange={v => set('ops_city')(v)}  placeholder="Denver" />
+              <Field label="State" value={form.ops_state} onChange={v => set('ops_state')(v)} placeholder="CO" />
+              <Field label="ZIP"   value={form.ops_zip}   onChange={v => set('ops_zip')(v)}   placeholder="80216" />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Verification status */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield size={14} className="text-[var(--color-teal)]" />
+          <p className="text-sm font-semibold text-[var(--color-text)]">Verification status</p>
+          <span className={`ml-auto px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            initialData.verification_status === 'verified'
+              ? 'bg-emerald-50 text-emerald-700'
+              : initialData.verification_status === 'submitted'
+              ? 'bg-amber-50 text-amber-700'
+              : 'bg-[var(--color-cream)] text-[var(--color-text-faint)]'
+          }`}>
+            {initialData.verification_status === 'verified'   ? 'Verified'
+            : initialData.verification_status === 'submitted' ? 'In Review'
+            : 'Incomplete'}
+          </span>
+        </div>
+        <div className="space-y-3">
+          {verificationItems.map(({ label, verified }) => (
+            <div key={label} className="flex items-center justify-between">
+              <span className="text-sm text-[var(--color-text)]">{label}</span>
+              {verified
+                ? <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"><Check size={11} /> Verified</span>
+                : <button className="text-xs font-semibold text-[var(--color-teal)] hover:underline">Verify now →</button>
+              }
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
+    </div>
+  );
+}
+
+// ── Tab: Compliance ───────────────────────────────────────────────────────────
+
+function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryChange }: {
+  label: string; hint?: string; required?: boolean;
+  url: string; expiry: string;
+  onFileChange: (name: string) => void;
+  onExpiryChange: (date: string) => void;
+}) {
+  const [fileName, setFileName] = useState(url ? 'Uploaded ✓' : '');
+  const isExpired = expiry && new Date(expiry) < new Date();
+  const expiresSoon = expiry && !isExpired && new Date(expiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold text-[var(--color-text)]">{label}</p>
+        {required && <span className="text-xs font-medium text-red-500">Required</span>}
+      </div>
+      {hint && <p className="text-xs text-[var(--color-text-faint)]">{hint}</p>}
+
+      {isExpired   && <div className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">⚠ Certificate expired — upload a new one</div>}
+      {expiresSoon && <div className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">⚠ Expires within 30 days — consider renewing</div>}
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer text-sm transition-colors ${
+          fileName ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]' : 'border-dashed border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]'
+        }`}>
+          <Upload size={14} />
+          <span className="truncate">{fileName || 'Upload PDF or image'}</span>
+          <input type="file" accept=".pdf,image/*" className="hidden"
+            onChange={e => {
+              const name = e.target.files?.[0]?.name || '';
+              setFileName(name);
+              onFileChange(name);
+            }} />
+        </label>
+        <div>
+          <Label>Expiry date</Label>
+          <input type="date" value={expiry} onChange={e => onExpiryChange(e.target.value)}
+            className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComplianceTab({ initialData }: { initialData: ShipperProfile }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    coi_url:           initialData.coi_url,
+    coi_expiry:        initialData.coi_expiry,
+    hipaa_baa_url:     initialData.hipaa_baa_url,
+    hipaa_baa_expiry:  initialData.hipaa_baa_expiry,
+    hazmat_reg_url:    initialData.hazmat_reg_url,
+    hazmat_reg_expiry: initialData.hazmat_reg_expiry,
+  });
+  const [saved, setSaved] = useState(false);
 
   const saveMutation = useMutation({
     mutationFn: () => profileApi.updateShipper(form),
@@ -251,63 +513,44 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Building2 size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Company identity</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Company name" value={form.company} onChange={set('company')} icon={Building2} placeholder="Acme Corp" />
-          <Select label="Business type" value={form.business_type} onChange={set('business_type')} options={[
-            'Sole Proprietor', 'Limited Liability Company (LLC)', 'S-Corporation',
-            'C-Corporation', 'Partnership', 'Non-Profit',
-          ]} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="EIN / Tax ID" value={form.ein} onChange={set('ein')} icon={Hash} placeholder="XX-XXXXXXX" />
-          <Select label="Industry" value={form.industry} onChange={set('industry')} options={[
-            'Manufacturing', 'Retail / E-Commerce', 'Healthcare / Pharma', 'Automotive',
-            'Food & Beverage', 'Construction', 'Technology', 'Entertainment', 'Other',
-          ]} />
-        </div>
-        <Field label="Website" value={form.website} onChange={set('website')} icon={Globe} type="url" placeholder="https://yourcompany.com" />
+      <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-900">
+        Compliance documents are required for specific shipment types. All documents have expiry tracking — you will be alerted 30 days before expiry.
       </div>
 
       <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <MapPin size={14} className="text-[var(--color-teal)]" />
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">Business address</p>
-            <p className="text-xs text-[var(--color-text-faint)]">Registered address for billing and compliance</p>
-          </div>
-        </div>
-        <Field label="Street" value={form.biz_street} onChange={set('biz_street')} placeholder="123 Commerce St" />
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="City"  value={form.biz_city}  onChange={set('biz_city')}  placeholder="Denver" />
-          <Field label="State" value={form.biz_state} onChange={set('biz_state')} placeholder="CO" />
-          <Field label="ZIP"   value={form.biz_zip}   onChange={set('biz_zip')}   placeholder="80216" />
-        </div>
+        <UploadDoc
+          label="Certificate of Insurance (COI)"
+          hint="Required by some carriers before accepting a load. Proves declared value coverage on cargo."
+          required={false}
+          url={form.coi_url}
+          expiry={form.coi_expiry}
+          onFileChange={name => setForm(f => ({ ...f, coi_url: name }))}
+          onExpiryChange={d => setForm(f => ({ ...f, coi_expiry: d }))}
+        />
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Verification status</p>
-        </div>
-        <div className="space-y-3">
-          {[
-            { label: 'Email address',  status: 'verified'    },
-            { label: 'Phone number',   status: 'pending'     },
-            { label: 'Business (EIN)', status: 'not_started' },
-          ].map(({ label, status }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-sm text-[var(--color-text)]">{label}</span>
-              {status === 'verified'    && <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"><Check size={11} /> Verified</span>}
-              {status === 'pending'     && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700"><AlertCircle size={11} /> Pending</span>}
-              {status === 'not_started' && <button className="text-xs font-semibold text-[var(--color-teal)] hover:underline">Verify now →</button>}
-            </div>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <UploadDoc
+          label="HIPAA Business Associate Agreement (BAA)"
+          hint="Required if your organisation is in healthcare and shipments may contain PHI-adjacent items (medical records, specimens, devices)."
+          required={false}
+          url={form.hipaa_baa_url}
+          expiry={form.hipaa_baa_expiry}
+          onFileChange={name => setForm(f => ({ ...f, hipaa_baa_url: name }))}
+          onExpiryChange={d => setForm(f => ({ ...f, hipaa_baa_expiry: d }))}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <UploadDoc
+          label="HazMat Shipper Registration (PHMSA)"
+          hint="Required if you ship any regulated hazardous materials. Registration is with the Pipeline and Hazardous Materials Safety Administration."
+          required={false}
+          url={form.hazmat_reg_url}
+          expiry={form.hazmat_reg_expiry}
+          onFileChange={name => setForm(f => ({ ...f, hazmat_reg_url: name }))}
+          onExpiryChange={d => setForm(f => ({ ...f, hazmat_reg_expiry: d }))}
+        />
       </div>
 
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
@@ -601,6 +844,7 @@ function SubscriptionTab() {
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'profile',       label: 'Profile',       icon: User       },
   { id: 'business',      label: 'Business',      icon: Building2  },
+  { id: 'compliance',    label: 'Compliance',    icon: FileCheck  },
   { id: 'payment',       label: 'Payment',       icon: CreditCard },
   { id: 'subscription',  label: 'Subscription',  icon: Zap        },
   { id: 'notifications', label: 'Notifications', icon: Bell       },
@@ -637,7 +881,7 @@ export default function ShipperProfilePage() {
       </div>
 
       {/* Loading skeleton for API-driven tabs */}
-      {isLoading && (activeTab === 'profile' || activeTab === 'business' || activeTab === 'notifications') && (
+      {isLoading && (activeTab === 'profile' || activeTab === 'business' || activeTab === 'compliance' || activeTab === 'notifications') && (
         <div className="space-y-4 animate-pulse">
           <div className="h-36 rounded-2xl bg-[var(--color-cream-dark)]" />
           <div className="h-48 rounded-2xl bg-[var(--color-cream-dark)]" />
@@ -646,6 +890,7 @@ export default function ShipperProfilePage() {
 
       {!isLoading && profile && activeTab === 'profile'       && <ProfileTab       initialData={profile} />}
       {!isLoading && profile && activeTab === 'business'      && <BusinessTab      initialData={profile} />}
+      {!isLoading && profile && activeTab === 'compliance'    && <ComplianceTab    initialData={profile} />}
       {!isLoading && profile && activeTab === 'notifications' && <NotificationsTab initialData={profile} />}
       {activeTab === 'payment'       && <PaymentTab />}
       {activeTab === 'subscription'  && <SubscriptionTab />}

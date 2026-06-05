@@ -19,3 +19,6 @@ api/bootstrap/cache/*.php
 # OS
 .DS_Store
 Thumbs.db
+
+docs
+/docs

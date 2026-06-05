@@ -184,8 +184,12 @@ export function Sidebar({ role, userName, orgName, onLogout }: SidebarProps) {
             <p className="truncate text-sm font-medium text-white">{userName}</p>
             <p className="text-xs capitalize text-[var(--color-text-faint)]">{role}</p>
           </div>
-          <button onClick={onLogout} className="text-[var(--color-text-faint)] hover:text-white transition-colors" title="Log out">
-            <LogOut size={15} />
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--color-text-faint)] hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <LogOut size={13} />
+            Log out
           </button>
         </div>
       </div>

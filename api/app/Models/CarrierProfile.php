@@ -9,13 +9,58 @@ class CarrierProfile extends Model
 {
     protected $fillable = [
         'user_id',
+        'carrier_type',
+        'carrier_type_selected_at',
+
+        // Personal
+        'date_of_birth',
+        'ssn_last_4',
+        'photo_url',
+
+        // DOT-Commercial
+        'cdl_number',
+        'cdl_issuing_state',
+        'cdl_expiry_date',
+        'cdl_class',
+        'usdot_number',
+        'mc_number',
+        'hazmat_endorsement',
+        'hazmat_expiry_date',
+        'tanker_endorsement',
+        'passenger_endorsement',
         'company_name',
         'phone',
         'dot_number',
         'dot_verified',
-        'mc_number',
         'insurance_verified',
+        'auto_policy_number', 'auto_insurer_name', 'auto_coverage_amount',
+        'auto_effective_date', 'auto_expiry_date',
+        'cargo_policy_number', 'cargo_insurer_name', 'cargo_coverage_amount',
+        'cargo_expiry_date',
+
+        // Medical
+        'medical_examiner_name',
+        'dot_medical_expiry',
+        'drug_test_date',
+        'drug_test_result',
+
+        // Verification
+        'verification_status',
+        'verification_status_updated_at',
+        'verification_notes',
         'background_check_status',
+
+        // Stripe
+        'stripe_account_id',
+        'stripe_account_status',
+        'stripe_verification_data',
+
+        // Dates
+        'submitted_for_verification_at',
+        'last_verification_at',
+        'next_reverification_at',
+
+        // Stats
         'rating',
         'total_deliveries',
     ];
@@ -23,14 +68,43 @@ class CarrierProfile extends Model
     protected function casts(): array
     {
         return [
-            'dot_verified'        => 'boolean',
-            'insurance_verified'  => 'boolean',
-            'rating'              => 'decimal:2',
+            'dot_verified'              => 'boolean',
+            'insurance_verified'        => 'boolean',
+            'auto_coverage_amount'      => 'decimal:2',
+            'auto_effective_date'       => 'date',
+            'auto_expiry_date'          => 'date',
+            'cargo_coverage_amount'     => 'decimal:2',
+            'cargo_expiry_date'         => 'date',
+            'hazmat_endorsement'        => 'boolean',
+            'tanker_endorsement'        => 'boolean',
+            'passenger_endorsement'     => 'boolean',
+            'rating'                    => 'decimal:2',
+            'date_of_birth'             => 'date',
+            'cdl_expiry_date'           => 'date',
+            'hazmat_expiry_date'        => 'date',
+            'dot_medical_expiry'        => 'date',
+            'drug_test_date'            => 'date',
+            'stripe_verification_data'  => 'json',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vehicles(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CarrierVehicle::class);
+    }
+
+    public function documents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CarrierDocument::class);
+    }
+
+    public function verifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CarrierVerification::class);
     }
 }

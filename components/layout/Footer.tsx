@@ -35,6 +35,13 @@ export function Footer() {
             </div>
 
             <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Trust & Safety</p>
+              <div className="space-y-1.5">
+                <Link href="/verification" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Verification Requirements</Link>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Legal</p>
               <div className="space-y-1.5">
                 <Link href="/privacy" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>

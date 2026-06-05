@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CarrierController;
+use App\Http\Controllers\Api\StripeConnectController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\PaymentMethodController;
@@ -16,6 +17,9 @@ use Illuminate\Support\Facades\Route;
 // ── Public: tracking by token ──────────────────────────────────────────
 Route::get('/track/{token}',  [TrackController::class, 'show']);
 Route::post('/track/{token}', [TrackController::class, 'confirm']);
+
+// ── Stripe webhook (public — Stripe signs it) ──────────────────────────
+Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 
 // ── Auth (guest) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -45,13 +49,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/bids/{bid}/accept',          [BidController::class, 'accept']);
     Route::put('/bids/{bid}/withdraw',        [BidController::class, 'withdraw']);
 
-    // Carrier: job board, offers, earnings, profile
-    Route::get('/jobs',              [JobController::class, 'index']);
-    Route::get('/carrier/offers',    [BidController::class, 'carrierOffers']);
-    Route::get('/carrier/earnings',  [CarrierController::class, 'earnings']);
-    Route::get('/carrier/profile',   [CarrierController::class, 'getProfile']);
-    Route::put('/carrier/profile',   [CarrierController::class, 'updateProfile']);
-    Route::get('/carriers',          [CarrierController::class, 'index']);
+    // Carrier: job board, offers, earnings, profile, documents, vehicles
+    Route::get('/jobs',                        [JobController::class, 'index']);
+    Route::get('/carrier/offers',              [BidController::class, 'carrierOffers']);
+    Route::get('/carrier/earnings',            [CarrierController::class, 'earnings']);
+    Route::post('/carrier/payout',             [CarrierController::class, 'requestPayout']);
+    Route::get('/carrier/profile',             [CarrierController::class, 'show']);
+    Route::put('/carrier/profile',             [CarrierController::class, 'update']);
+    // Stripe Connect
+    Route::post('/stripe/connect/onboard',     [StripeConnectController::class, 'onboard']);
+    Route::get('/stripe/connect/status',       [StripeConnectController::class, 'status']);
+
+    Route::get('/carrier/documents',           [CarrierController::class, 'getDocuments']);
+    Route::post('/carrier/documents',          [CarrierController::class, 'uploadDocument']);
+    Route::get('/carrier/vehicles',            [CarrierController::class, 'getVehicles']);
+    Route::post('/carrier/vehicles',           [CarrierController::class, 'createVehicle']);
+    Route::put('/carrier/vehicles/{id}',       [CarrierController::class, 'updateVehicle']);
+    Route::delete('/carrier/vehicles/{id}',    [CarrierController::class, 'deleteVehicle']);
+    Route::get('/carriers',                    [CarrierController::class, 'index']);
 
     // Shipper profile
     Route::get('/shipper/profile',   [ShipperProfileController::class, 'show']);

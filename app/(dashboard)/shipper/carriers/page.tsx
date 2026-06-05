@@ -2,248 +2,659 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { preferredCarrierApi, carrierApi } from '@/lib/api';
+import { preferredCarrierApi, carrierApi, api } from '@/lib/api';
 import {
   Truck, Star, Search, Plus, X, Shield, Hash,
   CheckCircle2, Clock, Package, ChevronRight, Trash2,
-  Phone, Mail, MapPin, Loader2,
+  Phone, Mail, Loader2, SlidersHorizontal, ChevronDown,
+  Users, Zap, Building2,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Carrier {
   id: number;
-  carrierId: number;
   name: string;
-  company: string;
-  dot: string;
-  mc: string;
   email: string;
+  company_name: string;
+  dot_number: string;
+  mc_number: string;
   phone: string;
-  location: string;
+  carrier_type: string;
+  verification_status: string;
+  dot_verified: boolean;
+  insurance_verified: boolean;
+  hazmat_endorsement: boolean;
+  tanker_endorsement: boolean;
+  passenger_endorsement: boolean;
   rating: number;
-  reviews: number;
-  completedTogether: number;
-  status: 'active' | 'pending' | 'inactive';
+  total_deliveries: number;
+  member_since: string;
   avatar: string;
-  joinedDate: string;
-  insuranceVerified: boolean;
+  // preferred network extras
+  carrierId?: number;
+  completedTogether?: number;
+  status?: 'active' | 'pending' | 'inactive';
 }
 
-interface CarrierPreview {
-  name: string;
-  company: string;
-  dot: string;
-  mc: string;
-  rating: number;
-  reviews: number;
-  insuranceVerified: boolean;
-  avatar: string;
-}
-
-// ── Transforms ────────────────────────────────────────────────────────────────
-
-function toCarrier(r: any): Carrier {
-  return {
-    id:                r.id,
-    carrierId:         r.carrier_id,
-    name:              r.name,
-    company:           r.company ?? '',
-    dot:               r.dot ?? '',
-    mc:                r.mc ?? '',
-    email:             r.email ?? '',
-    phone:             r.phone ?? '',
-    location:          r.location ?? '',
-    rating:            r.rating ?? 0,
-    reviews:           r.reviews ?? 0,
-    completedTogether: r.completed_together ?? 0,
-    status:            r.status as Carrier['status'],
-    avatar:            r.avatar ?? '',
-    joinedDate:        r.joined_date ?? '',
-    insuranceVerified: r.insurance_verified ?? false,
-  };
-}
-
-function toPreview(r: any): CarrierPreview {
-  return {
-    name:             r.name ?? '',
-    company:          r.company_name ?? '',
-    dot:              r.dot_number ?? '',
-    mc:               r.mc_number ?? '',
-    rating:           r.rating ?? 0,
-    reviews:          r.reviews ?? 0,
-    insuranceVerified: r.insurance_verified ?? false,
-    avatar:           r.avatar ?? '',
-  };
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={11}
-          className={i <= Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-[var(--color-cream-dark)]'}
-        />
+      {[1,2,3,4,5].map(i => (
+        <Star key={i} size={11}
+          className={i <= Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-[var(--color-cream-dark)]'} />
       ))}
     </span>
   );
 }
 
-function StatusBadge({ status }: { status: Carrier['status'] }) {
-  const map = {
-    active:   'bg-emerald-50 text-emerald-700',
-    pending:  'bg-amber-50 text-amber-700',
-    inactive: 'bg-[var(--color-cream)] text-[var(--color-text-faint)]',
-  };
+function VerifiedBadge() {
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${map[status]}`}>
-      {status}
+    <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+      <Shield size={10} /> Verified
     </span>
   );
 }
 
-// ── Add Carrier Modal ─────────────────────────────────────────────────────────
+function EndorsementTag({ label }: { label: string }) {
+  return (
+    <span className="px-2 py-0.5 rounded-full bg-[var(--color-teal-pale)] text-[var(--color-teal)] text-xs font-medium">
+      {label}
+    </span>
+  );
+}
 
-function AddCarrierModal({ onClose }: { onClose: () => void }) {
+// ── Carrier Drawer ─────────────────────────────────────────────────────────────
+
+function CarrierDrawer({ carrier, onClose, showAddToNetwork }: {
+  carrier: Carrier;
+  onClose: () => void;
+  showAddToNetwork?: boolean;
+}) {
   const qc = useQueryClient();
-  const [dot, setDot]             = useState('');
-  const [preview, setPreview]     = useState<CarrierPreview | null>(null);
-  const [searched, setSearched]   = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [lookupError, setLookupError] = useState('');
-
-  const handleSearch = async () => {
-    if (dot.length < 5) return;
-    setSearching(true);
-    setSearched(false);
-    setPreview(null);
-    setLookupError('');
-    try {
-      const res  = await carrierApi.lookup(dot);
-      const list = res.data.data as any[];
-      if (list.length === 0) {
-        setLookupError(`No carrier found for DOT# ${dot}. Make sure they're registered on Shipmater.`);
-      } else {
-        setPreview(toPreview(list[0]));
-      }
-    } catch {
-      setLookupError('Search failed. Please try again.');
-    } finally {
-      setSearching(false);
-      setSearched(true);
-    }
-  };
 
   const addMutation = useMutation({
-    mutationFn: () => preferredCarrierApi.add({ dot_number: dot }),
+    mutationFn: () => preferredCarrierApi.add({ dot_number: carrier.dot_number }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['preferred-carriers'] });
       onClose();
     },
-    onError: (err: any) => {
-      setLookupError(err?.response?.data?.message ?? 'Failed to add carrier.');
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => preferredCarrierApi.remove(carrier.carrierId!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['preferred-carriers'] });
+      onClose();
     },
+  });
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="fixed right-0 top-0 z-50 h-full w-1/2 min-w-[520px] bg-[var(--color-cream)] shadow-2xl flex flex-col overflow-y-auto">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)]">
+          <p className="text-base font-semibold text-[var(--color-text)]">Carrier profile</p>
+          <button onClick={onClose} className="rounded-lg p-2 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Identity */}
+        <div className="p-6 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-slate)] text-xl font-bold text-white">
+              {carrier.avatar}
+            </div>
+            <div className="flex-1">
+              <p className="text-xl font-bold text-[var(--color-text)]">{carrier.name}</p>
+              {carrier.company_name && <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{carrier.company_name}</p>}
+              <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                {carrier.carrier_type === 'sole_proprietor' ? 'Owner-Operator' : 'Freight Company'} · Member since {carrier.member_since}
+              </p>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <Stars rating={carrier.rating} />
+                <span className="text-xs text-[var(--color-text-faint)]">{carrier.rating.toFixed(1)} · {carrier.total_deliveries} deliveries</span>
+                {carrier.verification_status === 'verified' && <VerifiedBadge />}
+              </div>
+            </div>
+          </div>
+
+          {/* Endorsements */}
+          <div className="mt-4 flex gap-2 flex-wrap">
+            {carrier.hazmat_endorsement    && <EndorsementTag label="HazMat" />}
+            {carrier.tanker_endorsement    && <EndorsementTag label="Tanker" />}
+            {carrier.passenger_endorsement && <EndorsementTag label="Passenger" />}
+            {carrier.insurance_verified    && <EndorsementTag label="Insured" />}
+            {carrier.dot_verified          && <EndorsementTag label="DOT Verified" />}
+          </div>
+        </div>
+
+        {/* DOT / MC */}
+        <div className="p-6 border-b border-[var(--color-cream-dark)]">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Authority</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-[var(--color-text-faint)]">DOT Number</p>
+              <p className="font-mono text-sm font-medium text-[var(--color-text)]">{carrier.dot_number || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--color-text-faint)]">MC Number</p>
+              <p className="font-mono text-sm font-medium text-[var(--color-text)]">{carrier.mc_number || '—'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact */}
+        <div className="p-6 border-b border-[var(--color-cream-dark)]">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Contact</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Mail size={13} className="text-[var(--color-teal)]" />
+              <span className="text-sm text-[var(--color-text)]">{carrier.email}</span>
+            </div>
+            {carrier.phone && (
+              <div className="flex items-center gap-2">
+                <Phone size={13} className="text-[var(--color-teal)]" />
+                <span className="text-sm text-[var(--color-text)]">{carrier.phone}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="p-6 border-b border-[var(--color-cream-dark)]">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-[var(--color-cream)] p-4 text-center">
+              <p className="text-2xl font-bold text-[var(--color-slate)]">{carrier.total_deliveries}</p>
+              <p className="text-xs text-[var(--color-text-faint)] mt-1">Platform deliveries</p>
+            </div>
+            <div className="rounded-xl bg-[var(--color-cream)] p-4 text-center">
+              <p className="text-2xl font-bold text-[var(--color-slate)]">{carrier.rating.toFixed(1)}</p>
+              <p className="text-xs text-[var(--color-text-faint)] mt-1">Average rating</p>
+            </div>
+            {carrier.completedTogether !== undefined && (
+              <div className="col-span-2 rounded-xl bg-[var(--color-teal-pale)] p-4 text-center">
+                <p className="text-2xl font-bold text-[var(--color-teal)]">{carrier.completedTogether}</p>
+                <p className="text-xs text-[var(--color-teal)] mt-1">Shipments with your business</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="p-6 space-y-2 mt-auto">
+          <button className="w-full rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-light)] transition-colors">
+            Assign to shipment
+          </button>
+          <button className="w-full rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
+            Create contract
+          </button>
+          {showAddToNetwork && (
+            <button
+              onClick={() => addMutation.mutate()}
+              disabled={addMutation.isPending}
+              className="w-full rounded-xl border border-[var(--color-teal)] py-2.5 text-sm font-semibold text-[var(--color-teal)] hover:bg-[var(--color-teal-pale)] disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+            >
+              {addMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Add to my network
+            </button>
+          )}
+          {!showAddToNetwork && carrier.carrierId && (
+            <button
+              onClick={() => removeMutation.mutate()}
+              disabled={removeMutation.isPending}
+              className="w-full rounded-xl border border-red-200 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+            >
+              {removeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Remove from network
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Carrier Row ────────────────────────────────────────────────────────────────
+
+function CarrierRow({ carrier, onClick }: { carrier: Carrier; onClick: () => void }) {
+  return (
+    <tr
+      onClick={onClick}
+      className="border-b border-[var(--color-cream-dark)] last:border-0 hover:bg-[var(--color-cream)] transition-colors cursor-pointer"
+    >
+      <td className="px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-slate)] text-xs font-bold text-white">
+            {carrier.avatar}
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--color-text)]">{carrier.name}</p>
+            <p className="text-xs text-[var(--color-text-faint)]">
+              {carrier.company_name || (carrier.carrier_type === 'sole_proprietor' ? 'Owner-Operator' : 'Company')}
+            </p>
+          </div>
+          {carrier.verification_status === 'verified' && (
+            <span title="Verified"><Shield size={13} className="text-emerald-500 shrink-0" /></span>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <p className="font-mono text-xs text-[var(--color-text)]">{carrier.dot_number || '—'}</p>
+        <p className="font-mono text-xs text-[var(--color-text-faint)]">{carrier.mc_number || '—'}</p>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex flex-col gap-1">
+          <Stars rating={carrier.rating} />
+          <span className="text-xs text-[var(--color-text-faint)]">{carrier.rating.toFixed(1)}</span>
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-1.5">
+          <Package size={12} className="text-[var(--color-teal)]" />
+          <span className="text-sm font-semibold text-[var(--color-text)]">{carrier.total_deliveries}</span>
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex gap-1 flex-wrap">
+          {carrier.hazmat_endorsement    && <EndorsementTag label="HazMat" />}
+          {carrier.tanker_endorsement    && <EndorsementTag label="Tanker" />}
+          {carrier.passenger_endorsement && <EndorsementTag label="Passenger" />}
+          {!carrier.hazmat_endorsement && !carrier.tanker_endorsement && !carrier.passenger_endorsement && (
+            <span className="text-xs text-[var(--color-text-faint)]">—</span>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <button onClick={e => { e.stopPropagation(); onClick(); }}
+          className="rounded-lg border border-[var(--color-cream-dark)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors flex items-center gap-1">
+          View <ChevronRight size={11} />
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+function CarrierTable({ carriers, onSelect, isLoading, emptyMessage }: {
+  carriers: Carrier[];
+  onSelect: (c: Carrier) => void;
+  isLoading: boolean;
+  emptyMessage: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] overflow-hidden">
+      {isLoading ? (
+        <div className="divide-y divide-[var(--color-cream-dark)]">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
+              <div className="h-9 w-9 rounded-xl bg-[var(--color-cream-dark)]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-40 rounded bg-[var(--color-cream-dark)]" />
+                <div className="h-3 w-28 rounded bg-[var(--color-cream)]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : carriers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Truck size={32} className="text-[var(--color-cream-dark)] mb-3" />
+          <p className="text-sm font-medium text-[var(--color-text-muted)]">{emptyMessage}</p>
+        </div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--color-cream-dark)] bg-[var(--color-cream)]">
+              {['Carrier', 'DOT / MC', 'Rating', 'Deliveries', 'Endorsements', ''].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)] first:px-5">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {carriers.map(c => (
+              <CarrierRow key={c.id} carrier={c} onClick={() => onSelect(c)} />
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ── Find Carriers tab ──────────────────────────────────────────────────────────
+
+function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
+  const [search, setSearch]       = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters]     = useState({
+    verified: true,
+    hazmat: false,
+    tanker: false,
+    passenger: false,
+    carrier_type: '',
+    min_rating: '',
+    sort: 'rating',
+  });
+
+  const f = (k: string, v: any) => setFilters(p => ({ ...p, [k]: v }));
+
+  const params: Record<string, any> = {
+    sort: filters.sort,
+    ...(search            && { search }),
+    ...(filters.verified  && { verified: 1 }),
+    ...(filters.hazmat    && { hazmat: 1 }),
+    ...(filters.tanker    && { tanker: 1 }),
+    ...(filters.passenger && { passenger: 1 }),
+    ...(filters.carrier_type && { carrier_type: filters.carrier_type }),
+    ...(filters.min_rating   && { min_rating: filters.min_rating }),
+  };
+
+  const { data: res, isLoading } = useQuery({
+    queryKey: ['carriers-search', params],
+    queryFn: () => api.get('/api/v1/carriers', { params }).then(r => r.data.data as Carrier[]),
+  });
+
+  const carriers = res ?? [];
+
+  return (
+    <div className="space-y-4">
+      {/* Search + filter bar */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, company, DOT, MC…"
+            className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-10 pr-4 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+          />
+        </div>
+        <button
+          onClick={() => setShowFilters(p => !p)}
+          className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+            showFilters
+              ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]'
+              : 'border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]'
+          }`}
+        >
+          <SlidersHorizontal size={15} /> Filters
+          {(filters.hazmat || filters.tanker || filters.passenger || filters.carrier_type || filters.min_rating) && (
+            <span className="h-4 w-4 rounded-full bg-[var(--color-teal)] text-white text-[10px] flex items-center justify-center">
+              {[filters.hazmat, filters.tanker, filters.passenger, !!filters.carrier_type, !!filters.min_rating].filter(Boolean).length}
+            </span>
+          )}
+        </button>
+
+        {/* Sort */}
+        <div className="relative">
+          <select
+            value={filters.sort}
+            onChange={e => f('sort', e.target.value)}
+            className="appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-3.5 pr-8 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
+          >
+            <option value="rating">Sort: Rating</option>
+            <option value="deliveries">Sort: Most deliveries</option>
+            <option value="newest">Sort: Newest</option>
+            <option value="oldest">Sort: Longest member</option>
+          </select>
+          <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+        </div>
+      </div>
+
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 grid grid-cols-2 gap-x-8 gap-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Status</p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={filters.verified} onChange={e => f('verified', e.target.checked)}
+                className="w-4 h-4 rounded accent-[var(--color-teal)]" />
+              <span className="text-sm text-[var(--color-text)]">Verified carriers only</span>
+            </label>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Carrier Type</p>
+            <select value={filters.carrier_type} onChange={e => f('carrier_type', e.target.value)}
+              className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
+              <option value="">All types</option>
+              <option value="sole_proprietor">Owner-Operator</option>
+              <option value="company">Freight Company</option>
+            </select>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Endorsements</p>
+            <div className="space-y-2">
+              {([['hazmat', 'HazMat'], ['tanker', 'Tanker'], ['passenger', 'Passenger']] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={filters[key]} onChange={e => f(key, e.target.checked)}
+                    className="w-4 h-4 rounded accent-[var(--color-teal)]" />
+                  <span className="text-sm text-[var(--color-text)]">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Minimum Rating</p>
+            <select value={filters.min_rating} onChange={e => f('min_rating', e.target.value)}
+              className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
+              <option value="">Any rating</option>
+              <option value="3">3+ stars</option>
+              <option value="4">4+ stars</option>
+              <option value="4.5">4.5+ stars</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Results count */}
+      {!isLoading && (
+        <p className="text-xs text-[var(--color-text-faint)]">
+          {carriers.length} carrier{carriers.length !== 1 ? 's' : ''} found
+        </p>
+      )}
+
+      <CarrierTable
+        carriers={carriers}
+        onSelect={onSelect}
+        isLoading={isLoading}
+        emptyMessage="No carriers match your filters"
+      />
+    </div>
+  );
+}
+
+// ── My Network tab ─────────────────────────────────────────────────────────────
+
+function MyNetworkTab({ onSelect, onAddCarrier }: {
+  onSelect: (c: Carrier) => void;
+  onAddCarrier: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const qc = useQueryClient();
+
+  const { data: carriers = [], isLoading } = useQuery<Carrier[]>({
+    queryKey: ['preferred-carriers'],
+    queryFn: () => preferredCarrierApi.list().then(r =>
+      (r.data.data as any[]).map((row: any) => ({
+        id:                  row.id,
+        carrierId:           row.carrier_id,
+        name:                row.name ?? '',
+        email:               row.email ?? '',
+        company_name:        row.company ?? '',
+        dot_number:          row.dot ?? '',
+        mc_number:           row.mc ?? '',
+        phone:               row.phone ?? '',
+        carrier_type:        'sole_proprietor',
+        verification_status: row.insurance_verified ? 'verified' : 'incomplete',
+        dot_verified:        false,
+        insurance_verified:  row.insurance_verified ?? false,
+        hazmat_endorsement:  false,
+        tanker_endorsement:  false,
+        passenger_endorsement: false,
+        rating:              row.rating ?? 0,
+        total_deliveries:    row.reviews ?? 0,
+        completedTogether:   row.completed_together ?? 0,
+        member_since:        row.joined_date ?? '',
+        status:              row.status ?? 'active',
+        avatar:              row.avatar ?? '',
+      }))
+    ),
+  });
+
+  const stats = {
+    total:    carriers.length,
+    verified: carriers.filter(c => c.insurance_verified).length,
+  };
+
+  const filtered = carriers.filter(c =>
+    [c.name, c.company_name, c.dot_number].some(f =>
+      f.toLowerCase().includes(search.toLowerCase())
+    )
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Total carriers',     value: stats.total,    icon: Truck,        color: 'text-[var(--color-teal)]', bg: 'bg-[var(--color-teal-pale)]' },
+          { label: 'Insurance verified', value: stats.verified, icon: Shield,       color: 'text-emerald-600',         bg: 'bg-emerald-50'               },
+          { label: 'Shipments together', value: carriers.reduce((s,c) => s + (c.completedTogether ?? 0), 0), icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className="flex items-center gap-4 rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-4">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bg}`}>
+              <Icon size={18} className={color} />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-[var(--color-slate)]">{value}</p>
+              <p className="text-xs text-[var(--color-text-faint)]">{label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, company, DOT…"
+          className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-10 pr-4 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+        />
+      </div>
+
+      <CarrierTable
+        carriers={filtered}
+        onSelect={onSelect}
+        isLoading={isLoading}
+        emptyMessage={search ? 'No carriers match your search' : 'No carriers in your network yet'}
+      />
+
+      {/* Invite CTA */}
+      <div className="rounded-2xl border border-dashed border-[var(--color-cream-dark)] p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-cream)] text-[var(--color-teal)]">
+            <Clock size={16} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">Know a reliable carrier?</p>
+            <p className="text-xs text-[var(--color-text-faint)]">Add them by DOT number or invite them to Shipmater.</p>
+          </div>
+        </div>
+        <button
+          onClick={onAddCarrier}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] px-4 py-2 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+        >
+          <Plus size={13} /> Add by DOT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Add by DOT modal ───────────────────────────────────────────────────────────
+
+function AddByDotModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [dot, setDot]     = useState('');
+  const [preview, setPreview] = useState<Carrier | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const search = async () => {
+    if (dot.length < 5) return;
+    setLoading(true); setError(''); setPreview(null);
+    try {
+      const res = await api.get('/api/v1/carriers', { params: { dot } });
+      const list = res.data.data as Carrier[];
+      if (!list.length) { setError(`No carrier found for DOT# ${dot}`); }
+      else setPreview(list[0]);
+    } catch { setError('Search failed. Try again.'); }
+    finally { setLoading(false); }
+  };
+
+  const addMutation = useMutation({
+    mutationFn: () => preferredCarrierApi.add({ dot_number: dot }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['preferred-carriers'] }); onClose(); },
+    onError: (e: any) => setError(e?.response?.data?.message ?? 'Failed to add carrier'),
   });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-[var(--color-white)] p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-semibold text-[var(--color-text)]">Add preferred carrier</h3>
-          <button onClick={onClose} className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors">
-            <X size={18} />
-          </button>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-[var(--color-text)]">Add carrier by DOT</h3>
+          <button onClick={onClose}><X size={18} className="text-[var(--color-text-faint)]" /></button>
         </div>
-
-        <p className="mb-4 text-sm text-[var(--color-text-faint)]">
-          Search by FMCSA DOT number to find and add a carrier to your preferred network.
-        </p>
+        <p className="text-sm text-[var(--color-text-muted)] mb-4">Enter the carrier's FMCSA DOT number.</p>
 
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Hash size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
-            <input
-              value={dot}
-              onChange={(e) => {
-                setDot(e.target.value.replace(/\D/g, ''));
-                setSearched(false);
-                setPreview(null);
-                setLookupError('');
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            <input value={dot} onChange={e => { setDot(e.target.value.replace(/\D/g,'')); setPreview(null); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && search()}
               placeholder="e.g. 3841922"
-              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-9 pr-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
-            />
+              className="w-full rounded-xl border border-[var(--color-cream-dark)] pl-9 pr-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none" />
           </div>
-          <button
-            onClick={handleSearch}
-            disabled={dot.length < 5 || searching}
-            className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all flex items-center gap-1.5 ${
-              dot.length >= 5 && !searching
-                ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)]'
-                : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
-            }`}
-          >
-            {searching ? <Loader2 size={14} className="animate-spin" /> : null}
-            Search
+          <button onClick={search} disabled={dot.length < 5 || loading}
+            className="rounded-xl bg-[var(--color-teal)] text-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            {loading ? <Loader2 size={14} className="animate-spin" /> : null} Search
           </button>
         </div>
 
-        {searched && lookupError && (
-          <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-            {lookupError}
-          </div>
-        )}
-
-        {!searched && lookupError && (
-          <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-            {lookupError}
-          </div>
-        )}
+        {error && <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
         {preview && (
           <div className="mt-4 rounded-xl border border-[var(--color-teal)] bg-[var(--color-teal-pale)] p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-slate)] text-sm font-bold text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[var(--color-slate)] flex items-center justify-center text-white text-sm font-bold">
                 {preview.avatar}
               </div>
               <div>
-                <p className="text-sm font-semibold text-[var(--color-text)]">{preview.name}</p>
-                <p className="text-xs text-[var(--color-text-faint)]">{preview.company} · DOT {preview.dot}</p>
+                <p className="font-semibold text-sm text-[var(--color-text)]">{preview.name}</p>
+                <p className="text-xs text-[var(--color-text-faint)]">DOT {preview.dot_number}</p>
               </div>
-              {preview.insuranceVerified && (
-                <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  <Shield size={11} /> Verified
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-xs text-[var(--color-text-faint)]">
-              <Stars rating={preview.rating} />
-              <span>{preview.rating.toFixed(1)} · {preview.reviews} reviews</span>
+              {preview.verification_status === 'verified' && <VerifiedBadge />}
             </div>
           </div>
         )}
 
         <div className="mt-5 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] transition-colors"
-          >
+          <button onClick={onClose} className="flex-1 rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)]">
             Cancel
           </button>
-          <button
-            onClick={() => addMutation.mutate()}
-            disabled={!preview || addMutation.isPending}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              preview && !addMutation.isPending
-                ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
-                : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
-            }`}
-          >
+          <button onClick={() => addMutation.mutate()} disabled={!preview || addMutation.isPending}
+            className="flex-1 rounded-xl bg-[var(--color-teal)] text-white py-2.5 text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
             {addMutation.isPending && <Loader2 size={13} className="animate-spin" />}
             Add to network
           </button>
@@ -253,343 +664,68 @@ function AddCarrierModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Carrier Detail Drawer ─────────────────────────────────────────────────────
-
-function CarrierDrawer({ carrier, onClose }: { carrier: Carrier; onClose: () => void }) {
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
-      {/* Panel — 50% width */}
-      <div className="fixed right-0 top-0 z-50 h-full w-1/2 min-w-[520px] bg-[var(--color-cream)] shadow-2xl flex flex-col overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)]">
-          <p className="text-base font-semibold text-[var(--color-text)]">Carrier profile</p>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] hover:text-[var(--color-text)] transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Identity */}
-        <div className="p-5 border-b border-[var(--color-cream-dark)]">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-slate)] text-xl font-bold text-white">
-              {carrier.avatar}
-            </div>
-            <div>
-              <p className="text-base font-semibold text-[var(--color-text)]">{carrier.name}</p>
-              <p className="text-sm text-[var(--color-text-faint)]">{carrier.company}</p>
-              <div className="mt-1 flex items-center gap-2">
-                <Stars rating={carrier.rating} />
-                <span className="text-xs text-[var(--color-text-faint)]">
-                  {carrier.rating.toFixed(1)} ({carrier.reviews} reviews)
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <StatusBadge status={carrier.status} />
-            {carrier.insuranceVerified && (
-              <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                <Shield size={10} /> Insured & verified
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Details */}
-        <div className="p-5 space-y-3 border-b border-[var(--color-cream-dark)]">
-          {[
-            { icon: Hash,   label: 'DOT Number',   value: carrier.dot   },
-            { icon: Hash,   label: 'MC Number',    value: carrier.mc    },
-            { icon: Mail,   label: 'Email',         value: carrier.email },
-            { icon: Phone,  label: 'Phone',         value: carrier.phone || '—' },
-            { icon: MapPin, label: 'Base location', value: carrier.location || '—' },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-center gap-3">
-              <Icon size={13} className="text-[var(--color-teal)] shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs text-[var(--color-text-faint)]">{label}</p>
-                <p className="text-sm font-medium text-[var(--color-text)] truncate">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Stats */}
-        <div className="p-5 border-b border-[var(--color-cream-dark)]">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">
-            With your business
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-[var(--color-cream)] p-3 text-center">
-              <p className="text-2xl font-bold text-[var(--color-slate)]">{carrier.completedTogether}</p>
-              <p className="text-xs text-[var(--color-text-faint)]">Shipments completed</p>
-            </div>
-            <div className="rounded-xl bg-[var(--color-cream)] p-3 text-center">
-              <p className="text-2xl font-bold text-[var(--color-slate)]">{carrier.reviews}</p>
-              <p className="text-xs text-[var(--color-text-faint)]">Platform reviews</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Joined */}
-        {carrier.joinedDate && (
-          <div className="px-5 py-3 border-b border-[var(--color-cream-dark)]">
-            <p className="text-xs text-[var(--color-text-faint)]">
-              Member since <span className="font-semibold text-[var(--color-text)]">{carrier.joinedDate}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="p-5 space-y-2">
-          <button className="w-full rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] transition-colors shadow-sm">
-            Assign to shipment
-          </button>
-          <button className="w-full rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
-            Create contract
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ShipperCarriersPage() {
-  const qc = useQueryClient();
-  const [search, setSearch]     = useState('');
-  const [showAdd, setShowAdd]   = useState(false);
+  const [tab, setTab]       = useState<'network' | 'find'>('network');
   const [selected, setSelected] = useState<Carrier | null>(null);
+  const [showAdd, setShowAdd]   = useState(false);
 
-  const { data: carriers = [], isLoading } = useQuery<Carrier[]>({
-    queryKey: ['preferred-carriers'],
-    queryFn:  () =>
-      preferredCarrierApi.list().then((r) => (r.data.data as any[]).map(toCarrier)),
-  });
-
-  const removeMutation = useMutation({
-    mutationFn: (id: number) => preferredCarrierApi.remove(id),
-    onSuccess: (_data, id) => {
-      qc.invalidateQueries({ queryKey: ['preferred-carriers'] });
-      if (selected?.id === id) setSelected(null);
-    },
-  });
-
-  const filtered = carriers.filter((c) =>
-    [c.name, c.company, c.dot, c.location].some((f) =>
-      f.toLowerCase().includes(search.toLowerCase())
-    )
-  );
-
-  const stats = {
-    total:    carriers.length,
-    active:   carriers.filter((c) => c.status === 'active').length,
-    verified: carriers.filter((c) => c.insuranceVerified).length,
-  };
+  const isFromNetwork = tab === 'network';
 
   return (
     <>
-      {showAdd && <AddCarrierModal onClose={() => setShowAdd(false)} />}
-      {selected && <CarrierDrawer carrier={selected} onClose={() => setSelected(null)} />}
+      {showAdd   && <AddByDotModal onClose={() => setShowAdd(false)} />}
+      {selected  && (
+        <CarrierDrawer
+          carrier={selected}
+          onClose={() => setSelected(null)}
+          showAddToNetwork={!isFromNetwork}
+        />
+      )}
 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1
-              className="text-2xl text-[var(--color-slate)]"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              Preferred Carriers
+            <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+              Carriers
             </h1>
             <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">
-              Your trusted carrier network — assign them directly to shipments
+              Manage your network or find and add new carriers
             </p>
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-light)] shadow-sm transition-colors"
           >
             <Plus size={15} /> Add carrier
           </button>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: 'Total carriers',     value: stats.total,    icon: Truck,        color: 'text-[var(--color-teal)]', bg: 'bg-[var(--color-teal-pale)]' },
-            { label: 'Active',             value: stats.active,   icon: CheckCircle2, color: 'text-emerald-600',         bg: 'bg-emerald-50'               },
-            { label: 'Insurance verified', value: stats.verified, icon: Shield,       color: 'text-blue-600',            bg: 'bg-blue-50'                  },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div
-              key={label}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-4"
-            >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${bg}`}>
-                <Icon size={18} className={color} />
-              </div>
-              <div>
-                {isLoading ? (
-                  <div className="h-6 w-8 rounded bg-[var(--color-cream-dark)] animate-pulse mb-1" />
-                ) : (
-                  <p className="text-xl font-bold text-[var(--color-slate)]">{value}</p>
-                )}
-                <p className="text-xs text-[var(--color-text-faint)]">{label}</p>
-              </div>
-            </div>
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-[var(--color-cream-dark)]">
+          {([
+            ['network', 'My Network',    Users],
+            ['find',    'Find Carriers', Search],
+          ] as const).map(([id, label, Icon]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === id
+                  ? 'border-[var(--color-teal)] text-[var(--color-teal)]'
+                  : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}>
+              <Icon size={14} /> {label}
+            </button>
           ))}
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, company, DOT# or city…"
-            className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-10 pr-4 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
-          />
-        </div>
-
-        {/* Carrier list */}
-        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] overflow-hidden">
-          {isLoading ? (
-            <div className="divide-y divide-[var(--color-cream-dark)]">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
-                  <div className="h-9 w-9 rounded-xl bg-[var(--color-cream-dark)]" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 w-40 rounded bg-[var(--color-cream-dark)]" />
-                    <div className="h-3 w-28 rounded bg-[var(--color-cream)]" />
-                  </div>
-                  <div className="h-5 w-16 rounded-full bg-[var(--color-cream-dark)]" />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Truck size={32} className="text-[var(--color-cream-dark)] mb-3" />
-              <p className="text-sm font-medium text-[var(--color-text-muted)]">No carriers found</p>
-              <p className="text-xs text-[var(--color-text-faint)] mt-1">
-                {search ? 'Try a different search term' : 'Add your first carrier to get started'}
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-cream-dark)] bg-[var(--color-cream)]">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Carrier</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">DOT / MC</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Rating</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Shipments</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Status</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((carrier, idx) => (
-                  <tr
-                    key={carrier.id}
-                    className={`border-b border-[var(--color-cream-dark)] last:border-0 hover:bg-[var(--color-cream)] transition-colors cursor-pointer ${idx % 2 !== 0 ? 'bg-[var(--color-cream)]/30' : ''}`}
-                    onClick={() => setSelected(carrier)}
-                  >
-                    {/* Identity */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-slate)] text-xs font-bold text-white">
-                          {carrier.avatar}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[var(--color-text)]">{carrier.name}</p>
-                          <p className="text-xs text-[var(--color-text-faint)]">
-                            {carrier.company}{carrier.location ? ` · ${carrier.location}` : ''}
-                          </p>
-                        </div>
-                        {carrier.insuranceVerified && (
-                          <span title="Verified"><Shield size={12} className="text-emerald-500 shrink-0" /></span>
-                        )}
-                      </div>
-                    </td>
-                    {/* DOT */}
-                    <td className="px-4 py-4">
-                      <p className="font-mono text-xs text-[var(--color-text)]">{carrier.dot}</p>
-                      <p className="font-mono text-xs text-[var(--color-text-faint)]">{carrier.mc}</p>
-                    </td>
-                    {/* Rating */}
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col gap-1">
-                        <Stars rating={carrier.rating} />
-                        <span className="text-xs text-[var(--color-text-faint)]">
-                          {carrier.rating.toFixed(1)} ({carrier.reviews})
-                        </span>
-                      </div>
-                    </td>
-                    {/* Shipments together */}
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1.5">
-                        <Package size={12} className="text-[var(--color-teal)]" />
-                        <span className="font-semibold text-[var(--color-text)]">{carrier.completedTogether}</span>
-                      </div>
-                    </td>
-                    {/* Status */}
-                    <td className="px-4 py-4">
-                      <StatusBadge status={carrier.status} />
-                    </td>
-                    {/* Actions */}
-                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2 justify-end">
-                        <button
-                          onClick={() => setSelected(carrier)}
-                          className="rounded-lg border border-[var(--color-cream-dark)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors flex items-center gap-1"
-                        >
-                          View <ChevronRight size={11} />
-                        </button>
-                        <button
-                          onClick={() => removeMutation.mutate(carrier.id)}
-                          disabled={removeMutation.isPending}
-                          className="rounded-lg p-1.5 text-[var(--color-text-faint)] hover:text-red-500 transition-colors disabled:opacity-40"
-                          title="Remove from network"
-                        >
-                          {removeMutation.isPending && removeMutation.variables === carrier.id
-                            ? <Loader2 size={13} className="animate-spin" />
-                            : <Trash2 size={13} />
-                          }
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Invite CTA */}
-        <div className="rounded-2xl border border-dashed border-[var(--color-cream-dark)] p-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-cream)] text-[var(--color-teal)]">
-              <Clock size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">Know a reliable carrier?</p>
-              <p className="text-xs text-[var(--color-text-faint)]">
-                Invite them to Shipmater and they&apos;ll appear here automatically.
-              </p>
-            </div>
-          </div>
-          <button className="shrink-0 flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] px-4 py-2 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
-            <Plus size={13} /> Send invite
-          </button>
-        </div>
+        {tab === 'network' && (
+          <MyNetworkTab onSelect={setSelected} onAddCarrier={() => setShowAdd(true)} />
+        )}
+        {tab === 'find' && (
+          <FindCarriersTab onSelect={setSelected} />
+        )}
       </div>
     </>
   );
