@@ -36,11 +36,12 @@ class ServiceTypeSeeder extends Seeder
                 'category' => 'medical',
                 'sort_order' => 2,
                 'children' => [
-                    ['key' => 'medical_courier',        'name' => 'Medical Courier Services'],
-                    ['key' => 'pharma_courier',         'name' => 'Pharmaceutical Courier Services'],
-                    ['key' => 'lab_specimen',           'name' => 'Lab Specimen & Blood Transport'],
-                    ['key' => 'medical_equipment',      'name' => 'Medical Equipment Delivery'],
-                    ['key' => 'cold_chain_pharma',      'name' => 'Cold Chain Pharma', 'requires_dot' => true],
+                    ['key' => 'medical_courier',         'name' => 'Medical Courier Services'],
+                    ['key' => 'pharma_courier',          'name' => 'Pharmaceutical Courier Services'],
+                    ['key' => 'hospital_courier',        'name' => 'Hospital Courier Services'],
+                    ['key' => 'blood_platelets',         'name' => 'Blood & Platelets Courier Services'],
+                    ['key' => 'temp_controlled_courier', 'name' => 'Temperature Controlled Courier Services'],
+                    ['key' => 'life_science',            'name' => 'Life Science Courier Services'],
                 ],
             ],
             [

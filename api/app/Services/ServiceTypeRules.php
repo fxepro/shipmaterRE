@@ -14,11 +14,12 @@ class ServiceTypeRules
         'hazmat'            => ['required' => ['dot_number', 'mc_number', 'cdl_number', 'hazmat_endorsement', 'auto_policy_number', 'cargo_policy_number'], 'recommended' => ['hazmat_expiry_date', 'dot_medical_expiry'], 'tabs' => ['dot_commercial', 'insurance', 'medical']],
 
         // ── Medical & Pharmaceutical ──────────────────────────────────────
-        'medical_courier'   => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number', 'background_check_status'], 'tabs' => ['personal', 'insurance']],
-        'pharma_courier'    => ['required' => ['auto_policy_number', 'cargo_policy_number'], 'recommended' => ['background_check_status'], 'tabs' => ['personal', 'insurance']],
-        'lab_specimen'      => ['required' => ['auto_policy_number'], 'recommended' => ['background_check_status'], 'tabs' => ['personal', 'insurance']],
-        'medical_equipment' => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number'], 'tabs' => ['personal', 'insurance']],
-        'cold_chain_pharma' => ['required' => ['dot_number', 'auto_policy_number', 'cargo_policy_number'], 'recommended' => ['mc_number'], 'tabs' => ['dot_commercial', 'insurance']],
+        'medical_courier'         => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number', 'background_check_status'], 'tabs' => ['personal', 'insurance']],
+        'pharma_courier'          => ['required' => ['auto_policy_number', 'cargo_policy_number'], 'recommended' => ['background_check_status'], 'tabs' => ['personal', 'insurance']],
+        'hospital_courier'        => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number', 'background_check_status'], 'tabs' => ['personal', 'insurance']],
+        'blood_platelets'         => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number', 'background_check_status'], 'tabs' => ['personal', 'insurance']],
+        'temp_controlled_courier' => ['required' => ['auto_policy_number', 'cargo_policy_number'], 'recommended' => ['dot_number'], 'tabs' => ['personal', 'insurance']],
+        'life_science'            => ['required' => ['auto_policy_number'], 'recommended' => ['cargo_policy_number', 'background_check_status'], 'tabs' => ['personal', 'insurance']],
 
         // ── Auto & Vehicles ───────────────────────────────────────────────
         'auto_transport_open'     => ['required' => ['dot_number', 'mc_number', 'auto_policy_number', 'cargo_policy_number'], 'recommended' => ['company_name'], 'tabs' => ['dot_commercial', 'insurance']],
