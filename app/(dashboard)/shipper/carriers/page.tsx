@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { preferredCarrierApi, carrierApi, api, serviceTypeApi } from '@/lib/api';
 import {
-  Truck, Star, Search, Plus, X, Shield,
-  CheckCircle2, Package, ChevronRight, Trash2,
+  Truck, Star, Search, Hash, Plus, X, Shield,
+  CheckCircle2, Clock, Package, ChevronRight, Trash2,
   Phone, Mail, Loader2, ChevronDown,
   Users, Building2, MapPin, Navigation,
 } from 'lucide-react';
