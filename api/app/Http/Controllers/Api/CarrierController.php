@@ -53,6 +53,17 @@ class CarrierController extends Controller
             'dot_verified'            => (bool) ($profile?->dot_verified ?? false),
             'identity_verified'       => (bool) ($profile?->identity_verified ?? false),
             'identity_verified_at'    => $profile?->identity_verified_at?->toISOString(),
+
+            // Last FMCSA verification results (so the UI can show them without re-checking)
+            'fmcsa_result'            => $profile?->verifications
+                                            ?->firstWhere('check_type', 'fmcsa')
+                                            ?->result_data,
+            'fmcsa_checked_at'        => $profile?->verifications
+                                            ?->firstWhere('check_type', 'fmcsa')
+                                            ?->updated_at?->toISOString(),
+            'fmcsa_expires_at'        => $profile?->verifications
+                                            ?->firstWhere('check_type', 'fmcsa')
+                                            ?->expires_at?->toDateString(),
             'company_name'            => $profile?->company_name ?? '',
             'phone'                   => $profile?->phone ?? '',
 
@@ -123,7 +134,7 @@ class CarrierController extends Controller
     public function show(Request $request): JsonResponse
     {
         abort_unless($request->user()->isCarrier(), 403);
-        $request->user()->load('carrierProfile.serviceTypes', 'carrierProfile.certifications');
+        $request->user()->load('carrierProfile.serviceTypes', 'carrierProfile.certifications', 'carrierProfile.verifications');
 
         return response()->json(['data' => $this->shape($request)]);
     }

@@ -455,6 +455,9 @@ export default function CarrierProfilePage() {
         tanker_endorsement: profile.tanker_endorsement || false,
         passenger_endorsement: profile.passenger_endorsement || false,
       });
+
+      // Restore last FMCSA verification results — no need to re-check every visit
+      if (profile.fmcsa_result) setDotResult(profile.fmcsa_result);
       setMedicalForm({
         medical_examiner_name: profile.medical_examiner_name || '',
         dot_medical_expiry: profile.dot_medical_expiry || '',
@@ -893,9 +896,17 @@ export default function CarrierProfilePage() {
                           {dotResult.allowed_to_operate ? 'Authorized to Operate' : 'NOT Authorized to Operate'}
                         </span>
                       </div>
-                      <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1">
-                        <ExternalLink size={10} /> FMCSA SAFER
-                      </span>
+                      <div className="text-right">
+                        <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1 justify-end">
+                          <ExternalLink size={10} /> FMCSA SAFER
+                        </span>
+                        {profile.fmcsa_checked_at && (
+                          <span className="text-xs text-[var(--color-text-faint)]">
+                            Checked {new Date(profile.fmcsa_checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {profile.fmcsa_expires_at && ` · expires ${new Date(profile.fmcsa_expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
                       {dotResult.legal_name && (
