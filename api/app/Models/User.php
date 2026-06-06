@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,17 +16,10 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-        'avatar_url',
+        'name', 'email', 'password', 'role', 'avatar_url', 'current_org_id',
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
@@ -34,65 +29,100 @@ class User extends Authenticatable
         ];
     }
 
-    // ── Relationships ──────────────────────────────────────────────────
+    // ── Org relationships ──────────────────────────────────────────────────
+
+    public function currentOrg(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'current_org_id');
+    }
+
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(Organization::class, 'org_members')
+                    ->withPivot('role', 'status', 'joined_at')
+                    ->withTimestamps();
+    }
+
+    public function ownedOrganizations(): HasMany
+    {
+        return $this->hasMany(Organization::class, 'owner_id');
+    }
+
+    // ── Profile relationships ──────────────────────────────────────────────
 
     public function carrierProfile(): HasOne
     {
         return $this->hasOne(CarrierProfile::class);
     }
 
-    /** Shipments this user dispatched as a shipper */
+    public function shipperProfile(): HasOne
+    {
+        return $this->hasOne(ShipperProfile::class);
+    }
+
     public function dispatchedShipments(): HasMany
     {
         return $this->hasMany(Shipment::class, 'shipper_id');
     }
 
-    /** Shipments assigned to this user as a carrier */
     public function assignedShipments(): HasMany
     {
         return $this->hasMany(Shipment::class, 'carrier_id');
     }
 
-    /** Shipments where this user is the receiver */
     public function inboundShipments(): HasMany
     {
         return $this->hasMany(Shipment::class, 'receiver_id');
     }
 
-    /** Saved payment methods (cards + ACH bank accounts) */
     public function paymentMethods(): HasMany
     {
         return $this->hasMany(PaymentMethod::class);
     }
 
-    /** Transactions as shipper */
     public function transactions(): HasMany
     {
-        return $this->hasMany(\App\Models\Transaction::class, 'shipper_id');
+        return $this->hasMany(Transaction::class, 'shipper_id');
     }
 
-    /** Preferred carrier links (shipper → carrier) */
     public function preferredCarriers(): HasMany
     {
-        return $this->hasMany(\App\Models\PreferredCarrier::class, 'shipper_id');
+        return $this->hasMany(PreferredCarrier::class, 'shipper_id');
     }
 
-    /** Contracts created by this shipper */
     public function contracts(): HasMany
     {
-        return $this->hasMany(\App\Models\Contract::class, 'shipper_id');
+        return $this->hasMany(Contract::class, 'shipper_id');
     }
 
-    /** Shipper profile (business details + notification prefs) */
-    public function shipperProfile(): HasOne
+    // ── Role helpers ───────────────────────────────────────────────────────
+    // Checks org type first (multi-org), falls back to legacy role column.
+
+    public function isCarrier(): bool
     {
-        return $this->hasOne(\App\Models\ShipperProfile::class);
+        return $this->currentOrg?->type === 'carrier'
+            || $this->role === 'carrier';
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────
+    public function isShipper(): bool
+    {
+        return $this->currentOrg?->type === 'shipper'
+            || $this->role === 'shipper';
+    }
 
-    public function isShipper(): bool  { return $this->role === 'shipper'; }
-    public function isCarrier(): bool  { return $this->role === 'carrier'; }
-    public function isReceiver(): bool { return $this->role === 'receiver'; }
-    public function isAdmin(): bool    { return $this->role === 'admin'; }
+    public function isReceiver(): bool      { return $this->role === 'receiver'; }
+    public function isPlatformAdmin(): bool { return $this->role === 'admin'; }
+
+    /** Org role for the current org */
+    public function orgRole(): ?string
+    {
+        return OrgMember::where('org_id', $this->current_org_id)
+                        ->where('user_id', $this->id)
+                        ->value('role');
+    }
+
+    public function isOrgOwner(): bool  { return $this->orgRole() === 'owner'; }
+    public function isOrgAdmin(): bool  { return in_array($this->orgRole(), ['owner', 'admin']); }
+    public function isDriver(): bool    { return $this->orgRole() === 'driver'; }
+    public function isDispatcher(): bool { return in_array($this->orgRole(), ['owner', 'admin', 'dispatcher']); }
 }

@@ -10,6 +10,7 @@ class CarrierProfile extends Model
 {
     protected $fillable = [
         'user_id',
+        'org_id',
         'carrier_type',
         'carrier_type_selected_at',
 
@@ -92,6 +93,11 @@ class CarrierProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function org(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'org_id');
     }
 
     public function vehicles(): \Illuminate\Database\Eloquent\Relations\HasMany

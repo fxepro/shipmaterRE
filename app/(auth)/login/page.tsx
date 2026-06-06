@@ -27,7 +27,7 @@ export default function LoginPage() {
     setError('');
     try {
       const user = await login(data.email, data.password);
-      router.replace(getRolePath(user.role));
+      router.replace(getRolePath(user.role, user.org?.type));
     } catch (e: unknown) {
       const status = (e as { response?: { status?: number } })?.response?.status;
       const msg    = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;

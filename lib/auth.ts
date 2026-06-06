@@ -44,7 +44,12 @@ export async function logout(): Promise<void> {
   console.log('[auth] logged out – token cleared');
 }
 
-export function getRolePath(role: string): string {
+export function getRolePath(role: string, orgType?: string): string {
+  // Org type takes priority over legacy role
+  if (orgType === 'carrier') return '/carrier';
+  if (orgType === 'shipper') return '/shipper';
+
+  // Fallback to legacy role
   switch (role) {
     case 'carrier':  return '/carrier';
     case 'receiver': return '/receiver';

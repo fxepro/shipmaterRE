@@ -9,6 +9,8 @@ class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $org = $this->relationLoaded('currentOrg') ? $this->currentOrg : null;
+
         return [
             'id'         => $this->id,
             'name'       => $this->name,
@@ -16,8 +18,22 @@ class UserResource extends JsonResource
             'role'       => $this->role,
             'avatar_url' => $this->avatar_url,
             'created_at' => $this->created_at?->toISOString(),
+
+            // Org context
+            'org' => $org ? [
+                'id'     => $org->id,
+                'name'   => $org->name,
+                'slug'   => $org->slug,
+                'type'   => $org->type,
+                'status' => $org->status,
+                'plan'   => $org->plan,
+                'logo_url' => $org->logo_url,
+            ] : null,
+            'org_role' => $this->orgRole(),
+
+            // Carrier profile (for carrier orgs)
             'carrier_profile' => $this->when(
-                $this->role === 'carrier' && $this->relationLoaded('carrierProfile'),
+                $this->isCarrier() && $this->relationLoaded('carrierProfile'),
                 fn () => new CarrierProfileResource($this->carrierProfile)
             ),
         ];

@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\CarrierProfile;
+use App\Models\Organization;
+use App\Models\OrgMember;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -31,11 +34,22 @@ class AuthController extends Controller
             'role'     => $data['role'],
         ]);
 
-        // Carriers get an auto-created profile
-        if ($user->role === 'carrier') {
-            CarrierProfile::create(['user_id' => $user->id]);
+        // Create solo org for carriers and shippers
+        if (in_array($data['role'], ['carrier', 'shipper'])) {
+            $org = $this->createSoloOrg($user, $data['role']);
+            $user->update(['current_org_id' => $org->id]);
+            $user->setRelation('currentOrg', $org);
         }
 
+        // Carriers get an auto-created profile
+        if ($user->role === 'carrier') {
+            CarrierProfile::create([
+                'user_id' => $user->id,
+                'org_id'  => $user->current_org_id,
+            ]);
+        }
+
+        $user->load('currentOrg', 'carrierProfile');
         $token = $user->createToken('web')->plainTextToken;
 
         return response()->json([
@@ -60,11 +74,8 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
-        if ($user->role === 'carrier') {
-            $user->load('carrierProfile');
-        }
+        $user->load('currentOrg', 'carrierProfile');
 
-        // Revoke old tokens so only one session is active at a time
         $user->tokens()->delete();
         $token = $user->createToken('web')->plainTextToken;
 
@@ -77,7 +88,6 @@ class AuthController extends Controller
     // POST /api/v1/auth/logout
     public function logout(Request $request): JsonResponse
     {
-        // Delete the Bearer token that authenticated this request
         $accessToken = $request->user()->currentAccessToken();
         if ($accessToken instanceof \Laravel\Sanctum\PersonalAccessToken) {
             $accessToken->delete();
@@ -89,14 +99,40 @@ class AuthController extends Controller
     // GET /api/v1/user
     public function user(Request $request): JsonResponse
     {
-        /** @var User $user */
         $user = $request->user();
-        if ($user->role === 'carrier') {
-            $user->load('carrierProfile');
+        $user->load('currentOrg', 'carrierProfile');
+
+        return response()->json(['data' => new UserResource($user)]);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    private function createSoloOrg(User $user, string $type): Organization
+    {
+        $orgName = $user->name . "'s " . ucfirst($type);
+        $baseSlug = Str::slug($user->name . '-' . $type);
+        $slug = $baseSlug;
+        $i = 1;
+        while (Organization::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $i++;
         }
 
-        return response()->json([
-            'data' => new UserResource($user),
+        $org = Organization::create([
+            'name'     => $orgName,
+            'slug'     => $slug,
+            'type'     => $type,
+            'status'   => 'active',
+            'owner_id' => $user->id,
         ]);
+
+        OrgMember::create([
+            'org_id'    => $org->id,
+            'user_id'   => $user->id,
+            'role'      => 'owner',
+            'status'    => 'active',
+            'joined_at' => now(),
+        ]);
+
+        return $org;
     }
 }
