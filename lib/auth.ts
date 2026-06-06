@@ -20,7 +20,9 @@ export async function getUser(): Promise<User | null> {
     return user;
   } catch (e: unknown) {
     const status = (e as { response?: { status?: number } })?.response?.status;
-    console.error('[auth] me() FAILED – status:', status, e);
+    if (status !== 401) {
+      console.error('[auth] me() FAILED – status:', status, e);
+    }
     clearStoredToken();
     return null;
   }
