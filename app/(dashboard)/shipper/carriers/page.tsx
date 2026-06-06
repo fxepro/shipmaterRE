@@ -421,6 +421,7 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
   const [distance, setDistance]     = useState('100');
   const [verified, setVerified]     = useState(false);
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
+  const [openCats, setOpenCats]     = useState<Record<string, boolean>>({});
 
   // Load service categories for the hierarchical selector
   const { data: categories = [] } = useQuery({
@@ -550,7 +551,7 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
           <div className="space-y-1">
             {(categories as any[]).map((cat: any) => {
               const state = categoryState(cat);
-              const [open, setOpen] = useState(false);
+              const isOpen = !!openCats[cat.key];
               return (
                 <div key={cat.key} className={`rounded-xl border transition-colors ${state !== 'none' ? 'border-[var(--color-teal)]/30 bg-[var(--color-teal)]/[0.02]' : 'border-transparent'}`}>
                   {/* Category row */}
@@ -562,7 +563,7 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
                       onChange={() => toggleCategory(cat)}
                       className="w-4 h-4 rounded accent-[var(--color-teal)] shrink-0 cursor-pointer"
                     />
-                    <button type="button" onClick={() => setOpen(p => !p)} className="flex items-center gap-2 flex-1 text-left min-w-0">
+                    <button type="button" onClick={() => setOpenCats(p => ({ ...p, [cat.key]: !p[cat.key] }))} className="flex items-center gap-2 flex-1 text-left min-w-0">
                       <span className="text-base leading-none">{cat.icon}</span>
                       <span className="text-sm font-medium text-[var(--color-text)] truncate">{cat.name}</span>
                       {state === 'partial' && (
@@ -570,13 +571,13 @@ function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
                           ({cat.children.filter((c: any) => serviceTypes.includes(c.key)).length}/{cat.children.length})
                         </span>
                       )}
-                      <svg className={`ml-auto h-3.5 w-3.5 shrink-0 text-[var(--color-text-faint)] transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className={`ml-auto h-3.5 w-3.5 shrink-0 text-[var(--color-text-faint)] transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
                   </div>
                   {/* Sub-services */}
-                  {open && (
+                  {isOpen && (
                     <div className="pl-8 pr-2 pb-2 space-y-1.5">
                       {cat.children.map((child: any) => (
                         <label key={child.key} className="flex items-center gap-2 cursor-pointer">
