@@ -58,7 +58,7 @@ class Organization extends Model
 
     public function serviceTypes(): BelongsToMany
     {
-        return $this->belongsToMany(ServiceType::class, 'org_service_types')
+        return $this->belongsToMany(ServiceType::class, 'org_service_types', 'org_id', 'service_type_id')
                     ->withTimestamps();
     }
 
