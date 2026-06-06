@@ -51,6 +51,10 @@ class CarrierProfile extends Model
         'verification_status_updated_at',
         'verification_notes',
         'background_check_status',
+        'identity_verified',
+        'identity_verified_at',
+        'checkr_candidate_id',
+        'checkr_report_id',
 
         // Stripe
         'stripe_account_id',
@@ -71,6 +75,8 @@ class CarrierProfile extends Model
     {
         return [
             'dot_verified'              => 'boolean',
+            'identity_verified'         => 'boolean',
+            'identity_verified_at'      => 'datetime',
             'insurance_verified'        => 'boolean',
             'auto_coverage_amount'      => 'decimal:2',
             'auto_effective_date'       => 'date',

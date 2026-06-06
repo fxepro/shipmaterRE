@@ -40,4 +40,13 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'fmcsa' => [
+        'key' => env('FMCSA_API_KEY'),
+    ],
+
+    'checkr' => [
+        'key'            => env('CHECKR_API_KEY'),
+        'webhook_secret' => env('CHECKR_WEBHOOK_SECRET'),
+    ],
+
 ];

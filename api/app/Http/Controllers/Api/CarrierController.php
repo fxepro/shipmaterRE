@@ -51,6 +51,8 @@ class CarrierController extends Controller
             'tanker_endorsement'      => (bool) ($profile?->tanker_endorsement ?? false),
             'passenger_endorsement'   => (bool) ($profile?->passenger_endorsement ?? false),
             'dot_verified'            => (bool) ($profile?->dot_verified ?? false),
+            'identity_verified'       => (bool) ($profile?->identity_verified ?? false),
+            'identity_verified_at'    => $profile?->identity_verified_at?->toISOString(),
             'company_name'            => $profile?->company_name ?? '',
             'phone'                   => $profile?->phone ?? '',
 

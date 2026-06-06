@@ -166,3 +166,13 @@ export const profileApi = {
   getCarrier:    () => api.get('/api/v1/carrier/profile'),
   updateCarrier: (data: Record<string, unknown>) => api.put('/api/v1/carrier/profile', data),
 };
+
+// ── Carrier Verification (FMCSA + Stripe Identity) ──────────────────────
+export const verificationApi = {
+  verifyDot:       (dotNumber: string) =>
+                     api.post('/api/v1/carrier/verify/dot', { dot_number: dotNumber }),
+  verifyMc:        (mcNumber: string) =>
+                     api.post('/api/v1/carrier/verify/mc', { mc_number: mcNumber }),
+  list:            () => api.get('/api/v1/carrier/verifications'),
+  identitySession: () => api.post('/api/v1/stripe/identity/session'),
+};

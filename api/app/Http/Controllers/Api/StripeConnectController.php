@@ -97,11 +97,55 @@ class StripeConnectController extends Controller
         ]);
     }
 
+    // POST /api/v1/stripe/identity/session
+    // Creates a Stripe Identity VerificationSession and returns the hosted URL.
+    // The carrier is redirected to Stripe, verifies their ID, then returned
+    // to /carrier/profile?identity=success (or ?identity=cancelled).
+
+    public function identitySession(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isCarrier(), 403);
+
+        $stripe  = $this->stripe();
+        $profile = $user->carrierProfile()->firstOrCreate(['user_id' => $user->id]);
+
+        $session = $stripe->identity->verificationSessions->create([
+            'type'       => 'document',
+            'options'    => [
+                'document' => [
+                    'allowed_types'          => ['driving_license', 'passport'],
+                    'require_id_number'      => true,
+                    'require_live_capture'   => true,
+                    'require_matching_selfie'=> true,
+                ],
+            ],
+            'return_url' => config('app.frontend_url') . '/carrier/profile?tab=personal&identity=success',
+            'metadata'   => [
+                'user_id'            => (string) $user->id,
+                'carrier_profile_id' => (string) $profile->id,
+            ],
+        ]);
+
+        // Track session ID so we can match the webhook
+        \App\Models\CarrierVerification::updateOrCreate(
+            ['carrier_profile_id' => $profile->id, 'check_type' => 'identity'],
+            [
+                'status'      => 'pending',
+                'external_id' => $session->id,
+                'result_data' => ['session_id' => $session->id, 'created_at' => now()->toISOString()],
+            ]
+        );
+
+        return response()->json(['url' => $session->url]);
+    }
+
     // POST /api/v1/stripe/connect/webhook
-    // Stripe sends account.updated events here
+    // Handles account.updated (Connect) and identity.verification_session.* events.
+
     public function webhook(Request $request): JsonResponse
     {
-        $payload = $request->getContent();
+        $payload   = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
 
         try {
@@ -114,20 +158,76 @@ class StripeConnectController extends Controller
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
-        if ($event->type === 'account.updated') {
-            $account = $event->data->object;
-            $profile = CarrierProfile::where('stripe_account_id', $account->id)->first();
+        match ($event->type) {
 
-            if ($profile) {
-                $status = 'pending';
-                if ($account->details_submitted && $account->charges_enabled && $account->payouts_enabled) {
-                    $status = 'verified';
-                } elseif ($account->requirements?->disabled_reason) {
-                    $status = 'restricted';
+            // ── Stripe Connect: carrier account updated ─────────────────────
+            'account.updated' => (function () use ($event) {
+                $account = $event->data->object;
+                $profile = CarrierProfile::where('stripe_account_id', $account->id)->first();
+                if ($profile) {
+                    $status = 'pending';
+                    if ($account->details_submitted && $account->charges_enabled && $account->payouts_enabled) {
+                        $status = 'verified';
+                    } elseif ($account->requirements?->disabled_reason) {
+                        $status = 'restricted';
+                    }
+                    $profile->update(['stripe_account_status' => $status]);
                 }
-                $profile->update(['stripe_account_status' => $status]);
-            }
-        }
+            })(),
+
+            // ── Stripe Identity: verification completed ─────────────────────
+            'identity.verification_session.verified' => (function () use ($event) {
+                $session = $event->data->object;
+                $profileId = $session->metadata['carrier_profile_id'] ?? null;
+                if (!$profileId) return;
+
+                $profile = CarrierProfile::find($profileId);
+                if (!$profile) return;
+
+                $profile->update([
+                    'identity_verified'    => true,
+                    'identity_verified_at' => now(),
+                ]);
+
+                \App\Models\CarrierVerification::updateOrCreate(
+                    ['carrier_profile_id' => $profile->id, 'check_type' => 'identity'],
+                    [
+                        'status'      => 'passed',
+                        'external_id' => $session->id,
+                        'result_data' => [
+                            'session_id'  => $session->id,
+                            'verified_at' => now()->toISOString(),
+                            'last_error'  => null,
+                        ],
+                        'expires_at'  => now()->addYears(2),
+                    ]
+                );
+            })(),
+
+            // ── Stripe Identity: verification requires input (failed) ────────
+            'identity.verification_session.requires_input' => (function () use ($event) {
+                $session   = $event->data->object;
+                $profileId = $session->metadata['carrier_profile_id'] ?? null;
+                if (!$profileId) return;
+
+                $profile = CarrierProfile::find($profileId);
+                if (!$profile) return;
+
+                \App\Models\CarrierVerification::updateOrCreate(
+                    ['carrier_profile_id' => $profile->id, 'check_type' => 'identity'],
+                    [
+                        'status'      => 'manual_review',
+                        'external_id' => $session->id,
+                        'result_data' => [
+                            'session_id' => $session->id,
+                            'last_error' => $session->last_error?->reason ?? 'Verification requires additional input',
+                        ],
+                    ]
+                );
+            })(),
+
+            default => null,
+        };
 
         return response()->json(['received' => true]);
     }

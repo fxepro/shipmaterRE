@@ -3,12 +3,31 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, verificationApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star } from 'lucide-react';
+import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star, ShieldCheck, ExternalLink } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import CertificationSelector from '@/components/carrier/CertificationSelector';
 import { certificationApi } from '@/lib/api';
+
+// ── FMCSA result type ────────────────────────────────────────────────────────
+interface FmcsaResult {
+  dot_number: string;
+  legal_name: string | null;
+  dba_name: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  allowed_to_operate: boolean;
+  operating_status: string | null;
+  safety_rating: string | null;
+  safety_rating_date: string | null;
+  bipd_insurance_on_file: boolean;
+  cargo_insurance_on_file: boolean;
+  total_drivers: number;
+  total_power_units: number;
+  mcs150_date: string | null;
+}
 
 // ── Vehicle types ─────────────────────────────────────────────────────────────
 interface Vehicle {
@@ -270,15 +289,26 @@ export default function CarrierProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('personal');
   const [saved, setSaved] = useState(false);
 
+  // FMCSA live verification state
+  const [dotVerifying, setDotVerifying]   = useState(false);
+  const [dotResult, setDotResult]         = useState<FmcsaResult | null>(null);
+  const [mcVerifying, setMcVerifying]     = useState(false);
+  const [mcResult, setMcResult]           = useState<FmcsaResult | null>(null);
+
+  // Stripe Identity state
+  const [identityLoading, setIdentityLoading] = useState(false);
+
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['carrier-profile'],
     queryFn: () => api.get('/api/v1/carrier/profile').then(r => r.data?.data),
     retry: false,
   });
 
-  // Handle Stripe Connect return
+  // Handle Stripe Connect + Stripe Identity returns
   useEffect(() => {
-    const stripeResult = searchParams.get('stripe');
+    const stripeResult   = searchParams.get('stripe');
+    const identityResult = searchParams.get('identity');
+
     if (stripeResult === 'success') {
       setActiveTab('financial');
       api.get('/api/v1/stripe/connect/status').then(() => {
@@ -289,6 +319,13 @@ export default function CarrierProfilePage() {
     } else if (stripeResult === 'refresh') {
       setActiveTab('financial');
       toast.error('Stripe setup incomplete — please try again.');
+      router.replace('/carrier/profile');
+    }
+
+    if (identityResult === 'success') {
+      setActiveTab('personal');
+      qc.invalidateQueries({ queryKey: ['carrier-profile'] });
+      toast.success('Identity submitted — verification typically takes a few minutes.');
       router.replace('/carrier/profile');
     }
   }, [searchParams]); // eslint-disable-line
@@ -446,6 +483,53 @@ export default function CarrierProfilePage() {
       setTimeout(() => setSaved(false), 2000);
     },
   });
+
+  // ── FMCSA DOT live verification ─────────────────────────────────────────
+  async function verifyDot() {
+    const dot = dotForm.usdot_number.trim();
+    if (!dot) { toast.error('Enter a USDOT number first'); return; }
+    setDotVerifying(true);
+    setDotResult(null);
+    try {
+      const res = await verificationApi.verifyDot(dot);
+      setDotResult(res.data.data);
+      qc.invalidateQueries({ queryKey: ['carrier-profile'] });
+      toast.success(res.data.verified ? '✓ DOT verified — active authority' : 'DOT found — not authorized to operate');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? 'DOT verification failed');
+    } finally {
+      setDotVerifying(false);
+    }
+  }
+
+  // ── FMCSA MC live verification ───────────────────────────────────────────
+  async function verifyMc() {
+    const mc = dotForm.mc_number.trim();
+    if (!mc) { toast.error('Enter an MC number first'); return; }
+    setMcVerifying(true);
+    setMcResult(null);
+    try {
+      const res = await verificationApi.verifyMc(mc);
+      setMcResult(res.data.data);
+      toast.success('MC number found in FMCSA records');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? 'MC verification failed');
+    } finally {
+      setMcVerifying(false);
+    }
+  }
+
+  // ── Stripe Identity ─────────────────────────────────────────────────────
+  async function startIdentityVerification() {
+    setIdentityLoading(true);
+    try {
+      const res = await verificationApi.identitySession();
+      window.location.href = res.data.url;
+    } catch {
+      toast.error('Could not start identity verification — try again');
+      setIdentityLoading(false);
+    }
+  }
 
   if (isLoading) return <div className="py-12 text-center">Loading...</div>;
   if (isError || !profile) return <div className="py-12 text-center text-red-600">Error loading profile</div>;
@@ -661,6 +745,46 @@ export default function CarrierProfilePage() {
               </div>
             </div>
 
+            {/* ── Stripe Identity Verification ──────────────────────────── */}
+            <div className="border-t border-[var(--color-cream-dark)] pt-6">
+              <SectionTitle>Identity Verification</SectionTitle>
+              <p className="text-xs text-[var(--color-text-faint)] mb-4">
+                Powered by Stripe Identity. You'll be asked to photograph your ID and take a selfie. Takes about 2 minutes.
+              </p>
+
+              {profile.identity_verified ? (
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <CheckCircle size={18} className="text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Identity Verified</p>
+                    {profile.identity_verified_at && (
+                      <p className="text-xs text-emerald-700">
+                        Verified {new Date(profile.identity_verified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-cream)] p-4 space-y-1.5 text-sm text-[var(--color-text-muted)]">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-2">Stripe will verify</p>
+                    <div className="flex items-center gap-2"><CheckCircle size={13} className="text-[var(--color-teal)] shrink-0" /> Government-issued ID (driver's license or passport)</div>
+                    <div className="flex items-center gap-2"><CheckCircle size={13} className="text-[var(--color-teal)] shrink-0" /> Live selfie matched against your ID photo</div>
+                    <div className="flex items-center gap-2"><CheckCircle size={13} className="text-[var(--color-teal)] shrink-0" /> ID number extracted and validated</div>
+                  </div>
+                  <button
+                    onClick={startIdentityVerification}
+                    disabled={identityLoading}
+                    className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] disabled:opacity-60 transition-colors"
+                  >
+                    {identityLoading
+                      ? <><Loader2 size={14} className="animate-spin" /> Opening Stripe…</>
+                      : <><ShieldCheck size={14} /> Verify Identity</>}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <SaveBar saved={saved} onSave={() => {
               const fullName = [personalForm.first_name, personalForm.middle_name, personalForm.last_name, personalForm.suffix].filter(Boolean).join(' ');
               save({ name: fullName, phone: personalForm.phone, date_of_birth: personalForm.date_of_birth });
@@ -716,11 +840,141 @@ export default function CarrierProfilePage() {
               </div>
             </div>
 
+            {/* ── Operating Authority + FMCSA Verification ──────────────── */}
             <div className="border-t border-[var(--color-cream-dark)] pt-6">
-              <SectionTitle>Operating Authority <span className="text-xs font-normal text-[var(--color-text-faint)] ml-1">— Optional, only if operating as independent authority</span></SectionTitle>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="USDOT Number" value={dotForm.usdot_number} onChange={v => setDotForm(p => ({...p, usdot_number: v}))} placeholder="1234567" />
-                <Field label="MC Number" value={dotForm.mc_number} onChange={v => setDotForm(p => ({...p, mc_number: v}))} placeholder="MC-123456" />
+              <SectionTitle>
+                Operating Authority
+                <span className="text-xs font-normal text-[var(--color-text-faint)] ml-2">— Only if operating under independent authority</span>
+              </SectionTitle>
+
+              {/* USDOT row */}
+              <div className="space-y-3">
+                <div>
+                  <Label>USDOT Number</Label>
+                  <div className="flex gap-2">
+                    <input
+                      value={dotForm.usdot_number}
+                      onChange={e => setDotForm(p => ({...p, usdot_number: e.target.value}))}
+                      placeholder="1234567"
+                      className="flex-1 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+                    />
+                    <button
+                      onClick={verifyDot}
+                      disabled={dotVerifying || !dotForm.usdot_number.trim()}
+                      className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {dotVerifying
+                        ? <><Loader2 size={13} className="animate-spin" /> Checking…</>
+                        : profile.dot_verified
+                          ? <><CheckCircle size={13} /> Verified</>
+                          : <><ShieldCheck size={13} /> Verify with FMCSA</>}
+                    </button>
+                  </div>
+                  {profile.dot_verified && !dotResult && (
+                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                      <CheckCircle size={11} /> DOT verified against FMCSA SAFER database
+                    </p>
+                  )}
+                </div>
+
+                {/* FMCSA DOT result panel */}
+                {dotResult && (
+                  <div className={`rounded-xl border p-4 space-y-3 ${
+                    dotResult.allowed_to_operate
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : 'border-red-200 bg-red-50'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {dotResult.allowed_to_operate
+                          ? <CheckCircle size={15} className="text-emerald-600" />
+                          : <AlertCircle size={15} className="text-red-600" />}
+                        <span className={`text-sm font-semibold ${dotResult.allowed_to_operate ? 'text-emerald-800' : 'text-red-800'}`}>
+                          {dotResult.allowed_to_operate ? 'Authorized to Operate' : 'NOT Authorized to Operate'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1">
+                        <ExternalLink size={10} /> FMCSA SAFER
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                      {dotResult.legal_name && (
+                        <div><p className="text-[var(--color-text-faint)]">Legal Name</p><p className="font-medium text-[var(--color-text)]">{dotResult.legal_name}</p></div>
+                      )}
+                      {dotResult.operating_status && (
+                        <div><p className="text-[var(--color-text-faint)]">Operating Status</p><p className="font-medium text-[var(--color-text)]">{dotResult.operating_status}</p></div>
+                      )}
+                      <div>
+                        <p className="text-[var(--color-text-faint)]">Safety Rating</p>
+                        <p className={`font-medium ${dotResult.safety_rating === 'Satisfactory' ? 'text-emerald-700' : dotResult.safety_rating === 'Unsatisfactory' ? 'text-red-700' : 'text-[var(--color-text)]'}`}>
+                          {dotResult.safety_rating || 'Not Rated'}
+                        </p>
+                      </div>
+                      {(dotResult.city || dotResult.state) && (
+                        <div><p className="text-[var(--color-text-faint)]">Location</p><p className="font-medium text-[var(--color-text)]">{[dotResult.city, dotResult.state].filter(Boolean).join(', ')}</p></div>
+                      )}
+                      <div>
+                        <p className="text-[var(--color-text-faint)]">BIPD Insurance</p>
+                        <p className={`font-medium ${dotResult.bipd_insurance_on_file ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {dotResult.bipd_insurance_on_file ? 'On File' : 'Not on File'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[var(--color-text-faint)]">Cargo Insurance</p>
+                        <p className={`font-medium ${dotResult.cargo_insurance_on_file ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {dotResult.cargo_insurance_on_file ? 'On File' : 'Not on File'}
+                        </p>
+                      </div>
+                      <div><p className="text-[var(--color-text-faint)]">Total Drivers</p><p className="font-medium text-[var(--color-text)]">{dotResult.total_drivers}</p></div>
+                      <div><p className="text-[var(--color-text-faint)]">Power Units</p><p className="font-medium text-[var(--color-text)]">{dotResult.total_power_units}</p></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* MC row */}
+                <div>
+                  <Label>MC Number</Label>
+                  <div className="flex gap-2">
+                    <input
+                      value={dotForm.mc_number}
+                      onChange={e => setDotForm(p => ({...p, mc_number: e.target.value}))}
+                      placeholder="MC-123456"
+                      className="flex-1 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+                    />
+                    <button
+                      onClick={verifyMc}
+                      disabled={mcVerifying || !dotForm.mc_number.trim()}
+                      className="flex items-center gap-2 rounded-xl border border-[var(--color-teal)] text-[var(--color-teal)] px-4 py-2.5 text-sm font-semibold hover:bg-[var(--color-teal-pale)] disabled:opacity-50 transition-colors shrink-0"
+                    >
+                      {mcVerifying
+                        ? <><Loader2 size={13} className="animate-spin" /> Checking…</>
+                        : <><ShieldCheck size={13} /> Verify MC</>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* FMCSA MC result panel */}
+                {mcResult && (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={15} className="text-blue-600" />
+                      <span className="text-sm font-semibold text-blue-800">MC number found in FMCSA records</span>
+                      <span className="ml-auto text-xs text-[var(--color-text-faint)] flex items-center gap-1"><ExternalLink size={10} /> FMCSA</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                      {mcResult.legal_name && (
+                        <div><p className="text-[var(--color-text-faint)]">Legal Name</p><p className="font-medium text-[var(--color-text)]">{mcResult.legal_name}</p></div>
+                      )}
+                      {mcResult.operating_status && (
+                        <div><p className="text-[var(--color-text-faint)]">Status</p><p className="font-medium text-[var(--color-text)]">{mcResult.operating_status}</p></div>
+                      )}
+                      <div><p className="text-[var(--color-text-faint)]">DOT#</p><p className="font-medium text-[var(--color-text)]">{mcResult.dot_number}</p></div>
+                      {(mcResult.city || mcResult.state) && (
+                        <div><p className="text-[var(--color-text-faint)]">Location</p><p className="font-medium text-[var(--color-text)]">{[mcResult.city, mcResult.state].filter(Boolean).join(', ')}</p></div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

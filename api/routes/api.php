@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CarrierController;
+use App\Http\Controllers\Api\CarrierVerificationController;
 use App\Http\Controllers\Api\StripeConnectController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\JobController;
@@ -79,6 +80,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stripe Connect
     Route::post('/stripe/connect/onboard',     [StripeConnectController::class, 'onboard']);
     Route::get('/stripe/connect/status',       [StripeConnectController::class, 'status']);
+
+    // Stripe Identity
+    Route::post('/stripe/identity/session',    [StripeConnectController::class, 'identitySession']);
+
+    // Carrier verification (FMCSA live lookup)
+    Route::post('/carrier/verify/dot',         [CarrierVerificationController::class, 'verifyDot']);
+    Route::post('/carrier/verify/mc',          [CarrierVerificationController::class, 'verifyMc']);
+    Route::get('/carrier/verifications',       [CarrierVerificationController::class, 'index']);
 
     Route::get('/carrier/documents',           [CarrierController::class, 'getDocuments']);
     Route::post('/carrier/documents',          [CarrierController::class, 'uploadDocument']);
