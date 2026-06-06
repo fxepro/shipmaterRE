@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\PreferredCarrierController;
 use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\ShipperProfileController;
+use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\CertificationController;
 use App\Http\Controllers\Api\OrgController;
 use App\Http\Controllers\Api\ServiceTypeController;
@@ -28,6 +29,10 @@ Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
     return \Illuminate\Support\Facades\Broadcast::auth($request);
 })->middleware('auth:sanctum');
+
+// ── Blog (public) ─────────────────────────────────────────────────────
+Route::get('/blog',        [BlogController::class, 'index']);
+Route::get('/blog/{slug}', [BlogController::class, 'show']);
 
 // ── Service types (public) ─────────────────────────────────────────────
 Route::get('/service-types',       [ServiceTypeController::class, 'index']);
@@ -113,6 +118,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/preferred-carriers',                       [PreferredCarrierController::class, 'index']);
     Route::post('/preferred-carriers',                      [PreferredCarrierController::class, 'store']);
     Route::delete('/preferred-carriers/{preferredCarrier}', [PreferredCarrierController::class, 'destroy']);
+
+    // Blog admin
+    Route::get('/admin/blog',         [BlogController::class, 'adminIndex']);
+    Route::post('/admin/blog',        [BlogController::class, 'store']);
+    Route::put('/admin/blog/{id}',    [BlogController::class, 'update']);
+    Route::delete('/admin/blog/{id}', [BlogController::class, 'destroy']);
 
     // Contracts
     Route::get('/contracts',              [ContractController::class, 'index']);

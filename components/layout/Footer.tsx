@@ -23,6 +23,15 @@ export function Footer() {
               <div className="space-y-1.5">
                 <Link href="/features"   className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Features</Link>
                 <Link href="/industries" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Industries</Link>
+                <Link href="/blog"       className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Blog</Link>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Solutions</p>
+              <div className="space-y-1.5">
+                <Link href="/shippers"  className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">For Shippers</Link>
+                <Link href="/carriers"  className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">For Carriers</Link>
               </div>
             </div>
 
@@ -37,7 +46,9 @@ export function Footer() {
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Trust & Safety</p>
               <div className="space-y-1.5">
-                <Link href="/verification" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Verification Requirements</Link>
+                <Link href="/compliance"          className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Platform Compliance</Link>
+                <Link href="/provider-compliance" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Carrier Requirements</Link>
+                <Link href="/verification"        className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Verification</Link>
               </div>
             </div>
 

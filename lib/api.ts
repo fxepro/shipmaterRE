@@ -125,6 +125,16 @@ export const contractApi = {
   destroy: (id: number) => api.delete(`/api/v1/contracts/${id}`),
 };
 
+// ── Blog ───────────────────────────────────────────────────────────────
+export const blogApi = {
+  list:    (params?: Record<string, unknown>)                        => api.get('/api/v1/blog', { params }),
+  get:     (slug: string)                                            => api.get(`/api/v1/blog/${slug}`),
+  adminList: (params?: Record<string, unknown>)                      => api.get('/api/v1/admin/blog', { params }),
+  create:  (data: Record<string, unknown>)                           => api.post('/api/v1/admin/blog', data),
+  update:  (id: number, data: Record<string, unknown>)               => api.put(`/api/v1/admin/blog/${id}`, data),
+  destroy: (id: number)                                              => api.delete(`/api/v1/admin/blog/${id}`),
+};
+
 // ── Service Types ──────────────────────────────────────────────────────
 export const serviceTypeApi = {
   list:  () => api.get('/api/v1/service-types'),
