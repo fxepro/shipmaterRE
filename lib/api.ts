@@ -65,6 +65,8 @@ export const shipmentApi = {
   acceptOffer:   (id: number) => api.put(`/api/v1/shipments/${id}/accept-offer`),
   declineOffer:  (id: number) => api.put(`/api/v1/shipments/${id}/decline-offer`),
   start:         (id: number) => api.put(`/api/v1/shipments/${id}/start`),
+  deliver:       (id: number, data?: { delivery_photo_url?: string; delivery_notes?: string }) =>
+                   api.post(`/api/v1/shipments/${id}/deliver`, data ?? {}),
 };
 
 // ── Bids ──────────────────────────────────────────────────────────────
@@ -78,7 +80,8 @@ export const bidApi = {
 // ── Jobs (carrier) ────────────────────────────────────────────────────
 export const jobApi = {
   list:      (params?: Record<string, unknown>) => api.get('/api/v1/jobs', { params }),
-  available: (type: 'open' | 'contracted' = 'open') => api.get('/api/v1/jobs', { params: { type } }),
+  available: (type: 'open' | 'contracted' = 'open', myServices = false) =>
+               api.get('/api/v1/jobs', { params: { type, ...(myServices && { my_services: 1 }) } }),
 };
 
 // ── Carrier ───────────────────────────────────────────────────────────

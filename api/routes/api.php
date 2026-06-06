@@ -24,6 +24,11 @@ Route::post('/track/{token}', [TrackController::class, 'confirm']);
 // ── Stripe webhook (public — Stripe signs it) ──────────────────────────
 Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 
+// ── Broadcasting auth ─────────────────────────────────────────────────
+Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
+    return \Illuminate\Support\Facades\Broadcast::auth($request);
+})->middleware('auth:sanctum');
+
 // ── Service types (public) ─────────────────────────────────────────────
 Route::get('/service-types',       [ServiceTypeController::class, 'index']);
 Route::get('/service-types/rules', [ServiceTypeController::class, 'rules']);
@@ -50,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/shipments/{shipment}/accept-offer',      [ShipmentController::class, 'acceptOffer']);
     Route::put('/shipments/{shipment}/decline-offer',     [ShipmentController::class, 'declineOffer']);
     Route::put('/shipments/{shipment}/start',             [ShipmentController::class, 'start']);
+    Route::post('/shipments/{shipment}/deliver',          [ShipmentController::class, 'deliver']);
 
     // Bids
     Route::get('/shipments/{shipment}/bids',  [BidController::class, 'index']);

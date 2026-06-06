@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use App\Models\ServiceType;
 
 class Shipment extends Model
 {
     protected $fillable = [
         'shipper_id', 'carrier_id', 'receiver_id',
+        'org_id', 'service_type_id', 'required_cert_keys',
         'status', 'job_type', 'contract_id',
         'item_description', 'item_category', 'weight_lbs',
         'handling_requirements', 'special_notes',
@@ -31,6 +33,7 @@ class Shipment extends Model
     {
         return [
             'handling_requirements' => 'array',
+            'required_cert_keys'    => 'array',
             'pickup_date'           => 'date',
             'delivery_date'         => 'date',
             'delivered_at'          => 'datetime',
@@ -88,5 +91,10 @@ class Shipment extends Model
     public function latestPing(): HasMany
     {
         return $this->hasMany(GpsPing::class)->latest('pinged_at')->limit(1);
+    }
+
+    public function serviceType(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class);
     }
 }

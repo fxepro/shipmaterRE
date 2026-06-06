@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
+use App\Models\ServiceType;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -11,21 +12,21 @@ use Illuminate\Http\Request;
 
 class JobController extends Controller
 {
-    // GET /api/v1/jobs?type=open|contracted
+    // GET /api/v1/jobs?type=open|contracted&my_services=1
     public function index(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-        abort_unless($user->role === 'carrier', 403);
+        abort_unless($user->isCarrier(), 403);
 
         $type = $request->input('type', 'open');
 
-        // ── Contracted offers ──────────────────────────────────────────
+        // ── Contracted offers ─────────────��────────────────────────────
         if ($type === 'contracted') {
             $jobs = Shipment::where('job_type', 'contracted')
                 ->where('carrier_id', $user->id)
                 ->where('status', 'offered')
-                ->with(['shipper', 'contract'])
+                ->with(['shipper', 'contract', 'serviceType'])
                 ->latest()
                 ->get();
 
@@ -34,13 +35,24 @@ class JobController extends Controller
             ]);
         }
 
-        // ── Open marketplace ───────────────────────────────────────────
-        $jobs = Shipment::where('job_type', 'open')
+        // ── Open marketplace ──────────────��────────────────────────────
+        $query = Shipment::where('job_type', 'open')
             ->whereIn('status', ['pending', 'bidding'])
-            ->with(['shipper'])
-            ->withCount('bids')
-            ->latest()
-            ->paginate(50);
+            ->with(['shipper', 'serviceType'])
+            ->withCount('bids');
+
+        // Filter by carrier's service types (opt-in via ?my_services=1)
+        if ($request->boolean('my_services')) {
+            $org = $user->currentOrg;
+            if ($org) {
+                $serviceTypeIds = $org->serviceTypes()->pluck('service_types.id');
+                if ($serviceTypeIds->isNotEmpty()) {
+                    $query->whereIn('service_type_id', $serviceTypeIds);
+                }
+            }
+        }
+
+        $jobs = $query->latest()->paginate(50);
 
         // Single query: which jobs has this carrier already bid on?
         $biddedIds = Bid::where('carrier_id', $user->id)
@@ -55,6 +67,11 @@ class JobController extends Controller
                     'id'               => $s->id,
                     'item_description' => $s->item_description,
                     'item_category'    => $s->item_category,
+                    'service_type'     => $s->serviceType ? [
+                        'key'  => $s->serviceType->key,
+                        'name' => $s->serviceType->name,
+                        'icon' => $s->serviceType->icon,
+                    ] : null,
                     'weight_lbs'       => $s->weight_lbs ? (float) $s->weight_lbs : null,
                     'special_notes'    => $s->special_notes,
                     'pickup_city'      => $s->pickup_city,
@@ -79,6 +96,11 @@ class JobController extends Controller
         return [
             'id'               => $s->id,
             'item_description' => $s->item_description,
+            'service_type'     => $s->serviceType ? [
+                'key'  => $s->serviceType->key,
+                'name' => $s->serviceType->name,
+                'icon' => $s->serviceType->icon,
+            ] : null,
             'weight_lbs'       => $s->weight_lbs ? (float) $s->weight_lbs : null,
             'pickup_city'      => $s->pickup_city,
             'pickup_state'     => $s->pickup_state,

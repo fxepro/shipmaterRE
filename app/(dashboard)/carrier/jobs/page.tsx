@@ -21,6 +21,7 @@ type BidForm = z.infer<typeof bidSchema>;
 
 interface OpenJob {
   id: number; item_description: string; item_category?: string; weight_lbs?: number;
+  service_type?: { key: string; name: string; icon: string } | null;
   special_notes?: string; pickup_city: string; pickup_state: string;
   delivery_city: string; delivery_state: string; pickup_date?: string;
   distance_miles?: number; bids_count: number; already_bid: boolean;
@@ -93,9 +94,13 @@ function OpenJobCard({ job, onBid }: { job: OpenJob; onBid: () => void }) {
     <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-5 flex flex-col">
       <div className="flex items-start justify-between gap-2">
         <p className="font-medium text-[var(--color-text)] line-clamp-2">{job.item_description}</p>
-        {job.item_category && (
+        {job.service_type ? (
+          <span className="shrink-0 text-xs font-medium bg-[var(--color-cream)] text-[var(--color-text-faint)] border border-[var(--color-cream-dark)] rounded-full px-2 py-0.5">
+            {job.service_type.icon} {job.service_type.name}
+          </span>
+        ) : job.item_category ? (
           <span className="shrink-0 text-xs font-medium bg-[var(--color-cream)] text-[var(--color-text-faint)] border border-[var(--color-cream-dark)] rounded-full px-2 py-0.5">{job.item_category}</span>
-        )}
+        ) : null}
       </div>
 
       <div className="mt-3 flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
@@ -193,13 +198,14 @@ function ContractedOfferCard({ offer, onAccept, onDecline, isPending }: {
 type Tab = 'open' | 'contracted';
 
 export default function CarrierAvailablePage() {
-  const [tab, setTab] = useState<Tab>('open');
-  const [bidJob, setBidJob] = useState<OpenJob | null>(null);
+  const [tab, setTab]           = useState<Tab>('open');
+  const [myServices, setMyServices] = useState(false);
+  const [bidJob, setBidJob]     = useState<OpenJob | null>(null);
   const qc = useQueryClient();
 
   const { data: openRes, isLoading: openLoading } = useQuery({
-    queryKey: ['jobs-open'],
-    queryFn: () => jobApi.available('open'),
+    queryKey: ['jobs-open', myServices],
+    queryFn: () => jobApi.available('open', myServices),
     enabled: tab === 'open',
   });
 
@@ -240,10 +246,23 @@ export default function CarrierAvailablePage() {
     <div className="space-y-6">
       <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Available Jobs</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-6 border-b border-[var(--color-cream-dark)]">
-        <button className={`pb-3 text-sm transition-colors ${tabCls('open')}`} onClick={() => setTab('open')}>Open Market</button>
-        <button className={`pb-3 text-sm transition-colors ${tabCls('contracted')}`} onClick={() => setTab('contracted')}>Contracted Offers</button>
+      {/* Tabs + My Services toggle */}
+      <div className="flex items-center justify-between border-b border-[var(--color-cream-dark)]">
+        <div className="flex gap-6">
+          <button className={`pb-3 text-sm transition-colors ${tabCls('open')}`} onClick={() => setTab('open')}>Open Market</button>
+          <button className={`pb-3 text-sm transition-colors ${tabCls('contracted')}`} onClick={() => setTab('contracted')}>Contracted Offers</button>
+        </div>
+        {tab === 'open' && (
+          <label className="flex items-center gap-2 pb-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={myServices}
+              onChange={e => setMyServices(e.target.checked)}
+              className="w-4 h-4 rounded accent-[var(--color-teal)]"
+            />
+            <span className="text-xs font-medium text-[var(--color-text-muted)]">My service types only</span>
+          </label>
+        )}
       </div>
 
       {/* Open Market */}

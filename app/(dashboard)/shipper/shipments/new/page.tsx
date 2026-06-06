@@ -12,14 +12,16 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { StaticRouteMap } from '@/components/maps/StaticRouteMap';
-import { shipmentApi } from '@/lib/api';
+import { shipmentApi, serviceTypeApi } from '@/lib/api';
 import { isDemoMode } from '@/lib/demo';
+import { useQuery } from '@tanstack/react-query';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ShipmentForm {
   // Step 1 – Details
   description: string;
+  serviceTypeKey: string;
   category: string;
   weightLbs: string;
   handling: string[];
@@ -41,6 +43,7 @@ interface ShipmentForm {
   routeDurationS?: number;
   // Step 3 – Carrier
   carrierId?: number;
+  receiverEmail: string;
   // Step 4 – Cost
   cost: string;
 }
@@ -83,10 +86,10 @@ const STEPS = [
 ];
 
 const EMPTY: ShipmentForm = {
-  description: '', category: '', weightLbs: '', handling: [], instructions: '',
+  description: '', serviceTypeKey: '', category: '', weightLbs: '', handling: [], instructions: '',
   pickupAddress: '', pickupDate: '', pickupWindow: WINDOWS[0],
   deliveryAddress: '', deliveryDate: '', deliveryWindow: WINDOWS[0],
-  carrierId: undefined, cost: '',
+  carrierId: undefined, receiverEmail: '', cost: '',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -134,6 +137,12 @@ function NewShipmentInner() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<ShipmentForm>(EMPTY);
+
+  // Load service type categories from API
+  const { data: serviceTypeCategories = [] } = useQuery({
+    queryKey: ['service-types'],
+    queryFn:  () => serviceTypeApi.list().then(r => r.data.data),
+  });
 
   // Pre-fill from route planner query params
   useEffect(() => {
@@ -306,6 +315,8 @@ function NewShipmentInner() {
           estimated_duration_mins: durationMins,
 
           carrier_id:             form.carrierId,
+          receiver_email:         form.receiverEmail || undefined,
+          service_type_key:       form.serviceTypeKey || undefined,
           agreed_cost:            form.cost ? +form.cost : undefined,
         });
       }
@@ -379,19 +390,26 @@ function NewShipmentInner() {
               <Err msg={errors.description} />
             </div>
 
+            <div>
+              <Label>Service Type *</Label>
+              <select
+                value={form.serviceTypeKey}
+                onChange={e => { upd('serviceTypeKey', e.target.value); upd('category', e.target.options[e.target.selectedIndex]?.text || ''); }}
+                className={cn(INPUT, errors.serviceTypeKey && INPUT_ERR)}
+              >
+                <option value="">Select service type…</option>
+                {(serviceTypeCategories as any[]).map((cat: any) => (
+                  <optgroup key={cat.key} label={`${cat.icon} ${cat.name}`}>
+                    {cat.children.map((child: any) => (
+                      <option key={child.key} value={child.key}>{child.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <Err msg={errors.serviceTypeKey} />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Category *</Label>
-                <select
-                  value={form.category}
-                  onChange={e => upd('category', e.target.value)}
-                  className={cn(INPUT, errors.category && INPUT_ERR)}
-                >
-                  <option value="">Select…</option>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <Err msg={errors.category} />
-              </div>
               <div>
                 <Label>Weight (lbs) *</Label>
                 <input
@@ -553,10 +571,25 @@ function NewShipmentInner() {
           </div>
         )}
 
-        {/* ── Step 2: Carrier ── */}
+        {/* ── Step 2: Carrier + Receiver ── */}
         {step === 2 && (
-          <div className="space-y-3">
-            <p className="text-sm text-[var(--color-text-faint)]">Select the carrier to assign this shipment to.</p>
+          <div className="space-y-5">
+            <div>
+              <Label>Receiver email (optional)</Label>
+              <input
+                type="email"
+                value={form.receiverEmail}
+                onChange={e => upd('receiverEmail', e.target.value)}
+                placeholder="receiver@company.com"
+                className={INPUT}
+              />
+              <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                The person receiving this delivery. They will get access to track the shipment.
+              </p>
+            </div>
+
+            <div className="border-t border-[var(--color-cream-dark)] pt-4">
+              <p className="text-sm text-[var(--color-text-faint)] mb-3">Select the carrier to assign this shipment to (optional — or post as open bid).</p>
             {(errors as any).carrierId && (
               <p className="text-xs text-red-500">{(errors as any).carrierId}</p>
             )}
@@ -606,6 +639,7 @@ function NewShipmentInner() {
                 </button>
               );
             })}
+            </div>
           </div>
         )}
 

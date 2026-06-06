@@ -2,9 +2,10 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapPin, Navigation, Truck, User } from 'lucide-react';
 import { shipmentApi } from '@/lib/api';
+import { getEcho, disconnectEcho, type PingPayload } from '@/lib/echo';
 import type { Shipment, GpsPingData } from '@/types/shipment';
 
 // ── Route helpers ─────────────────────────────────────────────────────────────
@@ -323,11 +324,13 @@ function LiveMap({ shipment }: { shipment: Shipment }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LiveTrackingPage() {
+  const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const channelRef = useRef<any>(null);
 
   const { data: listRes, isLoading: listLoading } = useQuery({
-    queryKey:       ['shipper-shipments'],
-    queryFn:        () => shipmentApi.list(),
+    queryKey:        ['shipper-shipments'],
+    queryFn:         () => shipmentApi.list(),
     refetchInterval: 30_000,
   });
 
@@ -340,13 +343,59 @@ export default function LiveTrackingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active.length]);
 
-  // Live detail — polls every 5 seconds
+  // Fetch shipment detail once — WebSocket keeps it live
   const { data: detailRes } = useQuery({
-    queryKey:        ['live-shipment', selectedId],
-    queryFn:         () => shipmentApi.get(selectedId!),
-    enabled:         selectedId !== null,
-    refetchInterval:  5_000,
+    queryKey: ['live-shipment', selectedId],
+    queryFn:  () => shipmentApi.get(selectedId!),
+    enabled:  selectedId !== null,
+    // Fallback poll every 30s if WebSocket isn't available
+    refetchInterval: 30_000,
   });
+
+  // ── Subscribe to Reverb WebSocket when a shipment is selected ──────
+  useEffect(() => {
+    // Leave previous channel
+    if (channelRef.current) {
+      channelRef.current.stopListening('.ping.received');
+      channelRef.current = null;
+    }
+    if (!selectedId) return;
+
+    try {
+      const echo = getEcho();
+      const channel = echo.private(`shipment.${selectedId}`);
+      channel.listen('.ping.received', (payload: PingPayload) => {
+        // Inject the new ping directly into the query cache — no round-trip needed
+        qc.setQueryData(['live-shipment', selectedId], (old: any) => {
+          if (!old?.data?.data) return old;
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              data: {
+                ...old.data.data,
+                latest_ping: payload,
+                status: old.data.data.status === 'assigned' ? 'in_transit' : old.data.data.status,
+              },
+            },
+          };
+        });
+      });
+      channelRef.current = channel;
+    } catch {
+      // Reverb not running — fallback to polling (already set above)
+    }
+
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.stopListening('.ping.received');
+        channelRef.current = null;
+      }
+    };
+  }, [selectedId]); // eslint-disable-line
+
+  // Disconnect Echo on unmount
+  useEffect(() => () => disconnectEcho(), []);
 
   const liveShipment: Shipment | undefined = detailRes?.data?.data;
   const ping = liveShipment?.latest_ping ?? null;

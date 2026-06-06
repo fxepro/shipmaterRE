@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\ShipmentPingReceived;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ShipmentResource;
 use App\Models\Contract;
 use App\Models\GpsPing;
+use App\Models\ServiceType;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Str;
 
 class ShipmentController extends Controller
 {
@@ -99,10 +102,34 @@ class ShipmentController extends Controller
             'distance_miles'          => ['nullable', 'numeric'],
             'estimated_duration_mins' => ['nullable', 'integer'],
 
-            'carrier_id'  => ['nullable', 'exists:users,id'],
-            'receiver_id' => ['nullable', 'exists:users,id'],
-            'agreed_cost' => ['nullable', 'numeric', 'min:0'],
+            'carrier_id'       => ['nullable', 'exists:users,id'],
+            'receiver_id'      => ['nullable', 'exists:users,id'],
+            'receiver_email'   => ['nullable', 'email'],
+            'agreed_cost'      => ['nullable', 'numeric', 'min:0'],
+            'service_type_key' => ['nullable', 'string'],
+            'required_cert_keys' => ['nullable', 'array'],
         ]);
+
+        // Resolve receiver by email if provided
+        if (!empty($data['receiver_email']) && empty($data['receiver_id'])) {
+            $receiver = User::firstOrCreate(
+                ['email' => $data['receiver_email']],
+                [
+                    'name'     => explode('@', $data['receiver_email'])[0],
+                    'password' => bcrypt(Str::random(16)),
+                    'role'     => 'receiver',
+                ]
+            );
+            $data['receiver_id'] = $receiver->id;
+        }
+        unset($data['receiver_email']);
+
+        // Resolve service_type_id from key
+        if (!empty($data['service_type_key'])) {
+            $st = ServiceType::where('key', $data['service_type_key'])->first();
+            if ($st) $data['service_type_id'] = $st->id;
+            unset($data['service_type_key']);
+        }
 
         $jobType = $data['job_type'] ?? 'open';
 
@@ -164,6 +191,9 @@ class ShipmentController extends Controller
             $shipment->update(['status' => 'in_transit']);
         }
 
+        // Broadcast to WebSocket subscribers
+        broadcast(new ShipmentPingReceived($ping));
+
         return response()->json(['data' => $ping]);
     }
 
@@ -198,6 +228,34 @@ class ShipmentController extends Controller
         ]);
 
         return response()->json(['message' => 'Job declined.']);
+    }
+
+    // POST /api/v1/shipments/{shipment}/deliver  — carrier marks job delivered
+    public function deliver(Request $request, Shipment $shipment): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isCarrier(), 403);
+        abort_unless($shipment->carrier_id === $user->id, 403);
+        abort_unless(
+            in_array($shipment->status, ['assigned', 'in_transit']),
+            422,
+            'Only assigned or in-transit jobs can be marked delivered.'
+        );
+
+        $data = $request->validate([
+            'delivery_photo_url' => ['nullable', 'string'],
+            'delivery_notes'     => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $shipment->update([
+            'status'             => 'delivered',
+            'delivered_at'       => now(),
+            'delivery_photo_url' => $data['delivery_photo_url'] ?? null,
+        ]);
+
+        $shipment->load(['shipper', 'carrier.carrierProfile', 'receiver', 'latestPing']);
+
+        return response()->json(['data' => new ShipmentResource($shipment)]);
     }
 
     // PUT /api/v1/shipments/{shipment}/start  — carrier starts job (activation)

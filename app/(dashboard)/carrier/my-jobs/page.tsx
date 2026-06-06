@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, MapPin, ArrowRight, PlayCircle, Loader2 } from 'lucide-react';
+import { Truck, MapPin, ArrowRight, PlayCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { shipmentApi } from '@/lib/api';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -37,6 +37,15 @@ export default function CarrierMyJobsPage() {
       qc.invalidateQueries({ queryKey: ['carrier-my-jobs'] });
     },
     onError: () => toast.error('Failed to start job.'),
+  });
+
+  const deliverMutation = useMutation({
+    mutationFn: (id: number) => shipmentApi.deliver(id),
+    onSuccess: () => {
+      toast.success('Delivery confirmed!');
+      qc.invalidateQueries({ queryKey: ['carrier-my-jobs'] });
+    },
+    onError: () => toast.error('Failed to confirm delivery.'),
   });
 
   const allJobs: Shipment[] = res?.data?.data ?? [];
@@ -96,21 +105,35 @@ export default function CarrierMyJobsPage() {
                     </button>
                   )}
                   {job.status === 'in_transit' && (
-                    <button
-                      onClick={() => {
-                        if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
-                        navigator.geolocation.watchPosition(
-                          (pos) => shipmentApi.ping(job.id, { lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                          () => toast.error('Unable to get location'),
-                          { enableHighAccuracy: true, maximumAge: 10_000 }
-                        );
-                        toast.success('GPS tracking active');
-                      }}
-                      className="flex items-center gap-1.5 rounded-lg bg-[var(--color-slate)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-slate-80)] transition-colors"
-                    >
-                      <MapPin size={11} />
-                      Ping GPS
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
+                          navigator.geolocation.watchPosition(
+                            (pos) => shipmentApi.ping(job.id, { lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                            () => toast.error('Unable to get location'),
+                            { enableHighAccuracy: true, maximumAge: 10_000 }
+                          );
+                          toast.success('GPS tracking active');
+                        }}
+                        className="flex items-center gap-1.5 rounded-lg bg-[var(--color-slate)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-slate-80)] transition-colors"
+                      >
+                        <MapPin size={11} />
+                        Ping GPS
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Confirm delivery? This cannot be undone.')) {
+                            deliverMutation.mutate(job.id);
+                          }
+                        }}
+                        disabled={deliverMutation.isPending}
+                        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                      >
+                        {deliverMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                        Mark Delivered
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
