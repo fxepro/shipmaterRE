@@ -50,6 +50,18 @@ class CarrierController extends Controller
             'hazmat_expiry_date'      => $profile?->hazmat_expiry_date,
             'tanker_endorsement'      => (bool) ($profile?->tanker_endorsement ?? false),
             'passenger_endorsement'   => (bool) ($profile?->passenger_endorsement ?? false),
+            // Personal tab — address
+            'street'                  => $profile?->street ?? '',
+            'city'                    => $profile?->city ?? '',
+            'state'                   => $profile?->state ?? '',
+            'zip'                     => $profile?->zip ?? '',
+
+            // Personal tab — government ID
+            'id_type'                 => $profile?->id_type ?? 'dl',
+            'dl_number'               => $profile?->dl_number ?? '',
+            'dl_state'                => $profile?->dl_state ?? '',
+            'dl_expiry'               => $profile?->dl_expiry?->toDateString() ?? '',
+
             'dot_verified'            => (bool) ($profile?->dot_verified ?? false),
             'identity_verified'       => (bool) ($profile?->identity_verified ?? false),
             'identity_verified_at'    => $profile?->identity_verified_at?->toISOString(),
@@ -169,6 +181,14 @@ class CarrierController extends Controller
             'dot_number'            => ['sometimes', 'nullable', 'string', 'max:20'],
             'company_name'          => ['sometimes', 'nullable', 'string', 'max:200'],
             'phone'                 => ['sometimes', 'nullable', 'string', 'max:40'],
+            'street'                => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city'                  => ['sometimes', 'nullable', 'string', 'max:100'],
+            'state'                 => ['sometimes', 'nullable', 'string', 'max:2'],
+            'zip'                   => ['sometimes', 'nullable', 'string', 'max:10'],
+            'id_type'               => ['sometimes', 'nullable', 'string', 'in:dl,passport'],
+            'dl_number'             => ['sometimes', 'nullable', 'string', 'max:30'],
+            'dl_state'              => ['sometimes', 'nullable', 'string', 'max:2'],
+            'dl_expiry'             => ['sometimes', 'nullable', 'date'],
 
             // Insurance
             'auto_policy_number'   => ['sometimes', 'nullable', 'string'],
@@ -512,32 +532,41 @@ class CarrierController extends Controller
         }
 
         // ZIP + distance filter
-        // Carriers store their location via their org address.
-        // For now: if zip is provided, match org.state or org.zip prefix.
-        // Full geo-search (Haversine via PostGIS) can replace this when coordinate data is available.
+        // Primary source: carrier_profiles.zip / .state (saved from Personal tab).
+        // Fallback: org address (for multi-org carriers that set location at org level).
         if ($zip = $request->query('zip')) {
             $distance = (int) ($request->query('distance_miles', 50));
 
             if ($distance <= 25) {
-                // Tight: match first 3 digits of ZIP (same metro area)
+                // Tight radius — match first 3 digits of ZIP (same metro)
                 $prefix = substr(preg_replace('/\D/', '', $zip), 0, 3);
-                $query->whereHas('currentOrg', fn ($q) =>
-                    $q->where('zip', 'like', $prefix . '%')
-                );
+                $query->where(function ($q) use ($prefix) {
+                    $q->whereHas('carrierProfile', fn ($cp) =>
+                        $cp->where('zip', 'like', $prefix . '%')
+                    )
+                    ->orWhereHas('currentOrg', fn ($o) =>
+                        $o->where('zip', 'like', $prefix . '%')
+                    );
+                });
             } else {
-                // Broad: match state via ZIP prefix mapping
+                // Broad radius — match by state derived from ZIP prefix
                 $state = $this->zipToState($zip);
                 if ($state) {
-                    $query->whereHas('currentOrg', fn ($q) =>
-                        $q->where('state', $state)
-                    );
+                    $query->where(function ($q) use ($state) {
+                        $q->whereHas('carrierProfile', fn ($cp) =>
+                            $cp->where('state', $state)
+                        )
+                        ->orWhereHas('currentOrg', fn ($o) =>
+                            $o->where('state', $state)
+                        );
+                    });
                 }
             }
         }
 
-        // Sorting
+        // Sorting — LEFT JOIN so carriers without a profile still appear
         $sort = $request->query('sort', 'rating');
-        $query->join('carrier_profiles as cp', 'cp.user_id', '=', 'users.id');
+        $query->leftJoin('carrier_profiles as cp', 'cp.user_id', '=', 'users.id');
         match ($sort) {
             'rating'      => $query->orderByDesc('cp.rating'),
             'deliveries'  => $query->orderByDesc('cp.total_deliveries'),

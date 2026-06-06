@@ -335,10 +335,9 @@ export default function CarrierProfilePage() {
 
   const [personalForm, setPersonalForm] = useState({
     first_name: '', middle_name: '', last_name: '', suffix: '',
-    date_of_birth: '', ssn: '', phone: '',
+    date_of_birth: '', phone: '',
     street: '', city: '', state: '', zip: '',
     id_type: 'dl', dl_number: '', dl_state: '', dl_expiry: '',
-    passport_number: '', passport_expiry: '',
   });
 
   const [dotForm, setDotForm] = useState({
@@ -441,7 +440,15 @@ export default function CarrierProfilePage() {
         middle_name: parts.length > 2 ? parts.slice(1, -1).join(' ') : '',
         last_name:   parts.length > 1 ? parts[parts.length - 1] : '',
         date_of_birth: profile.date_of_birth || '',
-        phone: profile.phone || '',
+        phone:       profile.phone     || '',
+        street:      profile.street    || '',
+        city:        profile.city      || '',
+        state:       profile.state     || '',
+        zip:         profile.zip       || '',
+        id_type:     profile.id_type   || 'dl',
+        dl_number:   profile.dl_number || '',
+        dl_state:    profile.dl_state  || '',
+        dl_expiry:   profile.dl_expiry || '',
       }));
       setDotForm({
         cdl_number: profile.cdl_number || '',
@@ -731,9 +738,9 @@ export default function CarrierProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <p className="text-xs text-[var(--color-text-faint)]">Upload your passport photo page and a selfie for identity matching.</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Passport Number" value={personalForm.passport_number} onChange={v => setPersonalForm(p => ({...p, passport_number: v}))} placeholder="US1234567" />
-                    <Field label="Expiry Date" value={personalForm.passport_expiry} onChange={v => setPersonalForm(p => ({...p, passport_expiry: v}))} type="date" />
+                    <div /><div />
                   </div>
                   <UploadBox label="Passport Photo Page" required docType="passport" />
                   <UploadBox label="Selfie (for identity matching)" required docType="selfie" hint="Clear photo of your face. Must match your passport." />
@@ -790,7 +797,19 @@ export default function CarrierProfilePage() {
 
             <SaveBar saved={saved} onSave={() => {
               const fullName = [personalForm.first_name, personalForm.middle_name, personalForm.last_name, personalForm.suffix].filter(Boolean).join(' ');
-              save({ name: fullName, phone: personalForm.phone, date_of_birth: personalForm.date_of_birth });
+              save({
+                name:          fullName,
+                phone:         personalForm.phone,
+                date_of_birth: personalForm.date_of_birth,
+                street:        personalForm.street,
+                city:          personalForm.city,
+                state:         personalForm.state,
+                zip:           personalForm.zip,
+                id_type:       personalForm.id_type,
+                dl_number:     personalForm.dl_number,
+                dl_state:      personalForm.dl_state,
+                dl_expiry:     personalForm.dl_expiry || null,
+              });
             }} isPending={updateMutation.isPending} />
           </div>
         )}
