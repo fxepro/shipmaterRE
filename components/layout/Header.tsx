@@ -15,7 +15,9 @@ export function Header() {
         <nav className="flex items-center gap-6">
           <Link href="/features"   className="hidden sm:block text-sm font-medium text-white/80 hover:text-white transition-colors">Features</Link>
           <Link href="/industries" className="hidden sm:block text-sm font-medium text-white/80 hover:text-white transition-colors">Industries</Link>
-          <Link href="/login"      className="text-sm font-medium text-white/80 hover:text-white transition-colors">Sign in</Link>
+          <Link href="/shippers"   className="hidden md:block text-sm font-medium text-white/80 hover:text-white transition-colors">Shippers</Link>
+          <Link href="/carriers"   className="hidden md:block text-sm font-medium text-white/80 hover:text-white transition-colors">Carriers</Link>
+          <Link href="/blog"       className="hidden md:block text-sm font-medium text-white/80 hover:text-white transition-colors">Blog</Link>
           <Link href="/register"   className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[var(--color-teal)] hover:bg-[var(--color-teal-pale)] transition-colors">
             Get started
           </Link>
