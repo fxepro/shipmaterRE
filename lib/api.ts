@@ -134,6 +134,18 @@ export const certificationApi = {
   sync: (keys: string[]) => api.put('/api/v1/carrier/certifications', { certification_keys: keys }),
 };
 
+// ── Org / Team ──────────────────────────────────────────────────────────
+export const orgApi = {
+  get:              ()                                          => api.get('/api/v1/org'),
+  update:           (data: Record<string, unknown>)            => api.put('/api/v1/org', data),
+  members:          ()                                         => api.get('/api/v1/org/members'),
+  updateMember:     (id: number, role: string)                 => api.put(`/api/v1/org/members/${id}`, { role }),
+  removeMember:     (id: number)                               => api.delete(`/api/v1/org/members/${id}`),
+  invitations:      ()                                         => api.get('/api/v1/org/invitations'),
+  invite:           (email: string, role: string)              => api.post('/api/v1/org/invitations', { email, role }),
+  cancelInvitation: (id: number)                               => api.delete(`/api/v1/org/invitations/${id}`),
+};
+
 // ── Profile (shipper + carrier) ────────────────────────────────────────
 export const profileApi = {
   getShipper:    () => api.get('/api/v1/shipper/profile'),

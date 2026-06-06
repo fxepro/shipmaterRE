@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ServiceType;
 use App\Models\ShipperProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class ShipperProfileController extends Controller
     {
         $user    = $request->user();
         $profile = $user->shipperProfile;
+        $org     = $user->currentOrg;
 
         return [
             // User
@@ -106,6 +108,11 @@ class ShipperProfileController extends Controller
             // Notifications
             'notif_email'      => $profile?->notif_email ?? $this->defaultNotifEmail(),
             'notif_sms'        => $profile?->notif_sms   ?? $this->defaultNotifSms(),
+
+            // Org / service types
+            'org_id'           => $org?->id,
+            'org_name'         => $org?->name,
+            'service_type_keys' => $org?->serviceTypes->pluck('key')->toArray() ?? [],
         ];
     }
 
@@ -122,7 +129,7 @@ class ShipperProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         abort_unless($request->user()->isShipper(), 403);
-        $request->user()->load('shipperProfile');
+        $request->user()->load('shipperProfile', 'currentOrg.serviceTypes');
 
         return response()->json(['data' => $this->shape($request)]);
     }
@@ -192,6 +199,10 @@ class ShipperProfileController extends Controller
             // Notifications
             'notif_email'   => ['sometimes', 'array'],
             'notif_sms'     => ['sometimes', 'array'],
+
+            // Service types (org level)
+            'service_type_keys'   => ['sometimes', 'array'],
+            'service_type_keys.*' => ['string'],
         ]);
 
         // Update users table fields
@@ -207,8 +218,20 @@ class ShipperProfileController extends Controller
             unset($profileData['company']);
         }
 
+        // Sync org service types if provided
+        $serviceTypeKeys = $validated['service_type_keys'] ?? null;
+        $profileData = array_diff_key($profileData, ['service_type_keys' => null]);
+
         if ($profileData) {
-            ShipperProfile::updateOrCreate(['user_id' => $user->id], $profileData);
+            ShipperProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                array_merge($profileData, ['org_id' => $user->current_org_id])
+            );
+        }
+
+        if ($serviceTypeKeys !== null && $user->currentOrg) {
+            $ids = ServiceType::whereIn('key', $serviceTypeKeys)->pluck('id');
+            $user->currentOrg->serviceTypes()->sync($ids);
         }
 
         // Recalculate verification status
@@ -218,7 +241,7 @@ class ShipperProfileController extends Controller
             $profile->update(['verification_status' => $status]);
         }
 
-        $user->load('shipperProfile');
+        $user->load('shipperProfile', 'currentOrg.serviceTypes');
 
         return response()->json(['data' => $this->shape($request)]);
     }

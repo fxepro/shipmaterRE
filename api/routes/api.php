@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PreferredCarrierController;
 use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\ShipperProfileController;
 use App\Http\Controllers\Api\CertificationController;
+use App\Http\Controllers\Api\OrgController;
 use App\Http\Controllers\Api\ServiceTypeController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
@@ -78,6 +79,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Certifications
     Route::put('/carrier/certifications', [CertificationController::class, 'sync']);
+
+    // Org / Team management
+    Route::get('/org',                          [OrgController::class, 'show']);
+    Route::put('/org',                          [OrgController::class, 'update']);
+    Route::get('/org/members',                  [OrgController::class, 'members']);
+    Route::put('/org/members/{id}',             [OrgController::class, 'updateMember']);
+    Route::delete('/org/members/{id}',          [OrgController::class, 'removeMember']);
+    Route::get('/org/invitations',              [OrgController::class, 'invitations']);
+    Route::post('/org/invitations',             [OrgController::class, 'invite']);
+    Route::delete('/org/invitations/{id}',      [OrgController::class, 'cancelInvitation']);
 
     // Shipper profile
     Route::get('/shipper/profile',   [ShipperProfileController::class, 'show']);

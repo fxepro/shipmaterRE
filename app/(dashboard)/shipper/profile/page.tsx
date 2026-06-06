@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { paymentApi, profileApi } from '@/lib/api';
+import { paymentApi, profileApi, orgApi } from '@/lib/api';
 import {
   User, Building2, CreditCard, Bell, Zap,
   Camera, Check, ChevronDown, Plus, Trash2,
   Mail, Phone, MapPin, Globe, Hash, Shield,
   AlertCircle, Landmark, X, Loader2, Star,
   CalendarDays, RefreshCw, ChevronRight, Upload, FileCheck,
+  Users, Package, Crown, UserMinus, Send,
 } from 'lucide-react';
+import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'business' | 'compliance' | 'payment' | 'subscription' | 'notifications';
+type Tab = 'profile' | 'business' | 'services' | 'compliance' | 'payment' | 'subscription' | 'notifications' | 'team';
 
 interface ShipperProfile {
   name: string; email: string; phone: string; member_since: string;
@@ -40,6 +42,9 @@ interface ShipperProfile {
   // notifications
   notif_email: Record<string, boolean>;
   notif_sms:   Record<string, boolean>;
+  // org / services
+  service_type_keys: string[];
+  org_name: string;
 }
 
 interface PaymentMethod {
@@ -764,6 +769,216 @@ function NotificationsTab({ initialData }: { initialData: ShipperProfile }) {
   );
 }
 
+// ── Tab: Services ─────────────────────────────────────────────────────────────
+
+function ServicesTab({ initialData }: { initialData: ShipperProfile }) {
+  const qc = useQueryClient();
+  const [keys, setKeys] = useState<string[]>(initialData.service_type_keys ?? []);
+  const [saved, setSaved] = useState(false);
+
+  const saveMutation = useMutation({
+    mutationFn: () => profileApi.updateShipper({ service_type_keys: keys }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shipper-profile'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Package size={14} className="text-[var(--color-teal)]" />
+          <div>
+            <p className="text-sm font-semibold text-[var(--color-text)]">What do you ship?</p>
+            <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+              Select all service types your business ships. This helps us match you with the right carriers and pre-filter your carrier search.
+            </p>
+          </div>
+        </div>
+        <ServiceTypeSelector selected={keys} onChange={setKeys} />
+      </div>
+      <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
+    </div>
+  );
+}
+
+// ── Tab: Team ─────────────────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+  owner:      'Owner',
+  admin:      'Admin',
+  dispatcher: 'Dispatcher',
+  driver:     'Driver',
+  viewer:     'Viewer',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  owner:      'bg-purple-50 text-purple-700',
+  admin:      'bg-blue-50 text-blue-700',
+  dispatcher: 'bg-teal-50 text-[var(--color-teal)]',
+  driver:     'bg-amber-50 text-amber-700',
+  viewer:     'bg-[var(--color-cream)] text-[var(--color-text-muted)]',
+};
+
+function TeamTab() {
+  const qc = useQueryClient();
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole]   = useState('dispatcher');
+  const [showInvite, setShowInvite]   = useState(false);
+
+  const { data: members = [],     isLoading: loadingMembers }     = useQuery({ queryKey: ['org-members'],     queryFn: () => orgApi.members().then(r => r.data.data) });
+  const { data: invitations = [], isLoading: loadingInvitations } = useQuery({ queryKey: ['org-invitations'], queryFn: () => orgApi.invitations().then(r => r.data.data) });
+
+  const inviteMutation = useMutation({
+    mutationFn: () => orgApi.invite(inviteEmail, inviteRole),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['org-invitations'] });
+      setInviteEmail('');
+      setShowInvite(false);
+    },
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: number; role: string }) => orgApi.updateMember(id, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org-members'] }),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: number) => orgApi.removeMember(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org-members'] }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: number) => orgApi.cancelInvitation(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['org-invitations'] }),
+  });
+
+  return (
+    <div className="space-y-6">
+
+      {/* Members */}
+      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users size={14} className="text-[var(--color-teal)]" />
+            <p className="text-sm font-semibold text-[var(--color-text)]">Team members</p>
+            <span className="rounded-full bg-[var(--color-cream)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-muted)]">
+              {members.length}
+            </span>
+          </div>
+          <button onClick={() => setShowInvite(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
+            <Plus size={12} /> Invite member
+          </button>
+        </div>
+
+        {loadingMembers ? (
+          <div className="space-y-3 animate-pulse">
+            {[1,2].map(i => <div key={i} className="h-14 rounded-xl bg-[var(--color-cream-dark)]" />)}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(members as any[]).map((m: any) => (
+              <div key={m.id} className="flex items-center gap-3 rounded-xl border border-[var(--color-cream-dark)] px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-slate)] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  {m.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[var(--color-text)] truncate">{m.name}</p>
+                  <p className="text-xs text-[var(--color-text-faint)] truncate">{m.email}</p>
+                </div>
+                {m.is_owner ? (
+                  <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${ROLE_COLORS['owner']}`}>
+                    <Crown size={10} /> Owner
+                  </span>
+                ) : (
+                  <select
+                    value={m.role}
+                    onChange={e => updateRoleMutation.mutate({ id: m.id, role: e.target.value })}
+                    className="rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-2.5 py-1 text-xs text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
+                  >
+                    {(['admin', 'dispatcher', 'viewer'] as const).map(r => (
+                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                    ))}
+                  </select>
+                )}
+                {!m.is_owner && (
+                  <button onClick={() => removeMutation.mutate(m.id)} disabled={removeMutation.isPending}
+                    className="text-[var(--color-text-faint)] hover:text-red-500 transition-colors ml-1">
+                    <UserMinus size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pending invitations */}
+      {(invitations as any[]).length > 0 && (
+        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
+          <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Pending invitations</p>
+          <div className="space-y-2">
+            {(invitations as any[]).map((inv: any) => (
+              <div key={inv.id} className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-cream-dark)] px-4 py-3">
+                <Send size={14} className="text-[var(--color-text-faint)] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[var(--color-text)] truncate">{inv.email}</p>
+                  <p className="text-xs text-[var(--color-text-faint)]">Expires {inv.expires_at} · {ROLE_LABELS[inv.role]}</p>
+                </div>
+                <button onClick={() => cancelMutation.mutate(inv.id)} disabled={cancelMutation.isPending}
+                  className="text-[var(--color-text-faint)] hover:text-red-500 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--color-white)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-[var(--color-text)]">Invite team member</h3>
+              <button onClick={() => setShowInvite(false)} className="text-[var(--color-text-faint)] hover:text-[var(--color-text)]"><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label>Email address</Label>
+                <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="colleague@company.com"
+                  className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none">
+                  <option value="admin">Admin — full access except billing</option>
+                  <option value="dispatcher">Dispatcher — create and manage shipments</option>
+                  <option value="viewer">Viewer — read-only</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setShowInvite(false)} className="flex-1 rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] transition-colors">Cancel</button>
+              <button
+                onClick={() => inviteMutation.mutate()}
+                disabled={!inviteEmail || inviteMutation.isPending}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] disabled:opacity-60 shadow-sm transition-all">
+                {inviteMutation.isPending ? <><Loader2 size={13} className="animate-spin" /> Sending…</> : <><Send size={13} /> Send invite</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tab: Subscription (static — Stripe not yet integrated) ────────────────────
 
 const PLANS = {
@@ -844,10 +1059,12 @@ function SubscriptionTab() {
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'profile',       label: 'Profile',       icon: User       },
   { id: 'business',      label: 'Business',      icon: Building2  },
+  { id: 'services',      label: 'Services',      icon: Package    },
   { id: 'compliance',    label: 'Compliance',    icon: FileCheck  },
   { id: 'payment',       label: 'Payment',       icon: CreditCard },
   { id: 'subscription',  label: 'Subscription',  icon: Zap        },
   { id: 'notifications', label: 'Notifications', icon: Bell       },
+  { id: 'team',          label: 'Team',          icon: Users      },
 ];
 
 export default function ShipperProfilePage() {
@@ -881,7 +1098,7 @@ export default function ShipperProfilePage() {
       </div>
 
       {/* Loading skeleton for API-driven tabs */}
-      {isLoading && (activeTab === 'profile' || activeTab === 'business' || activeTab === 'compliance' || activeTab === 'notifications') && (
+      {isLoading && (['profile', 'business', 'services', 'compliance', 'notifications'] as Tab[]).includes(activeTab) && (
         <div className="space-y-4 animate-pulse">
           <div className="h-36 rounded-2xl bg-[var(--color-cream-dark)]" />
           <div className="h-48 rounded-2xl bg-[var(--color-cream-dark)]" />
@@ -890,10 +1107,12 @@ export default function ShipperProfilePage() {
 
       {!isLoading && profile && activeTab === 'profile'       && <ProfileTab       initialData={profile} />}
       {!isLoading && profile && activeTab === 'business'      && <BusinessTab      initialData={profile} />}
+      {!isLoading && profile && activeTab === 'services'      && <ServicesTab      initialData={profile} />}
       {!isLoading && profile && activeTab === 'compliance'    && <ComplianceTab    initialData={profile} />}
       {!isLoading && profile && activeTab === 'notifications' && <NotificationsTab initialData={profile} />}
       {activeTab === 'payment'       && <PaymentTab />}
       {activeTab === 'subscription'  && <SubscriptionTab />}
+      {activeTab === 'team'          && <TeamTab />}
     </div>
   );
 }
