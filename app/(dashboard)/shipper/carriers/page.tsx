@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { preferredCarrierApi, carrierApi, api, serviceTypeApi } from '@/lib/api';
 import {
-  Truck, Star, Search, Plus, X, Shield, Hash,
-  CheckCircle2, Clock, Package, ChevronRight, Trash2,
-  Phone, Mail, Loader2, SlidersHorizontal, ChevronDown,
-  Users, Zap, Building2,
+  Truck, Star, Plus, X, Shield,
+  CheckCircle2, Package, ChevronRight, Trash2,
+  Phone, Mail, Loader2, ChevronDown,
+  Users, Building2, MapPin, Navigation,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -32,6 +32,9 @@ interface Carrier {
   member_since: string;
   avatar: string;
   service_types?: { key: string; name: string; icon: string }[];
+  city?: string;
+  state?: string;
+  zip?: string;
   // preferred network extras
   carrierId?: number;
   completedTogether?: number;
@@ -340,186 +343,302 @@ function CarrierTable({ carriers, onSelect, isLoading, emptyMessage }: {
   );
 }
 
+// ── Carrier Card (rich) ────────────────────────────────────────────────────────
+
+function CarrierCard({ carrier, onClick }: { carrier: Carrier; onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-5 cursor-pointer hover:border-[var(--color-teal)]/50 hover:shadow-sm transition-all"
+    >
+      <div className="flex items-start gap-4">
+        {/* Avatar */}
+        <div className="w-12 h-12 rounded-xl bg-[var(--color-slate)] flex items-center justify-center text-sm font-bold text-white shrink-0">
+          {carrier.avatar}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Name + verified */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-[var(--color-text)]">{carrier.name}</p>
+            {carrier.verification_status === 'verified' && (
+              <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                <Shield size={10} /> Verified
+              </span>
+            )}
+          </div>
+
+          {/* Company + location */}
+          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+            {carrier.company_name || 'Owner-Operator'}
+          </p>
+          {(carrier.city || carrier.state) && (
+            <p className="text-xs text-[var(--color-text-faint)] flex items-center gap-1 mt-0.5">
+              <MapPin size={10} />
+              {[carrier.city, carrier.state].filter(Boolean).join(', ')}
+            </p>
+          )}
+
+          {/* Rating + deliveries */}
+          <div className="flex items-center gap-3 mt-2">
+            <span className="flex items-center gap-1">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} size={11} className={i <= Math.round(carrier.rating) ? 'text-amber-400 fill-amber-400' : 'text-[var(--color-cream-dark)]'} />
+              ))}
+              <span className="text-xs text-[var(--color-text-faint)] ml-0.5">{carrier.rating.toFixed(1)}</span>
+            </span>
+            <span className="text-xs text-[var(--color-text-faint)]">
+              {carrier.total_deliveries} deliveries
+            </span>
+            <span className="text-xs text-[var(--color-text-faint)]">
+              Since {carrier.member_since}
+            </span>
+          </div>
+
+          {/* Service type badges */}
+          {carrier.service_types && carrier.service_types.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {carrier.service_types.map(t => (
+                <span key={t.key}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--color-cream)] text-[var(--color-text-muted)] text-xs font-medium">
+                  {t.icon} {t.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <ChevronRight size={16} className="text-[var(--color-text-faint)] shrink-0 mt-1" />
+      </div>
+    </div>
+  );
+}
+
 // ── Find Carriers tab ──────────────────────────────────────────────────────────
 
 function FindCarriersTab({ onSelect }: { onSelect: (c: Carrier) => void }) {
-  const [search, setSearch]       = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters]     = useState({
-    verified: true,
-    hazmat: false,
-    tanker: false,
-    passenger: false,
-    carrier_type: '',
-    service_types: [] as string[],
-    min_rating: '',
-    sort: 'rating',
-  });
+  const [zip, setZip]               = useState('');
+  const [distance, setDistance]     = useState('100');
+  const [verified, setVerified]     = useState(false);
+  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
-  const { data: serviceTypesData } = useQuery({
+  // Load service categories for the hierarchical selector
+  const { data: categories = [] } = useQuery({
     queryKey: ['service-types'],
     queryFn: () => serviceTypeApi.list().then(r => r.data.data),
   });
 
-  const f = (k: string, v: any) => setFilters(p => ({ ...p, [k]: v }));
-
   const params: Record<string, any> = {
-    sort: filters.sort,
-    ...(search            && { search }),
-    ...(filters.verified  && { verified: 1 }),
-    ...(filters.hazmat    && { hazmat: 1 }),
-    ...(filters.tanker    && { tanker: 1 }),
-    ...(filters.passenger && { passenger: 1 }),
-    ...(filters.carrier_type && { carrier_type: filters.carrier_type }),
-    ...(filters.min_rating   && { min_rating: filters.min_rating }),
-    ...(filters.service_types.length > 0 && { service_types: filters.service_types }),
+    sort: 'rating',
+    ...(zip                    && { zip, distance_miles: distance }),
+    ...(verified               && { verified: 1 }),
+    ...(serviceTypes.length > 0 && { service_types: serviceTypes }),
   };
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['carriers-search', params],
-    queryFn: () => api.get('/api/v1/carriers', { params }).then(r => r.data.data as Carrier[]),
+    queryFn:  () => api.get('/api/v1/carriers', { params }).then(r => r.data.data as Carrier[]),
   });
 
   const carriers = res ?? [];
 
-  return (
-    <div className="space-y-4">
-      {/* Search + filter bar */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, company, DOT, MC…"
-            className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-10 pr-4 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
-          />
-        </div>
-        <button
-          onClick={() => setShowFilters(p => !p)}
-          className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
-            showFilters
-              ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]'
-              : 'border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]'
-          }`}
-        >
-          <SlidersHorizontal size={15} /> Filters
-          {(filters.hazmat || filters.tanker || filters.passenger || filters.carrier_type || filters.min_rating) && (
-            <span className="h-4 w-4 rounded-full bg-[var(--color-teal)] text-white text-[10px] flex items-center justify-center">
-              {[filters.hazmat, filters.tanker, filters.passenger, !!filters.carrier_type, !!filters.min_rating].filter(Boolean).length}
-            </span>
-          )}
-        </button>
+  // Toggle a service type (sub-service key)
+  function toggleServiceType(key: string) {
+    setServiceTypes(p => p.includes(key) ? p.filter(k => k !== key) : [...p, key]);
+  }
 
-        {/* Sort */}
-        <div className="relative">
-          <select
-            value={filters.sort}
-            onChange={e => f('sort', e.target.value)}
-            className="appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-3.5 pr-8 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
-          >
-            <option value="rating">Sort: Rating</option>
-            <option value="deliveries">Sort: Most deliveries</option>
-            <option value="newest">Sort: Newest</option>
-            <option value="oldest">Sort: Longest member</option>
-          </select>
-          <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+  // Toggle all children of a category
+  function toggleCategory(cat: any) {
+    const keys = cat.children.map((c: any) => c.key);
+    const allSelected = keys.every((k: string) => serviceTypes.includes(k));
+    if (allSelected) {
+      setServiceTypes(p => p.filter(k => !keys.includes(k)));
+    } else {
+      setServiceTypes(p => [...new Set([...p, ...keys])]);
+    }
+  }
+
+  function categoryState(cat: any) {
+    const keys = cat.children.map((c: any) => c.key);
+    const count = keys.filter((k: string) => serviceTypes.includes(k)).length;
+    if (count === 0)          return 'none';
+    if (count === keys.length) return 'all';
+    return 'partial';
+  }
+
+  return (
+    <div className="flex gap-6 items-start">
+
+      {/* ── Left: Filters (always visible) ──────────────────────────── */}
+      <div className="w-72 shrink-0 space-y-5 sticky top-6">
+
+        {/* Location */}
+        <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Navigation size={14} className="text-[var(--color-teal)]" />
+            <p className="text-sm font-semibold text-[var(--color-text)]">Location</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-muted)] mb-1.5">ZIP Code</p>
+            <input
+              type="text"
+              value={zip}
+              onChange={e => setZip(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="e.g. 90210"
+              maxLength={5}
+              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-muted)] mb-1.5">Radius</p>
+            <div className="relative">
+              <select
+                value={distance}
+                onChange={e => setDistance(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-3.5 pr-8 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
+              >
+                <option value="25">Within 25 miles</option>
+                <option value="50">Within 50 miles</option>
+                <option value="100">Within 100 miles</option>
+                <option value="250">Within 250 miles</option>
+                <option value="500">Within 500 miles</option>
+                <option value="">Any distance</option>
+              </select>
+              <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+            </div>
+          </div>
+        </div>
+
+        {/* Verified */}
+        <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-5">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center gap-2">
+              <Shield size={14} className="text-[var(--color-teal)]" />
+              <span className="text-sm font-semibold text-[var(--color-text)]">Verified only</span>
+            </div>
+            <button
+              role="switch"
+              aria-checked={verified}
+              onClick={() => setVerified(p => !p)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors ${
+                verified ? 'bg-[var(--color-teal)]' : 'bg-[var(--color-cream-dark)]'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${verified ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </label>
+          <p className="text-xs text-[var(--color-text-faint)] mt-2 ml-6">Only show carriers who have completed platform verification.</p>
+        </div>
+
+        {/* Service types */}
+        <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package size={14} className="text-[var(--color-teal)]" />
+              <p className="text-sm font-semibold text-[var(--color-text)]">Services</p>
+            </div>
+            {serviceTypes.length > 0 && (
+              <button onClick={() => setServiceTypes([])} className="text-xs text-[var(--color-teal)] hover:underline">
+                Clear
+              </button>
+            )}
+          </div>
+          {serviceTypes.length > 0 && (
+            <p className="text-xs text-[var(--color-teal)] font-medium">{serviceTypes.length} selected</p>
+          )}
+
+          <div className="space-y-1">
+            {(categories as any[]).map((cat: any) => {
+              const state = categoryState(cat);
+              const [open, setOpen] = useState(false);
+              return (
+                <div key={cat.key} className={`rounded-xl border transition-colors ${state !== 'none' ? 'border-[var(--color-teal)]/30 bg-[var(--color-teal)]/[0.02]' : 'border-transparent'}`}>
+                  {/* Category row */}
+                  <div className="flex items-center gap-2 px-2 py-2">
+                    <input
+                      type="checkbox"
+                      checked={state === 'all'}
+                      ref={el => { if (el) el.indeterminate = state === 'partial'; }}
+                      onChange={() => toggleCategory(cat)}
+                      className="w-4 h-4 rounded accent-[var(--color-teal)] shrink-0 cursor-pointer"
+                    />
+                    <button type="button" onClick={() => setOpen(p => !p)} className="flex items-center gap-2 flex-1 text-left min-w-0">
+                      <span className="text-base leading-none">{cat.icon}</span>
+                      <span className="text-sm font-medium text-[var(--color-text)] truncate">{cat.name}</span>
+                      {state === 'partial' && (
+                        <span className="text-xs text-[var(--color-teal)] shrink-0">
+                          ({cat.children.filter((c: any) => serviceTypes.includes(c.key)).length}/{cat.children.length})
+                        </span>
+                      )}
+                      <svg className={`ml-auto h-3.5 w-3.5 shrink-0 text-[var(--color-text-faint)] transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  {/* Sub-services */}
+                  {open && (
+                    <div className="pl-8 pr-2 pb-2 space-y-1.5">
+                      {cat.children.map((child: any) => (
+                        <label key={child.key} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={serviceTypes.includes(child.key)}
+                            onChange={() => toggleServiceType(child.key)}
+                            className="w-3.5 h-3.5 rounded accent-[var(--color-teal)] cursor-pointer shrink-0"
+                          />
+                          <span className="text-xs text-[var(--color-text-muted)]">{child.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Filter panel */}
-      {showFilters && (
-        <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Status</p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={filters.verified} onChange={e => f('verified', e.target.checked)}
-                className="w-4 h-4 rounded accent-[var(--color-teal)]" />
-              <span className="text-sm text-[var(--color-text)]">Verified carriers only</span>
-            </label>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Carrier Type</p>
-            <select value={filters.carrier_type} onChange={e => f('carrier_type', e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
-              <option value="">All types</option>
-              <option value="sole_proprietor">Owner-Operator</option>
-              <option value="company">Freight Company</option>
-            </select>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Endorsements</p>
-            <div className="space-y-2">
-              {([['hazmat', 'HazMat'], ['tanker', 'Tanker'], ['passenger', 'Passenger']] as const).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={filters[key]} onChange={e => f(key, e.target.checked)}
-                    className="w-4 h-4 rounded accent-[var(--color-teal)]" />
-                  <span className="text-sm text-[var(--color-text)]">{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Minimum Rating</p>
-              <select value={filters.min_rating} onChange={e => f('min_rating', e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none">
-                <option value="">Any rating</option>
-                <option value="3">3+ stars</option>
-                <option value="4">4+ stars</option>
-                <option value="4.5">4.5+ stars</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Service types filter */}
-          {serviceTypesData?.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-3">Service Type</p>
-              <div className="flex flex-wrap gap-2">
-                {serviceTypesData.map((t: any) => {
-                  const active = filters.service_types.includes(t.key);
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => f('service_types', active
-                        ? filters.service_types.filter((k: string) => k !== t.key)
-                        : [...filters.service_types, t.key]
-                      )}
-                      className={[
-                        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                        active
-                          ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]'
-                          : 'border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]/50',
-                      ].join(' ')}
-                    >
-                      <span>{t.icon}</span> {t.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      {/* ── Right: Results ──────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Results header */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {isLoading ? 'Searching…' : `${carriers.length} carrier${carriers.length !== 1 ? 's' : ''} found`}
+          </p>
         </div>
-      )}
 
-      {/* Results count */}
-      {!isLoading && (
-        <p className="text-xs text-[var(--color-text-faint)]">
-          {carriers.length} carrier{carriers.length !== 1 ? 's' : ''} found
-        </p>
-      )}
+        {/* Loading skeletons */}
+        {isLoading && (
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-5 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--color-cream-dark)]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-40 rounded bg-[var(--color-cream-dark)]" />
+                    <div className="h-3 w-28 rounded bg-[var(--color-cream)]" />
+                    <div className="h-3 w-56 rounded bg-[var(--color-cream)]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-      <CarrierTable
-        carriers={carriers}
-        onSelect={onSelect}
-        isLoading={isLoading}
-        emptyMessage="No carriers match your filters"
-      />
+        {/* Empty state */}
+        {!isLoading && carriers.length === 0 && (
+          <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-2xl p-12 text-center">
+            <Truck size={32} className="mx-auto text-[var(--color-cream-dark)] mb-3" />
+            <p className="text-sm font-semibold text-[var(--color-text)]">No carriers found</p>
+            <p className="text-xs text-[var(--color-text-faint)] mt-1">Try broadening your location radius or adjusting your service filters.</p>
+          </div>
+        )}
+
+        {/* Carrier cards */}
+        {!isLoading && carriers.map(c => (
+          <CarrierCard key={c.id} carrier={c} onClick={() => onSelect(c)} />
+        ))}
+      </div>
     </div>
   );
 }

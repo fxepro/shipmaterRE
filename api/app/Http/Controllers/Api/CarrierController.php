@@ -470,24 +470,12 @@ class CarrierController extends Controller
     }
 
     // ── GET /api/v1/carriers ────────────────────────────────────────────────
-    // Supports: ?search= ?dot= ?verified= ?hazmat= ?tanker= ?min_rating= ?sort=
+    // Supports: ?zip= ?distance_miles= ?verified= ?service_types[]= ?dot= ?sort=
 
     public function index(Request $request): JsonResponse
     {
-        $query = User::where('role', 'carrier')->with('carrierProfile.serviceTypes');
-
-        // Search: name, company, DOT, MC
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhereHas('carrierProfile', fn ($p) =>
-                      $p->where('company_name', 'ilike', "%{$search}%")
-                        ->orWhere('dot_number', 'ilike', "%{$search}%")
-                        ->orWhere('mc_number', 'ilike', "%{$search}%")
-                        ->orWhere('usdot_number', 'ilike', "%{$search}%")
-                  );
-            });
-        }
+        $query = User::where('role', 'carrier')
+                     ->with('carrierProfile.serviceTypes', 'currentOrg');
 
         // Exact DOT lookup (for add-carrier modal)
         if ($dot = $request->query('dot')) {
@@ -503,33 +491,35 @@ class CarrierController extends Controller
             );
         }
 
-        // Endorsement filters
-        if ($request->query('hazmat')) {
-            $query->whereHas('carrierProfile', fn ($q) => $q->where('hazmat_endorsement', true));
-        }
-        if ($request->query('tanker')) {
-            $query->whereHas('carrierProfile', fn ($q) => $q->where('tanker_endorsement', true));
-        }
-        if ($request->query('passenger')) {
-            $query->whereHas('carrierProfile', fn ($q) => $q->where('passenger_endorsement', true));
-        }
-
-        // Minimum rating
-        if ($minRating = $request->query('min_rating')) {
-            $query->whereHas('carrierProfile', fn ($q) =>
-                $q->where('rating', '>=', (float) $minRating)
-            );
-        }
-
-        // Carrier type (business structure)
-        if ($type = $request->query('carrier_type')) {
-            $query->whereHas('carrierProfile', fn ($q) => $q->where('carrier_type', $type));
-        }
-
-        // Service types filter (what they transport)
+        // Service types filter
         if ($serviceTypes = $request->query('service_types')) {
             $keys = is_array($serviceTypes) ? $serviceTypes : explode(',', $serviceTypes);
-            $query->whereHas('carrierProfile.serviceTypes', fn ($q) => $q->whereIn('key', $keys));
+            // Carriers now store service types at org level
+            $query->whereHas('currentOrg.serviceTypes', fn ($q) => $q->whereIn('key', $keys));
+        }
+
+        // ZIP + distance filter
+        // Carriers store their location via their org address.
+        // For now: if zip is provided, match org.state or org.zip prefix.
+        // Full geo-search (Haversine via PostGIS) can replace this when coordinate data is available.
+        if ($zip = $request->query('zip')) {
+            $distance = (int) ($request->query('distance_miles', 50));
+
+            if ($distance <= 25) {
+                // Tight: match first 3 digits of ZIP (same metro area)
+                $prefix = substr(preg_replace('/\D/', '', $zip), 0, 3);
+                $query->whereHas('currentOrg', fn ($q) =>
+                    $q->where('zip', 'like', $prefix . '%')
+                );
+            } else {
+                // Broad: match state via ZIP prefix mapping
+                $state = $this->zipToState($zip);
+                if ($state) {
+                    $query->whereHas('currentOrg', fn ($q) =>
+                        $q->where('state', $state)
+                    );
+                }
+            }
         }
 
         // Sorting
@@ -553,26 +543,31 @@ class CarrierController extends Controller
                     substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : '')
                 );
 
+                $org = $c->currentOrg;
+                // Service types are org-level for multi-org carriers
+                $serviceTypes = $org?->serviceTypes ?? $profile?->serviceTypes;
+
                 return [
                     'id'                   => $c->id,
                     'name'                 => $c->name,
                     'email'                => $c->email,
-                    'company_name'         => $profile?->company_name ?? '',
+                    'company_name'         => $profile?->company_name ?? $org?->name ?? '',
                     'dot_number'           => $profile?->dot_number ?? $profile?->usdot_number ?? '',
                     'mc_number'            => $profile?->mc_number ?? '',
-                    'phone'                => $profile?->phone ?? '',
-                    'carrier_type'         => $profile?->carrier_type ?? 'sole_proprietor',
+                    'phone'                => $profile?->phone ?? $org?->phone ?? '',
                     'verification_status'  => $profile?->verification_status ?? 'incomplete',
                     'dot_verified'         => (bool) ($profile?->dot_verified ?? false),
                     'insurance_verified'   => (bool) ($profile?->insurance_verified ?? false),
-                    'hazmat_endorsement'   => (bool) ($profile?->hazmat_endorsement ?? false),
-                    'tanker_endorsement'   => (bool) ($profile?->tanker_endorsement ?? false),
-                    'passenger_endorsement'=> (bool) ($profile?->passenger_endorsement ?? false),
                     'rating'               => (float) ($profile?->rating ?? 0),
                     'total_deliveries'     => $profile?->total_deliveries ?? 0,
                     'member_since'         => $c->created_at->format('M Y'),
                     'avatar'               => $avatar,
-                    'service_types'        => $profile?->serviceTypes->map(fn($t) => [
+                    // Location
+                    'city'                 => $org?->city ?? '',
+                    'state'                => $org?->state ?? '',
+                    'zip'                  => $org?->zip ?? '',
+                    // Service types (org-level)
+                    'service_types'        => $serviceTypes?->map(fn($t) => [
                         'key'  => $t->key,
                         'name' => $t->name,
                         'icon' => $t->icon,
@@ -580,5 +575,62 @@ class CarrierController extends Controller
                 ];
             }),
         ]);
+    }
+
+    // ── ZIP → State (US prefix map for broad geo-filter) ───────────────────────
+    // A full ZIP→coordinate lookup (PostGIS / geocoding API) can replace this.
+
+    private function zipToState(string $zip): ?string
+    {
+        $prefix = (int) substr(preg_replace('/\D/', '', $zip), 0, 3);
+        return match(true) {
+            $prefix >= 1   && $prefix <= 27  => 'MA',
+            $prefix >= 28  && $prefix <= 29  => 'RI',
+            $prefix >= 30  && $prefix <= 39  => 'NH',
+            $prefix >= 40  && $prefix <= 49  => 'ME',
+            $prefix >= 50  && $prefix <= 89  => 'VT',
+            $prefix >= 100 && $prefix <= 199 => 'NY',
+            $prefix >= 200 && $prefix <= 212 => 'DC',
+            $prefix >= 214 && $prefix <= 219 => 'MD',
+            $prefix >= 220 && $prefix <= 246 => 'VA',
+            $prefix >= 247 && $prefix <= 268 => 'WV',
+            $prefix >= 270 && $prefix <= 289 => 'NC',
+            $prefix >= 290 && $prefix <= 299 => 'SC',
+            $prefix >= 300 && $prefix <= 319 => 'GA',
+            $prefix >= 320 && $prefix <= 349 => 'FL',
+            $prefix >= 350 && $prefix <= 369 => 'AL',
+            $prefix >= 370 && $prefix <= 385 => 'TN',
+            $prefix >= 386 && $prefix <= 397 => 'MS',
+            $prefix >= 400 && $prefix <= 427 => 'KY',
+            $prefix >= 430 && $prefix <= 459 => 'OH',
+            $prefix >= 460 && $prefix <= 479 => 'IN',
+            $prefix >= 480 && $prefix <= 499 => 'MI',
+            $prefix >= 500 && $prefix <= 528 => 'IA',
+            $prefix >= 530 && $prefix <= 549 => 'WI',
+            $prefix >= 550 && $prefix <= 567 => 'MN',
+            $prefix >= 570 && $prefix <= 577 => 'SD',
+            $prefix >= 580 && $prefix <= 588 => 'ND',
+            $prefix >= 590 && $prefix <= 599 => 'MT',
+            $prefix >= 600 && $prefix <= 629 => 'IL',
+            $prefix >= 630 && $prefix <= 658 => 'MO',
+            $prefix >= 660 && $prefix <= 679 => 'KS',
+            $prefix >= 680 && $prefix <= 693 => 'NE',
+            $prefix >= 700 && $prefix <= 714 => 'LA',
+            $prefix >= 716 && $prefix <= 729 => 'AR',
+            $prefix >= 730 && $prefix <= 749 => 'OK',
+            $prefix >= 750 && $prefix <= 799 => 'TX',
+            $prefix >= 800 && $prefix <= 816 => 'CO',
+            $prefix >= 820 && $prefix <= 831 => 'WY',
+            $prefix >= 832 && $prefix <= 838 => 'ID',
+            $prefix >= 840 && $prefix <= 847 => 'UT',
+            $prefix >= 850 && $prefix <= 865 => 'AZ',
+            $prefix >= 870 && $prefix <= 884 => 'NM',
+            $prefix >= 889 && $prefix <= 898 => 'NV',
+            $prefix >= 900 && $prefix <= 961 => 'CA',
+            $prefix >= 970 && $prefix <= 979 => 'OR',
+            $prefix >= 980 && $prefix <= 994 => 'WA',
+            $prefix >= 995 && $prefix <= 999 => 'AK',
+            default                          => null,
+        };
     }
 }
