@@ -57,26 +57,30 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout',  [AuthController::class, 'logout']);
 
     // Shipments
-    Route::get('/shipments',                              [ShipmentController::class, 'index']);
-    Route::post('/shipments',                             [ShipmentController::class, 'store']);
-    Route::get('/shipments/{shipment}',                   [ShipmentController::class, 'show']);
-    Route::post('/shipments/{shipment}/ping',             [ShipmentController::class, 'ping']);
-    Route::put('/shipments/{shipment}/accept-offer',      [ShipmentController::class, 'acceptOffer']);
-    Route::put('/shipments/{shipment}/decline-offer',     [ShipmentController::class, 'declineOffer']);
-    Route::put('/shipments/{shipment}/start',             [ShipmentController::class, 'start']);
-    Route::post('/shipments/{shipment}/deliver',          [ShipmentController::class, 'deliver']);
+    Route::get('/shipments',                         [ShipmentController::class, 'index']);
+    Route::post('/shipments',                        [ShipmentController::class, 'store']);
+    Route::get('/shipments/{shipment}',              [ShipmentController::class, 'show']);
+    Route::put('/shipments/{shipment}/accept-offer', [ShipmentController::class, 'acceptOffer']);
+    Route::put('/shipments/{shipment}/decline-offer',[ShipmentController::class, 'declineOffer']);
 
     // Bids
     Route::get('/shipments/{shipment}/bids',  [BidController::class, 'index']);
     Route::post('/shipments/{shipment}/bids', [BidController::class, 'store']);
     Route::put('/bids/{bid}/accept',          [BidController::class, 'accept']);
-    Route::put('/bids/{bid}/withdraw',        [BidController::class, 'withdraw']);
 
-    // Carrier: job board, offers, earnings, profile, documents, vehicles
-    Route::get('/jobs',                        [JobController::class, 'index']);
-    Route::get('/carrier/offers',              [BidController::class, 'carrierOffers']);
-    Route::get('/carrier/earnings',            [CarrierController::class, 'earnings']);
-    Route::post('/carrier/payout',             [CarrierController::class, 'requestPayout']);
+    // ── Carrier operational routes — requires approved status ─────────────
+    Route::middleware('carrier.approved')->group(function () {
+        Route::get('/jobs',               [JobController::class, 'index']);
+        Route::get('/carrier/offers',     [BidController::class, 'carrierOffers']);
+        Route::get('/carrier/earnings',   [CarrierController::class, 'earnings']);
+        Route::post('/carrier/payout',    [CarrierController::class, 'requestPayout']);
+        Route::post('/shipments/{shipment}/deliver', [ShipmentController::class, 'deliver']);
+        Route::put('/shipments/{shipment}/start',    [ShipmentController::class, 'start']);
+        Route::post('/shipments/{shipment}/ping',    [ShipmentController::class, 'ping']);
+        Route::put('/bids/{bid}/withdraw',           [BidController::class, 'withdraw']);
+    });
+
+    // Carrier: profile, documents, vehicles (always accessible)
     Route::get('/carrier/profile',             [CarrierController::class, 'show']);
     Route::put('/carrier/profile',             [CarrierController::class, 'update']);
 
@@ -86,6 +90,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Stripe Identity
     Route::post('/stripe/identity/session',    [StripeConnectController::class, 'identitySession']);
+
+    // Carrier onboarding fee ($99)
+    Route::post('/stripe/onboarding-fee',      [StripeConnectController::class, 'onboardingFee']);
 
     // Carrier verification (FMCSA live lookup + Checkr background check)
     Route::post('/carrier/verify/dot',         [CarrierVerificationController::class, 'verifyDot']);
@@ -131,6 +138,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/preferred-carriers',                       [PreferredCarrierController::class, 'index']);
     Route::post('/preferred-carriers',                      [PreferredCarrierController::class, 'store']);
     Route::delete('/preferred-carriers/{preferredCarrier}', [PreferredCarrierController::class, 'destroy']);
+
+    // Admin: carrier approval queue (pending_review only)
+    Route::get('/admin/carriers/pending-review',    [CarrierController::class, 'pendingReview']);
+    Route::post('/admin/carriers/{id}/review',      [CarrierController::class, 'reviewCarrier']);
 
     // Blog admin
     Route::get('/admin/blog',         [BlogController::class, 'adminIndex']);

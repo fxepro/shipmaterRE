@@ -69,6 +69,8 @@ class CarrierProfile extends Model
         'stripe_account_id',
         'stripe_account_status',
         'stripe_verification_data',
+        'onboarding_fee_paid',
+        'onboarding_fee_payment_intent_id',
 
         // Dates
         'submitted_for_verification_at',
@@ -83,6 +85,7 @@ class CarrierProfile extends Model
     protected function casts(): array
     {
         return [
+            'onboarding_fee_paid'       => 'boolean',
             'dot_verified'              => 'boolean',
             'mc_verified'               => 'boolean',
             'identity_verified'         => 'boolean',

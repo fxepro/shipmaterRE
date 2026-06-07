@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CarrierProfile;
+use App\Services\CheckrService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Stripe\StripeClient;
 
 class StripeConnectController extends Controller
 {
+    public function __construct(private CheckrService $checkr) {}
+
     private function stripe(): StripeClient
     {
         return new StripeClient(config('services.stripe.secret'));
@@ -97,6 +100,43 @@ class StripeConnectController extends Controller
         ]);
     }
 
+    // POST /api/v1/stripe/onboarding-fee
+    // Creates a $99 PaymentIntent. Frontend confirms with Stripe.js.
+    // On payment_intent.succeeded webhook → fee marked paid, Checkr triggered.
+
+    public function onboardingFee(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isCarrier(), 403);
+
+        $profile = $user->carrierProfile()->firstOrCreate(['user_id' => $user->id]);
+
+        if ($profile->onboarding_fee_paid) {
+            return response()->json(['error' => 'Onboarding fee already paid.'], 422);
+        }
+
+        $stripe = $this->stripe();
+
+        $intent = $stripe->paymentIntents->create([
+            'amount'               => 9900, // $99.00 in cents
+            'currency'             => 'usd',
+            'automatic_payment_methods' => ['enabled' => true],
+            'description'          => 'Shipmater carrier onboarding fee',
+            'metadata'             => [
+                'user_id'            => (string) $user->id,
+                'carrier_profile_id' => (string) $profile->id,
+                'type'               => 'onboarding_fee',
+            ],
+        ]);
+
+        $profile->update([
+            'onboarding_fee_payment_intent_id' => $intent->id,
+            'verification_status'              => 'pending_payment',
+        ]);
+
+        return response()->json(['client_secret' => $intent->client_secret]);
+    }
+
     // POST /api/v1/stripe/identity/session
     // Creates a Stripe Identity VerificationSession and returns the hosted URL.
     // The carrier is redirected to Stripe, verifies their ID, then returned
@@ -159,6 +199,55 @@ class StripeConnectController extends Controller
         }
 
         match ($event->type) {
+
+            // ── Onboarding fee paid → trigger Checkr ───────────────────────
+            'payment_intent.succeeded' => (function () use ($event) {
+                $intent = $event->data->object;
+                if (($intent->metadata['type'] ?? '') !== 'onboarding_fee') return;
+
+                $profileId = $intent->metadata['carrier_profile_id'] ?? null;
+                if (!$profileId) return;
+
+                $profile = CarrierProfile::find($profileId);
+                if (!$profile || $profile->onboarding_fee_paid) return;
+
+                $profile->update([
+                    'onboarding_fee_paid'  => true,
+                    'verification_status'  => 'pending_background',
+                ]);
+
+                // Auto-trigger Checkr background check
+                $user = $profile->user;
+                if ($user && !$profile->checkr_candidate_id) {
+                    $parts     = explode(' ', trim($user->name), 2);
+                    $candidate = $this->checkr->createCandidate([
+                        'first_name' => $parts[0],
+                        'last_name'  => $parts[1] ?? '',
+                        'email'      => $user->email,
+                        'dob'        => $profile->date_of_birth?->format('Y-m-d'),
+                    ]);
+
+                    if ($candidate) {
+                        $profile->update(['checkr_candidate_id' => $candidate['id']]);
+                        $invitation = $this->checkr->createInvitation($candidate['id'], 'driver_pro');
+
+                        if ($invitation) {
+                            $profile->update(['background_check_status' => 'invitation_sent']);
+                            \App\Models\CarrierVerification::updateOrCreate(
+                                ['carrier_profile_id' => $profile->id, 'check_type' => 'background'],
+                                [
+                                    'status'      => 'pending',
+                                    'external_id' => $candidate['id'],
+                                    'result_data' => [
+                                        'invitation_url' => $invitation['invitation_url'],
+                                        'invitation_id'  => $invitation['id'],
+                                    ],
+                                ]
+                            );
+                        }
+                    }
+                }
+            })(),
 
             // ── Stripe Connect: carrier account updated ─────────────────────
             'account.updated' => (function () use ($event) {

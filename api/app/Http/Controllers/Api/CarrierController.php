@@ -32,6 +32,7 @@ class CarrierController extends Controller
             'email'                   => $user->email,
             'carrier_type'            => $profile?->carrier_type ?? 'sole_proprietor',
             'verification_status'     => $profile?->verification_status ?? 'incomplete',
+            'onboarding_fee_paid'     => (bool) ($profile?->onboarding_fee_paid ?? false),
             'completion_percentage'   => $completion,
 
             // Personal
@@ -158,6 +159,70 @@ class CarrierController extends Controller
         }
 
         return min($completed, 100);
+    }
+
+    // ── GET /api/v1/admin/carriers/pending-review ───────────────────────────
+    // Returns carriers awaiting admin review (Checkr returned 'consider')
+
+    public function pendingReview(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+
+        $carriers = User::where('role', 'carrier')
+            ->whereHas('carrierProfile', fn ($q) => $q->where('verification_status', 'pending_review'))
+            ->with('carrierProfile.verifications')
+            ->get()
+            ->map(function ($u) {
+                $profile = $u->carrierProfile;
+                $bgCheck = $profile?->verifications?->firstWhere('check_type', 'background');
+                return [
+                    'id'                      => $u->id,
+                    'name'                    => $u->name,
+                    'email'                   => $u->email,
+                    'verification_status'     => $profile?->verification_status,
+                    'background_check_status' => $profile?->background_check_status,
+                    'background_check_result' => $bgCheck?->result_data,
+                    'background_checked_at'   => $bgCheck?->updated_at?->toISOString(),
+                    'dot_verified'            => (bool) ($profile?->dot_verified ?? false),
+                    'onboarding_fee_paid'     => (bool) ($profile?->onboarding_fee_paid ?? false),
+                    'member_since'            => $u->created_at->format('M Y'),
+                ];
+            });
+
+        return response()->json(['data' => $carriers]);
+    }
+
+    // ── POST /api/v1/admin/carriers/{id}/approve ─────────────────────────────
+    // POST /api/v1/admin/carriers/{id}/reject
+
+    public function reviewCarrier(Request $request, int $id): JsonResponse
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+
+        $validated = $request->validate([
+            'action' => ['required', 'in:approve,reject'],
+            'notes'  => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $carrier = User::where('role', 'carrier')->findOrFail($id);
+        $profile = $carrier->carrierProfile;
+
+        if (!$profile) {
+            return response()->json(['error' => 'Carrier profile not found.'], 404);
+        }
+
+        $status = $validated['action'] === 'approve' ? 'approved' : 'rejected';
+
+        $profile->update([
+            'verification_status'            => $status,
+            'verification_notes'             => $validated['notes'] ?? null,
+            'verification_status_updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => "Carrier {$status}.",
+            'status'  => $status,
+        ]);
     }
 
     // ── GET /api/v1/carrier/profile ──────────────────────────────────────────

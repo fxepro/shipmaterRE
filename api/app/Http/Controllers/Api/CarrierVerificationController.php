@@ -212,19 +212,32 @@ class CarrierVerificationController extends Controller
             $profile = CarrierProfile::where('checkr_candidate_id', $candidateId)->first();
 
             if ($profile) {
+                // Map Checkr result → platform verification_status
+                $verificationStatus = match ($result) {
+                    'clear'     => 'approved',       // full platform access
+                    'suspended' => 'rejected',        // blocked
+                    default     => 'pending_review',  // consider → admin reviews
+                };
+
                 $profile->update([
-                    'checkr_report_id'        => $reportId,
-                    'background_check_status' => $result,
+                    'checkr_report_id'               => $reportId,
+                    'background_check_status'        => $result,
+                    'verification_status'            => $verificationStatus,
+                    'verification_status_updated_at' => now(),
                 ]);
 
                 CarrierVerification::updateOrCreate(
                     ['carrier_profile_id' => $profile->id, 'check_type' => 'background'],
                     [
-                        'status'      => $result === 'clear' ? 'passed' : 'failed',
+                        'status'      => match ($result) {
+                            'clear'     => 'passed',
+                            'suspended' => 'failed',
+                            default     => 'manual_review',
+                        },
                         'external_id' => $reportId,
                         'result_data' => [
-                            'result'    => $result,
-                            'report_id' => $reportId,
+                            'result'          => $result,
+                            'report_id'       => $reportId,
                             'turnaround_time' => $obj['turnaround_time'] ?? null,
                             'completed_at'    => $obj['completed_at'] ?? null,
                         ],

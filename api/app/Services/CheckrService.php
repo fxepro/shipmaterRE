@@ -45,6 +45,7 @@ class CheckrService
             'candidate_id'   => $candidateId,
             'package'        => $package,
             'work_locations' => [['country' => 'US']],
+            'payment_type'   => 'candidate', // carrier pays Checkr directly — platform has zero cost
         ]);
 
         if (!$response->successful()) {

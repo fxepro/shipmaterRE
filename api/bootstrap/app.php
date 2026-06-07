@@ -16,10 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Pure Bearer-token API — no session, no CSRF.
-        // Sanctum's auth:sanctum guard validates tokens via the
-        // Authorization: Bearer header without needing statefulApi().
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
+        $middleware->alias([
+            'carrier.approved' => \App\Http\Middleware\RequireCarrierApproval::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
