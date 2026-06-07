@@ -10,6 +10,8 @@ use App\Models\GpsPing;
 use App\Models\ServiceType;
 use App\Models\Shipment;
 use App\Models\User;
+use App\Services\GeocodingService;
+use App\Services\RoutingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,6 +19,10 @@ use Illuminate\Support\Str;
 
 class ShipmentController extends Controller
 {
+    public function __construct(
+        private GeocodingService $geocoder,
+        private RoutingService   $router,
+    ) {}
     // GET /api/v1/shipments
     // ?phase=jobs      — pre-activation (pending/bidding/offered/assigned)
     // ?phase=active    — post-activation (in_transit/delivered/disputed/cancelled)
@@ -143,6 +149,47 @@ class ShipmentController extends Controller
             $status = 'offered';
         } else {
             $status = isset($data['carrier_id']) ? 'assigned' : 'pending';
+        }
+
+        // Geocode addresses if coordinates not provided
+        if (empty($data['pickup_lat']) && !empty($data['pickup_address'])) {
+            $coords = $this->geocoder->geocode(
+                $data['pickup_address'],
+                $data['pickup_city']  ?? '',
+                $data['pickup_state'] ?? '',
+            );
+            if ($coords) {
+                $data['pickup_lat'] = $coords['lat'];
+                $data['pickup_lng'] = $coords['lng'];
+            }
+        }
+
+        if (empty($data['delivery_lat']) && !empty($data['delivery_address'])) {
+            $coords = $this->geocoder->geocode(
+                $data['delivery_address'],
+                $data['delivery_city']  ?? '',
+                $data['delivery_state'] ?? '',
+            );
+            if ($coords) {
+                $data['delivery_lat'] = $coords['lat'];
+                $data['delivery_lng'] = $coords['lng'];
+            }
+        }
+
+        // Fetch real road route if both endpoints are geocoded
+        if (!empty($data['pickup_lat']) && !empty($data['delivery_lat'])) {
+            $route = $this->router->getRoute(
+                (float) $data['pickup_lat'],
+                (float) $data['pickup_lng'],
+                (float) $data['delivery_lat'],
+                (float) $data['delivery_lng'],
+            );
+
+            if ($route) {
+                $data['route_polyline']         = $route['polyline'];
+                $data['distance_miles']         = $data['distance_miles'] ?? $route['distance_miles'];
+                $data['estimated_duration_mins'] = $data['estimated_duration_mins'] ?? $route['duration_mins'];
+            }
         }
 
         $shipment = Shipment::create(array_merge($data, [

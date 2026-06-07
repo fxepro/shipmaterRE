@@ -7,29 +7,43 @@ import type { GpsCoordinates } from '@/types/gps';
 interface StaticRouteMapProps {
   pickup: GpsCoordinates;
   delivery: GpsCoordinates;
+  routePolyline?: number[][];   // [[lng, lat], ...] from OSRM — real road route
   className?: string;
 }
 
-export function StaticRouteMap({ pickup, delivery, className = 'h-[200px] w-full rounded-xl overflow-hidden' }: StaticRouteMapProps) {
+export function StaticRouteMap({
+  pickup,
+  delivery,
+  routePolyline,
+  className = 'h-[200px] w-full rounded-xl overflow-hidden',
+}: StaticRouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const midLat = (pickup.lat + delivery.lat) / 2;
-    const midLng = (pickup.lng + delivery.lng) / 2;
-
     import('maplibre-gl').then(async (ml) => {
       await import('maplibre-gl/dist/maplibre-gl.css' as any);
+
+      // Use real road polyline if available, fall back to straight line
+      const routeCoords: number[][] = routePolyline && routePolyline.length > 0
+        ? routePolyline
+        : [[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]];
+
+      // Compute bounds to auto-fit
+      const lngs = routeCoords.map(c => c[0]);
+      const lats  = routeCoords.map(c => c[1]);
+      const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
+      const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
 
       const map = new ml.Map({
         container: containerRef.current!,
         style: process.env.NEXT_PUBLIC_MAPTILER_KEY && process.env.NEXT_PUBLIC_MAPTILER_KEY !== 'your-maptiler-key'
           ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`
           : 'https://tiles.openfreemap.org/styles/liberty',
-        center: [midLng, midLat],
-        zoom: 5,
+        bounds: [sw, ne],
+        fitBoundsOptions: { padding: 40, maxZoom: 12 },
         interactive: false,
       });
       mapRef.current = map;
@@ -40,10 +54,7 @@ export function StaticRouteMap({ pickup, delivery, className = 'h-[200px] w-full
           data: {
             type: 'Feature',
             properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: [[pickup.lng, pickup.lat], [delivery.lng, delivery.lat]],
-            },
+            geometry: { type: 'LineString', coordinates: routeCoords },
           },
         });
         map.addLayer({
@@ -51,10 +62,12 @@ export function StaticRouteMap({ pickup, delivery, className = 'h-[200px] w-full
           paint: { 'line-color': '#2A8C8A', 'line-width': 2 },
         });
 
+        // Pickup pin (teal)
         const startEl = document.createElement('div');
         startEl.style.cssText = 'width:10px;height:10px;border-radius:50%;background:#2A8C8A;border:2px solid #fff;';
         new ml.Marker({ element: startEl }).setLngLat([pickup.lng, pickup.lat]).addTo(map);
 
+        // Delivery pin (dark)
         const endEl = document.createElement('div');
         endEl.style.cssText = 'width:10px;height:10px;border-radius:50%;background:#0F1923;border:2px solid #fff;';
         new ml.Marker({ element: endEl }).setLngLat([delivery.lng, delivery.lat]).addTo(map);

@@ -37,6 +37,7 @@ class Shipment extends Model
             'pickup_date'           => 'date',
             'delivery_date'         => 'date',
             'delivered_at'          => 'datetime',
+            'route_polyline'         => 'array',
             'pickup_lat'            => 'decimal:8',
             'pickup_lng'            => 'decimal:8',
             'delivery_lat'          => 'decimal:8',

@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { MapPin, Package, ArrowRight, CheckCircle, Clock, Truck } from 'lucide-react';
 import { trackApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { LiveMap } from '@/components/maps/LiveMap';
+import { StaticRouteMap } from '@/components/maps/StaticRouteMap';
 
 interface TrackingData {
   id: number;
@@ -13,13 +15,19 @@ interface TrackingData {
   pickup_address: string;
   pickup_city: string;
   pickup_state: string;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
   pickup_date: string | null;
   delivery_address: string;
   delivery_city: string;
   delivery_state: string;
+  delivery_lat: number | null;
+  delivery_lng: number | null;
   delivery_date: string | null;
+  route_polyline: number[][] | null;
+  distance_miles: number | null;
   carrier_name?: string;
-  last_ping?: { lat: number; lng: number; recorded_at: string } | null;
+  latest_ping?: { lat: number; lng: number; pinged_at: string } | null;
 }
 
 const STATUS_STEPS = ['pending', 'assigned', 'in_transit', 'delivered'];
@@ -102,6 +110,30 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ token
           </div>
         </div>
 
+        {/* Map — live when in_transit, static otherwise */}
+        {shipment.pickup_lat && shipment.delivery_lat && (
+          <div className="rounded-2xl overflow-hidden border border-[var(--color-cream-dark)] shadow-sm">
+            {shipment.status === 'in_transit' && shipment.latest_ping ? (
+              <LiveMap
+                shipmentId={shipment.id}
+                initialCoordinates={{ lat: shipment.latest_ping.lat, lng: shipment.latest_ping.lng }}
+                pickupCoordinates={{ lat: shipment.pickup_lat!, lng: shipment.pickup_lng! }}
+                deliveryCoordinates={{ lat: shipment.delivery_lat!, lng: shipment.delivery_lng! }}
+                deliveryAddress={`${shipment.delivery_city}, ${shipment.delivery_state}`}
+                routePolyline={shipment.route_polyline ?? undefined}
+                className="h-[280px] w-full"
+              />
+            ) : (
+              <StaticRouteMap
+                pickup={{ lat: shipment.pickup_lat!, lng: shipment.pickup_lng! }}
+                delivery={{ lat: shipment.delivery_lat!, lng: shipment.delivery_lng! }}
+                routePolyline={shipment.route_polyline ?? undefined}
+                className="h-[200px] w-full"
+              />
+            )}
+          </div>
+        )}
+
         {/* Progress steps */}
         <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 shadow-sm">
           <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">Status</p>
@@ -139,15 +171,19 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ token
           </div>
         </div>
 
-        {/* Last known location */}
-        {shipment.last_ping && (
-          <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 shadow-sm">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">Last GPS ping</p>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {shipment.last_ping.lat.toFixed(5)}, {shipment.last_ping.lng.toFixed(5)}
-              {' · '}
-              <span className="text-[var(--color-text-faint)]">{formatDate(shipment.last_ping.recorded_at)}</span>
-            </p>
+        {/* Last GPS ping */}
+        {shipment.latest_ping && (
+          <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 shadow-sm flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-[var(--color-teal)] animate-pulse shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text)]">Live GPS</p>
+              <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                Updated {formatDate(shipment.latest_ping.pinged_at)}
+                {shipment.distance_miles && (
+                  <span> · {shipment.distance_miles.toFixed(0)} mi route</span>
+                )}
+              </p>
+            </div>
           </div>
         )}
 

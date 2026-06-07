@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useCallback } from 'react';
@@ -13,6 +13,7 @@ interface LiveMapProps {
   pickupCoordinates: GpsCoordinates;
   deliveryCoordinates: GpsCoordinates;
   deliveryAddress: string;
+  routePolyline?: number[][];   // [[lng, lat], ...] from OSRM — real road route
   eta?: string;
   className?: string;
 }
@@ -22,6 +23,7 @@ export function LiveMap({
   initialCoordinates,
   pickupCoordinates,
   deliveryCoordinates,
+  routePolyline,
   eta,
   className = 'h-[400px] w-full rounded-xl overflow-hidden',
 }: LiveMapProps) {
@@ -52,19 +54,21 @@ export function LiveMap({
       mapRef.current = map;
 
       map.on('load', () => {
+        // Use real road polyline if available, fall back to straight line
+        const routeCoords: number[][] = routePolyline && routePolyline.length > 0
+          ? routePolyline
+          : [
+              [pickupCoordinates.lng, pickupCoordinates.lat],
+              [initialCoordinates.lng, initialCoordinates.lat],
+              [deliveryCoordinates.lng, deliveryCoordinates.lat],
+            ];
+
         map.addSource('route', {
           type: 'geojson',
           data: {
             type: 'Feature',
             properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [pickupCoordinates.lng, pickupCoordinates.lat],
-                [initialCoordinates.lng, initialCoordinates.lat],
-                [deliveryCoordinates.lng, deliveryCoordinates.lat],
-              ],
-            },
+            geometry: { type: 'LineString', coordinates: routeCoords },
           },
         });
         map.addLayer({
@@ -72,7 +76,15 @@ export function LiveMap({
           paint: { 'line-color': '#2A8C8A', 'line-width': 3, 'line-dasharray': [2, 2] },
         });
 
-        // Live GPS marker (teal dot)
+        // Auto-fit to full route
+        const lngs = routeCoords.map(c => c[0]);
+        const lats  = routeCoords.map(c => c[1]);
+        map.fitBounds(
+          [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+          { padding: 60, maxZoom: 12 }
+        );
+
+        // Live GPS marker (teal pulsing dot)
         const el = document.createElement('div');
         el.style.cssText = `
           width:16px;height:16px;border-radius:50%;
@@ -84,15 +96,22 @@ export function LiveMap({
           .addTo(map);
         markerRef.current = gpsMarker;
 
-        // Delivery pin
-        const pin = document.createElement('div');
-        pin.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#0F1923;border:2px solid #fff;';
-        new ml.Marker({ element: pin })
+        // Pickup pin (teal)
+        const startEl = document.createElement('div');
+        startEl.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#2A8C8A;border:2px solid #fff;';
+        new ml.Marker({ element: startEl })
+          .setLngLat([pickupCoordinates.lng, pickupCoordinates.lat])
+          .addTo(map);
+
+        // Delivery pin (dark)
+        const endEl = document.createElement('div');
+        endEl.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#0F1923;border:2px solid #fff;';
+        new ml.Marker({ element: endEl })
           .setLngLat([deliveryCoordinates.lng, deliveryCoordinates.lat])
           .addTo(map);
       });
 
-      // Subscribe to GPS events
+      // Subscribe to live GPS events
       const echo = getEcho();
       channel = echo.private(`shipment.${shipmentId}`);
       channel.listen('GpsPingReceived', (e: GpsPingEvent) => {
