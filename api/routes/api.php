@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CarrierController;
 use App\Http\Controllers\Api\CarrierVerificationController;
+use App\Http\Controllers\Api\ClearinghouseController;
 use App\Http\Controllers\Api\StripeConnectController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\JobController;
@@ -28,6 +29,9 @@ Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 
 // ── Checkr webhook (public — Checkr signs it) ─────────────────────────
 Route::post('/checkr/webhook', [CarrierVerificationController::class, 'checkrWebhook']);
+
+// ── Clearinghouse webhook (public — FMCSA signs it) ───────────────────
+Route::post('/clearinghouse/webhook', [ClearinghouseController::class, 'webhook']);
 
 // ── Broadcasting auth ─────────────────────────────────────────────────
 Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
@@ -99,6 +103,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/carrier/verify/mc',          [CarrierVerificationController::class, 'verifyMc']);
     Route::post('/carrier/background-check',   [CarrierVerificationController::class, 'initiateBackgroundCheck']);
     Route::get('/carrier/verifications',       [CarrierVerificationController::class, 'index']);
+
+    // FMCSA Drug & Alcohol Clearinghouse
+    Route::post('/carrier/clearinghouse',         [ClearinghouseController::class, 'initiate']);
+    Route::get('/carrier/clearinghouse/status',   [ClearinghouseController::class, 'status']);
 
     Route::get('/carrier/documents',           [CarrierController::class, 'getDocuments']);
     Route::post('/carrier/documents',          [CarrierController::class, 'uploadDocument']);

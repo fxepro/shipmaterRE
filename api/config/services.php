@@ -49,4 +49,11 @@ return [
         'webhook_secret' => env('CHECKR_WEBHOOK_SECRET'),
     ],
 
+    'clearinghouse' => [
+        'url'            => env('CLEARINGHOUSE_API_URL', 'https://clearinghouse.fmcsa.dot.gov/api/v1'),
+        'api_key'        => env('CLEARINGHOUSE_API_KEY'),
+        'org_id'         => env('CLEARINGHOUSE_ORG_ID'),
+        'webhook_secret' => env('CLEARINGHOUSE_WEBHOOK_SECRET'),
+    ],
+
 ];

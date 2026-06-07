@@ -177,4 +177,6 @@ export const verificationApi = {
   identitySession:       () => api.post('/api/v1/stripe/identity/session'),
   initiateBackgroundCheck: () => api.post('/api/v1/carrier/background-check'),
   onboardingFee:           () => api.post('/api/v1/stripe/onboarding-fee'),
+  clearinghouseInitiate:   () => api.post('/api/v1/carrier/clearinghouse'),
+  clearinghouseStatus:     () => api.get('/api/v1/carrier/clearinghouse/status'),
 };

@@ -118,6 +118,11 @@ class CarrierController extends Controller
             'cargo_coverage_amount'   => $profile?->cargo_coverage_amount,
             'cargo_expiry_date'       => $profile?->cargo_expiry_date,
 
+            // Clearinghouse
+            'clearinghouse_query_status' => $profile?->clearinghouse_query_status ?? 'not_run',
+            'clearinghouse_queried_at'   => $profile?->clearinghouse_queried_at?->toISOString(),
+            'clearinghouse_completed_at' => $profile?->clearinghouse_completed_at?->toISOString(),
+
             // Stripe
             'stripe_account_id'       => $profile?->stripe_account_id,
             'stripe_account_status'   => $profile?->stripe_account_status ?? 'not_connected',

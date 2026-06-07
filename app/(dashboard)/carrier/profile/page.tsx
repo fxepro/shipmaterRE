@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, verificationApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import CertificationSelector from '@/components/carrier/CertificationSelector';
 import { certificationApi } from '@/lib/api';
@@ -191,7 +191,9 @@ export default function CarrierProfilePage() {
   const [identityLoading, setIdentityLoading] = useState(false);
 
   // Checkr background check state
-  const [bgCheckLoading, setBgCheckLoading] = useState(false);
+  const [bgCheckLoading, setBgCheckLoading]               = useState(false);
+  const [clearinghouseLoading, setClearinghouseLoading]   = useState(false);
+  const [clearinghouseRefreshing, setClearinghouseRefreshing] = useState(false);
 
   const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ['carrier-profile'],
@@ -1147,30 +1149,161 @@ export default function CarrierProfilePage() {
             )}
 
             {/* ── FMCSA Clearinghouse ──────────────────────────────────── */}
-            <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2">
-                    FMCSA Drug &amp; Alcohol Clearinghouse
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-200 text-yellow-800 uppercase tracking-wide">Federal Law</span>
-                  </p>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    Required by 49 CFR Part 382 for all CDL drivers. Checks federal drug and alcohol violation records from every prior employer.
-                  </p>
+            {(() => {
+              const chStatus = profile.clearinghouse_query_status ?? 'not_run';
+              const isClear      = chStatus === 'clear';
+              const isViolations = chStatus === 'violations_found';
+              const isPendingConsent = chStatus === 'pending_consent';
+              const isQuerying   = chStatus === 'querying';
+              const isError      = chStatus === 'error';
+              const canInitiate  = ['not_run', 'error'].includes(chStatus);
+
+              const statusConfig: Record<string, { label: string; bg: string; border: string; text: string }> = {
+                not_run:         { label: 'Not started',        bg: 'bg-yellow-50',  border: 'border-yellow-200', text: 'text-yellow-800' },
+                pending_consent: { label: 'Awaiting consent',   bg: 'bg-blue-50',    border: 'border-blue-200',   text: 'text-blue-800'   },
+                querying:        { label: 'Processing',          bg: 'bg-blue-50',    border: 'border-blue-200',   text: 'text-blue-800'   },
+                clear:           { label: 'No violations',       bg: 'bg-emerald-50', border: 'border-emerald-200','text': 'text-emerald-800' },
+                violations_found:{ label: 'Violations found',   bg: 'bg-red-50',     border: 'border-red-200',    text: 'text-red-800'    },
+                error:           { label: 'Error — retry',       bg: 'bg-orange-50',  border: 'border-orange-200', text: 'text-orange-800' },
+              };
+              const cfg = statusConfig[chStatus] ?? statusConfig['not_run'];
+
+              return (
+                <div className={`rounded-xl border ${cfg.border} ${cfg.bg} p-5 space-y-3`}>
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 flex-wrap">
+                        FMCSA Drug &amp; Alcohol Clearinghouse
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-200 text-yellow-800 uppercase tracking-wide">Federal Law · 49 CFR §382</span>
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        Required for all CDL drivers. Checks federal drug &amp; alcohol violations across every prior employer.
+                        Cost: $1.25 pre-employment query — covered by your platform fee.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Manual refresh when pending */}
+                      {['pending_consent', 'querying'].includes(chStatus) && (
+                        <button
+                          onClick={async () => {
+                            setClearinghouseRefreshing(true);
+                            try {
+                              await verificationApi.clearinghouseStatus();
+                              await refetch();
+                            } finally {
+                              setClearinghouseRefreshing(false);
+                            }
+                          }}
+                          disabled={clearinghouseRefreshing}
+                          className="p-1.5 rounded-lg hover:bg-white/60 text-[var(--color-text-muted)] transition-colors"
+                          title="Refresh status"
+                        >
+                          <RefreshCw size={13} className={clearinghouseRefreshing ? 'animate-spin' : ''} />
+                        </button>
+                      )}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.border} ${cfg.text} ${cfg.bg}`}>
+                        {isClear && <CheckCircle size={11} className="inline mr-1" />}
+                        {isViolations && <AlertCircle size={11} className="inline mr-1" />}
+                        {(isPendingConsent || isQuerying) && <Loader2 size={11} className="inline mr-1 animate-spin" />}
+                        {cfg.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Clear result */}
+                  {isClear && (
+                    <div className="flex items-center gap-2 text-emerald-700 text-sm font-medium">
+                      <CheckCircle size={15} />
+                      No drug or alcohol violations found
+                      {profile.clearinghouse_completed_at && (
+                        <span className="text-xs font-normal text-emerald-600 ml-1">
+                          · Verified {new Date(profile.clearinghouse_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Violations found */}
+                  {isViolations && (
+                    <div className="rounded-lg bg-white border border-red-200 p-3 text-xs text-red-800 space-y-1">
+                      <p className="font-semibold">Violations found on your Clearinghouse record</p>
+                      <p>Our team will review your record and contact you within 2 business days. You may dispute records directly at <a href="https://clearinghouse.fmcsa.dot.gov" target="_blank" rel="noopener noreferrer" className="underline">clearinghouse.fmcsa.dot.gov</a>.</p>
+                    </div>
+                  )}
+
+                  {/* Awaiting consent */}
+                  {isPendingConsent && (
+                    <div className="rounded-lg bg-white border border-blue-200 p-3 space-y-2 text-xs text-blue-900">
+                      <p className="font-semibold">Action required — grant consent on the FMCSA portal</p>
+                      <p>You should have received an email from FMCSA. Log in at the link below, find the pending consent request from Shipmater, and approve it.</p>
+                      <a
+                        href="https://clearinghouse.fmcsa.dot.gov"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 text-white px-4 py-2 font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        <ExternalLink size={11} /> Open FMCSA Clearinghouse Portal
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Processing */}
+                  {isQuerying && (
+                    <div className="flex items-center gap-2 text-blue-700 text-sm">
+                      <Loader2 size={14} className="animate-spin" />
+                      Consent received — FMCSA is processing your report. Typically 1–3 business days.
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {isError && (
+                    <p className="text-xs text-orange-800">Query encountered an error. Click &quot;Run Query&quot; below to retry.</p>
+                  )}
+
+                  {/* How it works (when not yet run) */}
+                  {chStatus === 'not_run' && (
+                    <div className="rounded-lg bg-white border border-yellow-200 p-3 space-y-1.5 text-xs text-[var(--color-text-muted)]">
+                      <p className="font-semibold text-[var(--color-text)] mb-1">How it works:</p>
+                      <div className="flex items-start gap-2"><span className="text-yellow-600 shrink-0">1.</span> We submit a query to FMCSA using your CDL number</div>
+                      <div className="flex items-start gap-2"><span className="text-yellow-600 shrink-0">2.</span> FMCSA emails you a consent request — you approve at clearinghouse.fmcsa.dot.gov</div>
+                      <div className="flex items-start gap-2"><span className="text-yellow-600 shrink-0">3.</span> FMCSA returns "no violations" or your violation history (1–3 days)</div>
+                      <div className="flex items-start gap-2"><span className="text-yellow-600 shrink-0">4.</span> Annual limited queries run automatically (free)</div>
+                    </div>
+                  )}
+
+                  {/* Initiate button */}
+                  {canInitiate && (
+                    <button
+                      disabled={clearinghouseLoading || !profile.cdl_number || !profile.cdl_issuing_state}
+                      title={!profile.cdl_number || !profile.cdl_issuing_state ? 'Add CDL number and state in the Commercial tab first' : ''}
+                      onClick={async () => {
+                        setClearinghouseLoading(true);
+                        try {
+                          const res = await verificationApi.clearinghouseInitiate();
+                          await refetch();
+                          toast.success(res.data.message ?? 'Clearinghouse query submitted — check your email for a consent request.');
+                        } catch (err: unknown) {
+                          const e = err as { response?: { data?: { error?: string; pending?: boolean } } };
+                          if (e?.response?.data?.pending) {
+                            toast.info('Clearinghouse integration is being finalised — you will be notified when it\'s ready.');
+                          } else {
+                            toast.error(e?.response?.data?.error ?? 'Failed to submit Clearinghouse query. Try again.');
+                          }
+                        } finally {
+                          setClearinghouseLoading(false);
+                        }
+                      }}
+                      className="flex items-center gap-2 rounded-lg bg-[var(--color-teal)] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[var(--color-teal-light)] disabled:opacity-40 transition-colors"
+                    >
+                      {clearinghouseLoading
+                        ? <><Loader2 size={13} className="animate-spin" /> Submitting…</>
+                        : isError ? 'Retry Query' : 'Run Clearinghouse Query'}
+                    </button>
+                  )}
                 </div>
-                <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 border border-yellow-300 text-yellow-800">
-                  Pending setup
-                </span>
-              </div>
-              <div className="rounded-lg bg-white border border-yellow-200 p-3 space-y-1.5 text-xs text-[var(--color-text-muted)]">
-                <p className="font-semibold text-[var(--color-text)] mb-1">What happens:</p>
-                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">1.</span> You register on <strong>clearinghouse.fmcsa.dot.gov</strong> and grant Shipmater query consent</div>
-                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">2.</span> We run a full query ($1.25 — covered by your platform fee)</div>
-                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">3.</span> Returns "no violations" or a full violation history</div>
-                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">4.</span> Annual limited queries are free and run automatically</div>
-              </div>
-              <p className="text-xs text-yellow-700">Integration coming soon — you will be notified when this step is ready.</p>
-            </div>
+              );
+            })()}
 
             {/* ── Run Checkr button ────────────────────────────────────── */}
             {['not_started', 'suspended'].includes(profile.background_check_status ?? 'not_started') && (

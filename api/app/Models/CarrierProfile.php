@@ -72,6 +72,13 @@ class CarrierProfile extends Model
         'onboarding_fee_paid',
         'onboarding_fee_payment_intent_id',
 
+        // FMCSA Drug & Alcohol Clearinghouse
+        'clearinghouse_query_id',
+        'clearinghouse_query_status',
+        'clearinghouse_queried_at',
+        'clearinghouse_completed_at',
+        'clearinghouse_result_data',
+
         // Dates
         'submitted_for_verification_at',
         'last_verification_at',
@@ -106,7 +113,10 @@ class CarrierProfile extends Model
             'hazmat_expiry_date'        => 'date',
             'dot_medical_expiry'        => 'date',
             'drug_test_date'            => 'date',
-            'stripe_verification_data'  => 'json',
+            'stripe_verification_data'    => 'json',
+            'clearinghouse_queried_at'    => 'datetime',
+            'clearinghouse_completed_at'  => 'datetime',
+            'clearinghouse_result_data'   => 'json',
         ];
     }
 
