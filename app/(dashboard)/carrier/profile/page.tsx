@@ -964,52 +964,134 @@ export default function CarrierProfilePage() {
         {/* ── BACKGROUND ────────────────────────────────────────────────── */}
         {activeTab === 'background' && (
           <div className="space-y-6">
-            <SectionTitle>Background Check</SectionTitle>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              We use Checkr to run criminal, MVR, OFAC, and sex offender registry checks. The following information is required to initiate.
-            </p>
+            <div>
+              <SectionTitle>Background Screening</SectionTitle>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                All carriers on Shipmater must pass a comprehensive background screen before platform access is granted.
+                Checks are run through <strong className="text-[var(--color-text)]">Checkr</strong> (criminal, MVR, watchlist, sex offender registry)
+                and the <strong className="text-[var(--color-text)]">FMCSA Drug &amp; Alcohol Clearinghouse</strong> (federal requirement for CDL holders).
+              </p>
+            </div>
 
-            {/* Prerequisites status */}
-            <div className="rounded-xl border border-[var(--color-cream-dark)] divide-y divide-[var(--color-cream-dark)]">
-              {[
-                { label: 'Legal name',                                              done: !!(profile.name) },
-                { label: "Driver's License number",                                  done: !!(profile.cdl_number) },
-                { label: 'Date of birth',                                           done: !!(profile.date_of_birth) },
-                { label: 'Home address',                                            done: !!(personalForm.street && personalForm.city) },
-                { label: 'Full SSN — collected securely by Checkr, never stored',  done: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  {item.done
-                    ? <CheckCircle size={16} className="text-[var(--color-success)] shrink-0" />
-                    : <Clock size={16} className="text-[var(--color-warning)] shrink-0" />}
-                  <span className={`text-sm ${item.done ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>{item.label}</span>
-                  {!item.done && <span className="ml-auto text-xs text-[var(--color-text-faint)]">Missing</span>}
+            {/* ── Check breakdown grid ─────────────────────────────────── */}
+            {(() => {
+              const bgStatus = profile.background_check_status;
+              const isDone   = bgStatus === 'clear';
+              const isFailed = bgStatus === 'suspended';
+              const isReview = bgStatus === 'consider';
+              const isPending = ['pending', 'invitation_sent'].includes(bgStatus ?? '');
+
+              const checks = [
+                {
+                  label: 'Criminal Background',
+                  detail: 'National, federal, and county-level criminal records',
+                  provider: 'Checkr',
+                },
+                {
+                  label: 'Motor Vehicle Record',
+                  detail: 'Driving history, violations, suspensions, DUI',
+                  provider: 'Checkr',
+                },
+                {
+                  label: 'Sex Offender Registry',
+                  detail: 'National sex offender registry — required for all carriers',
+                  provider: 'Checkr',
+                  highlight: true,
+                },
+                {
+                  label: 'OFAC / Watchlist',
+                  detail: 'Terrorist watchlist, sanctions, global watchlists',
+                  provider: 'Checkr',
+                },
+              ];
+
+              return (
+                <div className="rounded-xl border border-[var(--color-cream-dark)] divide-y divide-[var(--color-cream-dark)]">
+                  {checks.map((c) => (
+                    <div key={c.label} className={`flex items-center gap-4 px-4 py-3 ${c.highlight ? 'bg-[var(--color-cream-pale)]' : ''}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                        isDone   ? 'bg-emerald-100' :
+                        isFailed ? 'bg-red-100' :
+                        isReview ? 'bg-amber-100' :
+                        isPending ? 'bg-blue-50' :
+                        'bg-[var(--color-cream)]'
+                      }`}>
+                        {isDone   ? <CheckCircle size={14} className="text-emerald-600" /> :
+                         isFailed ? <AlertCircle size={14} className="text-red-500" /> :
+                         isReview ? <AlertCircle size={14} className="text-amber-500" /> :
+                         isPending ? <Loader2 size={13} className="text-blue-500 animate-spin" /> :
+                         <Clock size={13} className="text-[var(--color-text-faint)]" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text)]">{c.label}</p>
+                        <p className="text-xs text-[var(--color-text-muted)] truncate">{c.detail}</p>
+                      </div>
+                      <span className="text-xs text-[var(--color-text-faint)] shrink-0">{c.provider}</span>
+                    </div>
+                  ))}
+
+                  {/* Clearinghouse — separate federal check */}
+                  <div className="flex items-center gap-4 px-4 py-3 bg-yellow-50">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-yellow-100">
+                      <Clock size={13} className="text-yellow-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-[var(--color-text)]">Drug &amp; Alcohol Clearinghouse</p>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-yellow-200 text-yellow-800 uppercase tracking-wide">Federal — Required</span>
+                      </div>
+                      <p className="text-xs text-[var(--color-text-muted)]">FMCSA federal database — CDL drug/alcohol violations from all prior employers</p>
+                    </div>
+                    <span className="text-xs text-[var(--color-text-faint)] shrink-0">FMCSA</span>
+                  </div>
                 </div>
-              ))}
+              );
+            })()}
+
+            {/* ── Prerequisites ───────────────────────────────────────── */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-2">Required information</p>
+              <div className="rounded-xl border border-[var(--color-cream-dark)] divide-y divide-[var(--color-cream-dark)]">
+                {[
+                  { label: 'Legal name',                                             done: !!(profile.name) },
+                  { label: "Driver's license number",                                done: !!(profile.cdl_number) },
+                  { label: 'Date of birth',                                          done: !!(profile.date_of_birth) },
+                  { label: 'Home address',                                           done: !!(personalForm.street && personalForm.city) },
+                  { label: "Full SSN — entered directly on Checkr's secure form",   done: false, note: 'Collected by Checkr only' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                    {item.done
+                      ? <CheckCircle size={15} className="text-[var(--color-success)] shrink-0" />
+                      : <Clock size={15} className="text-[var(--color-warning)] shrink-0" />}
+                    <span className={`text-sm flex-1 ${item.done ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}>{item.label}</span>
+                    {item.note
+                      ? <span className="text-xs text-[var(--color-text-faint)]">{item.note}</span>
+                      : !item.done && <span className="text-xs text-[var(--color-text-faint)]">Missing</span>}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--color-cream-dark)] p-6">
-              <SectionTitle>What We Check</SectionTitle>
-              <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
-                <li className="flex items-start gap-2"><span className="text-[var(--color-teal)]">✓</span> Criminal background — national, federal, and county level</li>
-                <li className="flex items-start gap-2"><span className="text-[var(--color-teal)]">✓</span> Motor Vehicle Record (MVR) — driving history, violations, suspensions, DUI</li>
-                <li className="flex items-start gap-2"><span className="text-[var(--color-teal)]">✓</span> OFAC / Terrorist watchlist screening</li>
-                <li className="flex items-start gap-2"><span className="text-[var(--color-teal)]">✓</span> Sex offender registry</li>
-              </ul>
-            </div>
-
-            {/* Status panel — changes based on background_check_status */}
+            {/* ── Checkr status panel ──────────────────────────────────── */}
             {profile.background_check_status === 'clear' && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
-                <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-emerald-800">Background Check Passed</p>
-                  <p className="text-xs text-emerald-700 mt-0.5">All checks clear — criminal, MVR, OFAC, sex offender registry.</p>
-                  {profile.background_check_completed_at && (
-                    <p className="text-xs text-emerald-600 mt-1">
-                      Completed {new Date(profile.background_check_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  )}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Checkr Background Check — Passed</p>
+                    {profile.background_check_completed_at && (
+                      <p className="text-xs text-emerald-600 mt-0.5">
+                        Completed {new Date(profile.background_check_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {['Criminal — clear', 'MVR — clear', 'Sex offender registry — clear', 'OFAC / Watchlist — clear'].map(item => (
+                    <div key={item} className="flex items-center gap-1.5 text-xs text-emerald-700">
+                      <CheckCircle size={11} className="shrink-0" /> {item}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1018,8 +1100,8 @@ export default function CarrierProfilePage() {
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
                 <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">Background Check — Under Review</p>
-                  <p className="text-xs text-amber-700 mt-0.5">Results require manual review. Our team will follow up within 2 business days.</p>
+                  <p className="text-sm font-semibold text-amber-800">Under Manual Review</p>
+                  <p className="text-xs text-amber-700 mt-0.5">One or more results require a manual review. Our team will follow up within 2 business days.</p>
                 </div>
               </div>
             )}
@@ -1029,7 +1111,7 @@ export default function CarrierProfilePage() {
                 <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-red-800">Background Check — Not Passed</p>
-                  <p className="text-xs text-red-700 mt-0.5">Your background check did not meet the required criteria. Contact support if you believe this is an error.</p>
+                  <p className="text-xs text-red-700 mt-0.5">Your background check did not meet our requirements. Contact support@shipmater.com if you believe this is in error.</p>
                 </div>
               </div>
             )}
@@ -1038,8 +1120,8 @@ export default function CarrierProfilePage() {
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
                 <Loader2 size={18} className="text-blue-600 shrink-0 mt-0.5 animate-spin" />
                 <div>
-                  <p className="text-sm font-semibold text-blue-800">Background Check In Progress</p>
-                  <p className="text-xs text-blue-700 mt-0.5">Checkr is processing your report. Typically 3–5 business days.</p>
+                  <p className="text-sm font-semibold text-blue-800">Checkr Report In Progress</p>
+                  <p className="text-xs text-blue-700 mt-0.5">Processing your criminal, MVR, sex offender, and watchlist checks. Typically 3–5 business days.</p>
                 </div>
               </div>
             )}
@@ -1048,8 +1130,8 @@ export default function CarrierProfilePage() {
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
                 <Clock size={18} className="text-blue-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-blue-800">Action Required — Complete Your Background Check</p>
-                  <p className="text-xs text-blue-700 mt-0.5 mb-3">A secure link has been created. You'll enter your SSN directly on Checkr's form — we never see it.</p>
+                  <p className="text-sm font-semibold text-blue-800">Action Required — Complete the Checkr Form</p>
+                  <p className="text-xs text-blue-700 mt-0.5 mb-3">Enter your SSN directly on Checkr's secure form — we never see or store it.</p>
                   {profile.background_check_invitation_url && (
                     <a
                       href={profile.background_check_invitation_url}
@@ -1064,14 +1146,40 @@ export default function CarrierProfilePage() {
               </div>
             )}
 
-            {/* Run button — only shown when not yet started or failed */}
+            {/* ── FMCSA Clearinghouse ──────────────────────────────────── */}
+            <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2">
+                    FMCSA Drug &amp; Alcohol Clearinghouse
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-200 text-yellow-800 uppercase tracking-wide">Federal Law</span>
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                    Required by 49 CFR Part 382 for all CDL drivers. Checks federal drug and alcohol violation records from every prior employer.
+                  </p>
+                </div>
+                <span className="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 border border-yellow-300 text-yellow-800">
+                  Pending setup
+                </span>
+              </div>
+              <div className="rounded-lg bg-white border border-yellow-200 p-3 space-y-1.5 text-xs text-[var(--color-text-muted)]">
+                <p className="font-semibold text-[var(--color-text)] mb-1">What happens:</p>
+                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">1.</span> You register on <strong>clearinghouse.fmcsa.dot.gov</strong> and grant Shipmater query consent</div>
+                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">2.</span> We run a full query ($1.25 — covered by your platform fee)</div>
+                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">3.</span> Returns "no violations" or a full violation history</div>
+                <div className="flex items-start gap-2"><span className="text-yellow-600 mt-0.5">4.</span> Annual limited queries are free and run automatically</div>
+              </div>
+              <p className="text-xs text-yellow-700">Integration coming soon — you will be notified when this step is ready.</p>
+            </div>
+
+            {/* ── Run Checkr button ────────────────────────────────────── */}
             {['not_started', 'suspended'].includes(profile.background_check_status ?? 'not_started') && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--color-cream-dark)]">
                 <div>
                   <p className="text-sm font-medium text-[var(--color-text)]">
-                    {profile.background_check_status === 'suspended' ? 'Re-run Background Check' : 'Run Background Check'}
+                    {profile.background_check_status === 'suspended' ? 'Re-run Checkr Background Check' : 'Start Checkr Background Check'}
                   </p>
-                  <p className="text-xs text-[var(--color-text-faint)] mt-0.5">Typically takes 3–5 business days</p>
+                  <p className="text-xs text-[var(--color-text-faint)] mt-0.5">Criminal · MVR · Sex offender registry · OFAC — results in 3–5 business days</p>
                 </div>
                 <button
                   disabled={bgCheckLoading || !profile.name || !profile.date_of_birth}
