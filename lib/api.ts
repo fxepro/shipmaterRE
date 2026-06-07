@@ -176,4 +176,5 @@ export const verificationApi = {
   list:                  () => api.get('/api/v1/carrier/verifications'),
   identitySession:       () => api.post('/api/v1/stripe/identity/session'),
   initiateBackgroundCheck: () => api.post('/api/v1/carrier/background-check'),
+  onboardingFee:           () => api.post('/api/v1/stripe/onboarding-fee'),
 };

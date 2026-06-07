@@ -9,6 +9,7 @@ import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, 
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import CertificationSelector from '@/components/carrier/CertificationSelector';
 import { certificationApi } from '@/lib/api';
+import { FinancialTab as FinancialTabComponent } from './components/tabs/FinancialTab';
 
 // ── FMCSA result type ────────────────────────────────────────────────────────
 interface FmcsaResult {
@@ -169,116 +170,7 @@ function SaveBar({ saved, onSave, isPending }: { saved: boolean; onSave: () => v
   );
 }
 
-// ── Financial Tab ─────────────────────────────────────────────────────────────
-
-function FinancialTab({ stripeStatus }: { stripeStatus: string }) {
-  const qc = useQueryClient();
-  const [connecting, setConnecting] = useState(false);
-
-  async function handleConnect() {
-    try {
-      setConnecting(true);
-      const res = await api.post('/api/v1/stripe/connect/onboard');
-      // Open Stripe Express in same tab — Stripe redirects back to return_url
-      window.location.href = res.data.url;
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || 'Failed to start Stripe onboarding';
-      alert(msg);
-      setConnecting(false);
-    }
-  }
-
-  async function handleRefreshStatus() {
-    try {
-      await api.get('/api/v1/stripe/connect/status');
-      qc.invalidateQueries({ queryKey: ['carrier-profile'] });
-    } catch { /* ignore */ }
-  }
-
-  const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    not_connected: { label: 'Not connected', color: 'text-[var(--color-text-faint)]', icon: <AlertCircle size={16} className="text-[var(--color-warning)]" /> },
-    pending:       { label: 'Verification pending', color: 'text-blue-700', icon: <Loader2 size={16} className="text-blue-500 animate-spin" /> },
-    verified:      { label: 'Connected & verified', color: 'text-[var(--color-success)]', icon: <CheckCircle size={16} className="text-[var(--color-success)]" /> },
-    restricted:    { label: 'Action required', color: 'text-red-700', icon: <AlertCircle size={16} className="text-red-500" /> },
-  };
-
-  const s = statusMap[stripeStatus] ?? statusMap.not_connected;
-
-  return (
-    <div className="space-y-6">
-      <SectionTitle>Stripe Connect — Bank Payouts</SectionTitle>
-
-      <div className="rounded-xl border border-[var(--color-cream-dark)] p-6 space-y-4">
-        {/* Status row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {s.icon}
-            <span className={`text-sm font-medium ${s.color}`}>{s.label}</span>
-          </div>
-          {stripeStatus !== 'not_connected' && (
-            <button onClick={handleRefreshStatus} className="text-xs text-[var(--color-teal)] hover:underline">
-              Refresh status
-            </button>
-          )}
-        </div>
-
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Link your bank account or debit card to receive payments from completed shipments.
-          Funds are held in escrow and released on delivery confirmation.
-          Stripe handles all payment processing and identity verification.
-        </p>
-
-        {/* What Stripe collects */}
-        <div className="rounded-lg bg-[var(--color-cream)] border border-[var(--color-cream-dark)] p-4 space-y-1.5 text-sm text-[var(--color-text-muted)]">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)] mb-2">Stripe will collect</p>
-          <div className="flex items-center gap-2"><CheckCircle size={14} className="text-[var(--color-teal)] shrink-0" /> Full SSN — for identity verification and 1099-NEC tax reporting</div>
-          <div className="flex items-center gap-2"><CheckCircle size={14} className="text-[var(--color-teal)] shrink-0" /> Bank account routing + account number (ACH) for standard payouts</div>
-          <div className="flex items-center gap-2"><CheckCircle size={14} className="text-[var(--color-teal)] shrink-0" /> Debit card — for instant payouts</div>
-          <div className="flex items-center gap-2"><CheckCircle size={14} className="text-[var(--color-teal)] shrink-0" /> Date of birth + address — for identity verification</div>
-        </div>
-
-        {stripeStatus === 'not_connected' && (
-          <button onClick={handleConnect} disabled={connecting}
-            className="flex items-center gap-2 rounded-lg bg-[var(--color-teal)] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[var(--color-teal-light)] disabled:opacity-60">
-            {connecting ? <><Loader2 size={14} className="animate-spin" /> Opening Stripe…</> : 'Connect Bank Account'}
-          </button>
-        )}
-
-        {stripeStatus === 'pending' && (
-          <button onClick={handleConnect} disabled={connecting}
-            className="flex items-center gap-2 rounded-lg border border-[var(--color-teal)] text-[var(--color-teal)] px-5 py-2.5 text-sm font-semibold hover:bg-[var(--color-teal-pale)] disabled:opacity-60">
-            {connecting ? <><Loader2 size={14} className="animate-spin" /> Opening Stripe…</> : 'Continue Stripe Setup'}
-          </button>
-        )}
-
-        {stripeStatus === 'restricted' && (
-          <button onClick={handleConnect} disabled={connecting}
-            className="flex items-center gap-2 rounded-lg bg-red-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-60">
-            {connecting ? <><Loader2 size={14} className="animate-spin" /> Opening Stripe…</> : 'Resolve Issues in Stripe'}
-          </button>
-        )}
-      </div>
-
-      <div className="border-t border-[var(--color-cream-dark)] pt-6">
-        <SectionTitle>1099-NEC Tax Reporting</SectionTitle>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          If you earn over $600 in a calendar year on Shipmater, we are required to issue a 1099-NEC.
-          Your full SSN is collected and stored securely by Stripe — never on our servers.
-        </p>
-        <div className={`mt-4 rounded-lg p-4 flex items-center gap-3 text-sm font-medium ${
-          stripeStatus === 'verified'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : 'bg-[var(--color-cream)] border border-[var(--color-cream-dark)] text-[var(--color-text-muted)]'
-        }`}>
-          {stripeStatus === 'verified'
-            ? <><CheckCircle size={16} className="text-[var(--color-success)]" /> Tax information collected — W-9 on file via Stripe</>
-            : <><AlertCircle size={16} className="text-[var(--color-warning)]" /> Complete Stripe Connect above — Stripe will collect your SSN and W-9 during that flow</>
-          }
-        </div>
-      </div>
-    </div>
-  );
-}
+// ── Financial Tab — see components/tabs/FinancialTab.tsx ─────────────────────
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -307,10 +199,19 @@ export default function CarrierProfilePage() {
     retry: false,
   });
 
-  // Handle Stripe Connect + Stripe Identity returns
+  // Handle Stripe Connect + Stripe Identity returns + tab deep-links
   useEffect(() => {
     const stripeResult   = searchParams.get('stripe');
     const identityResult = searchParams.get('identity');
+    const tabParam       = searchParams.get('tab') as Tab | null;
+
+    // Deep-link: ?tab=financial (or any valid tab)
+    const validTabs: Tab[] = ['personal', 'services', 'certifications', 'insurance', 'medical', 'financial', 'background', 'vehicles', 'dot'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+      router.replace('/carrier/profile');
+      return;
+    }
 
     if (stripeResult === 'success') {
       setActiveTab('financial');
@@ -1057,7 +958,7 @@ export default function CarrierProfilePage() {
 
         {/* ── FINANCIAL ─────────────────────────────────────────────────── */}
         {activeTab === 'financial' && (
-          <FinancialTab stripeStatus={profile.stripe_account_status} />
+          <FinancialTabComponent />
         )}
 
         {/* ── BACKGROUND ────────────────────────────────────────────────── */}
