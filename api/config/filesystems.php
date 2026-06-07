@@ -60,6 +60,23 @@ return [
             'report' => false,
         ],
 
+        // ── Cloudflare R2 ──────────────────────────────────────────────────
+        // R2 is S3-compatible — same driver, different endpoint.
+        // Files are private by default; served via signed URLs (1-hour expiry).
+        'r2' => [
+            'driver'                  => 's3',
+            'key'                     => env('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+            'secret'                  => env('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+            'region'                  => 'auto',
+            'bucket'                  => env('CLOUDFLARE_R2_BUCKET'),
+            'endpoint'                => env('CLOUDFLARE_R2_ENDPOINT'), // https://{account_id}.r2.cloudflarestorage.com
+            'url'                     => env('CLOUDFLARE_R2_URL'),      // public domain if bucket is public
+            'use_path_style_endpoint' => true,
+            'visibility'              => 'private',
+            'throw'                   => true,
+            'report'                  => false,
+        ],
+
     ],
 
     /*

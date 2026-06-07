@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\ServiceTypeRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CarrierController extends Controller
@@ -333,18 +334,31 @@ class CarrierController extends Controller
             'data' => $profile->documents()
                 ->orderBy('type')
                 ->get()
-                ->map(fn($d) => [
-                    'id'              => $d->id,
-                    'type'            => $d->type,
-                    'name'            => $d->name,
-                    'url'             => $d->url,
-                    'policy_number'   => $d->policy_number,
-                    'insurer_name'    => $d->insurer_name,
-                    'coverage_amount' => $d->coverage_amount,
-                    'effective_date'  => $d->effective_date?->toDateString(),
-                    'expiry_date'     => $d->expiry_date?->toDateString(),
-                    'verified_at'     => $d->verified_at?->toISOString(),
-                ]),
+                ->map(function ($d) {
+                    // Generate a signed URL (1-hour expiry) for private R2 objects.
+                    // Fall back to stored URL for legacy local-storage records.
+                    $url = $d->url;
+                    if ($d->url && !str_starts_with($d->url, 'http')) {
+                        try {
+                            $url = Storage::disk('r2')->temporaryUrl($d->url, now()->addHour());
+                        } catch (\Throwable) {
+                            $url = null;
+                        }
+                    }
+
+                    return [
+                        'id'              => $d->id,
+                        'type'            => $d->type,
+                        'name'            => $d->name,
+                        'url'             => $url,
+                        'policy_number'   => $d->policy_number,
+                        'insurer_name'    => $d->insurer_name,
+                        'coverage_amount' => $d->coverage_amount,
+                        'effective_date'  => $d->effective_date?->toDateString(),
+                        'expiry_date'     => $d->expiry_date?->toDateString(),
+                        'verified_at'     => $d->verified_at?->toISOString(),
+                    ];
+                }),
         ]);
     }
 
@@ -368,16 +382,19 @@ class CarrierController extends Controller
 
         $profile = $request->user()->carrierProfile()->firstOrCreate(['user_id' => $request->user()->id]);
 
-        // Store file — using local storage for now; swap for S3/Supabase in production
         $file = $request->file('document');
-        $path = $file->store("carrier-docs/{$profile->id}", 'public');
+        $path = $file->storeAs(
+            "carrier-docs/{$profile->id}",
+            time() . '_' . $file->getClientOriginalName(),
+            'r2'
+        );
 
         $doc = CarrierDocument::create([
             'carrier_profile_id' => $profile->id,
             'carrier_vehicle_id' => $validated['vehicle_id'] ?? null,
             'type'               => $validated['type'],
             'name'               => $validated['name'] ?? $file->getClientOriginalName(),
-            'url'                => asset('storage/' . $path),
+            'url'                => $path, // store R2 path, serve via signed URL
             'mime_type'          => $file->getMimeType(),
             'size'               => $file->getSize(),
             'policy_number'      => $validated['policy_number'] ?? null,
