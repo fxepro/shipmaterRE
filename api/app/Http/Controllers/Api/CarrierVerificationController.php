@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CarrierProfile;
 use App\Models\CarrierVerification;
 use App\Services\FmcsaService;
 use Illuminate\Http\JsonResponse;
@@ -92,14 +93,31 @@ class CarrierVerificationController extends Controller
             ['user_id' => $request->user()->id]
         );
 
-        // Store the raw MC number (normalise the "MC-" prefix)
         $profile->update([
-            'mc_number' => preg_replace('/\D/', '', $validated['mc_number']),
+            'mc_number'           => preg_replace('/\D/', '', $validated['mc_number']),
+            'mc_verified'         => $result['allowed_to_operate'],
+            'last_verification_at'=> now(),
         ]);
 
+        CarrierVerification::updateOrCreate(
+            [
+                'carrier_profile_id' => $profile->id,
+                'check_type'         => 'mc',
+            ],
+            [
+                'status'      => $result['allowed_to_operate'] ? 'passed' : 'failed',
+                'external_id' => preg_replace('/\D/', '', $validated['mc_number']),
+                'result_data' => $result,
+                'expires_at'  => now()->addDays(90),
+            ]
+        );
+
         return response()->json([
-            'data'    => $result,
-            'message' => 'MC number found in FMCSA records.',
+            'data'     => $result,
+            'verified' => $result['allowed_to_operate'],
+            'message'  => $result['allowed_to_operate']
+                ? 'MC number verified — carrier has active operating authority.'
+                : 'MC number found but operating authority is NOT active.',
         ]);
     }
 

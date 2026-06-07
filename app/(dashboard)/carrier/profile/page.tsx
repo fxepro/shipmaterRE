@@ -463,8 +463,9 @@ export default function CarrierProfilePage() {
         passenger_endorsement: profile.passenger_endorsement || false,
       });
 
-      // Restore last FMCSA verification results — no need to re-check every visit
+      // Restore last verification results — no need to re-check every visit
       if (profile.fmcsa_result) setDotResult(profile.fmcsa_result);
+      if (profile.mc_result)    setMcResult(profile.mc_result);
       setMedicalForm({
         medical_examiner_name: profile.medical_examiner_name || '',
         dot_medical_expiry: profile.dot_medical_expiry || '',
@@ -978,30 +979,69 @@ export default function CarrierProfilePage() {
                     >
                       {mcVerifying
                         ? <><Loader2 size={13} className="animate-spin" /> Checking…</>
-                        : <><ShieldCheck size={13} /> Verify MC</>}
+                        : profile.mc_verified && !mcVerifying
+                          ? <><CheckCircle size={13} /> Verified</>
+                          : <><ShieldCheck size={13} /> Verify MC</>}
                     </button>
                   </div>
+                  {profile.mc_verified && !mcResult && (
+                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                      <CheckCircle size={11} /> MC verified — active operating authority
+                    </p>
+                  )}
                 </div>
 
                 {/* FMCSA MC result panel */}
                 {mcResult && (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle size={15} className="text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-800">MC number found in FMCSA records</span>
-                      <span className="ml-auto text-xs text-[var(--color-text-faint)] flex items-center gap-1"><ExternalLink size={10} /> FMCSA</span>
+                  <div className={`rounded-xl border p-4 space-y-3 ${
+                    mcResult.allowed_to_operate
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : 'border-red-200 bg-red-50'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {mcResult.allowed_to_operate
+                          ? <CheckCircle size={15} className="text-emerald-600" />
+                          : <AlertCircle size={15} className="text-red-600" />}
+                        <span className={`text-sm font-semibold ${mcResult.allowed_to_operate ? 'text-emerald-800' : 'text-red-800'}`}>
+                          {mcResult.allowed_to_operate ? 'Active Operating Authority' : 'Operating Authority NOT Active'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-[var(--color-text-faint)] flex items-center gap-1 justify-end">
+                          <ExternalLink size={10} /> FMCSA SAFER
+                        </span>
+                        {profile.mc_checked_at && (
+                          <span className="text-xs text-[var(--color-text-faint)]">
+                            Checked {new Date(profile.mc_checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {profile.mc_expires_at && ` · expires ${new Date(profile.mc_expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
                       {mcResult.legal_name && (
                         <div><p className="text-[var(--color-text-faint)]">Legal Name</p><p className="font-medium text-[var(--color-text)]">{mcResult.legal_name}</p></div>
                       )}
                       {mcResult.operating_status && (
-                        <div><p className="text-[var(--color-text-faint)]">Status</p><p className="font-medium text-[var(--color-text)]">{mcResult.operating_status}</p></div>
+                        <div><p className="text-[var(--color-text-faint)]">Operating Status</p><p className="font-medium text-[var(--color-text)]">{mcResult.operating_status}</p></div>
                       )}
                       <div><p className="text-[var(--color-text-faint)]">DOT#</p><p className="font-medium text-[var(--color-text)]">{mcResult.dot_number}</p></div>
                       {(mcResult.city || mcResult.state) && (
                         <div><p className="text-[var(--color-text-faint)]">Location</p><p className="font-medium text-[var(--color-text)]">{[mcResult.city, mcResult.state].filter(Boolean).join(', ')}</p></div>
                       )}
+                      <div>
+                        <p className="text-[var(--color-text-faint)]">BIPD Insurance</p>
+                        <p className={`font-medium ${mcResult.bipd_insurance_on_file ? 'text-emerald-700' : 'text-red-700'}`}>
+                          {mcResult.bipd_insurance_on_file ? 'On File' : 'Not on File'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[var(--color-text-faint)]">Cargo Insurance</p>
+                        <p className={`font-medium ${mcResult.cargo_insurance_on_file ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {mcResult.cargo_insurance_on_file ? 'On File' : 'Not on File'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -66,7 +66,7 @@ class CarrierController extends Controller
             'identity_verified'       => (bool) ($profile?->identity_verified ?? false),
             'identity_verified_at'    => $profile?->identity_verified_at?->toISOString(),
 
-            // Last FMCSA verification results (so the UI can show them without re-checking)
+            // Last DOT/FMCSA verification result
             'fmcsa_result'            => $profile?->verifications
                                             ?->firstWhere('check_type', 'fmcsa')
                                             ?->result_data,
@@ -75,6 +75,18 @@ class CarrierController extends Controller
                                             ?->updated_at?->toISOString(),
             'fmcsa_expires_at'        => $profile?->verifications
                                             ?->firstWhere('check_type', 'fmcsa')
+                                            ?->expires_at?->toDateString(),
+
+            // Last MC verification result
+            'mc_verified'             => (bool) ($profile?->mc_verified ?? false),
+            'mc_result'               => $profile?->verifications
+                                            ?->firstWhere('check_type', 'mc')
+                                            ?->result_data,
+            'mc_checked_at'           => $profile?->verifications
+                                            ?->firstWhere('check_type', 'mc')
+                                            ?->updated_at?->toISOString(),
+            'mc_expires_at'           => $profile?->verifications
+                                            ?->firstWhere('check_type', 'mc')
                                             ?->expires_at?->toDateString(),
             'company_name'            => $profile?->company_name ?? '',
             'phone'                   => $profile?->phone ?? '',

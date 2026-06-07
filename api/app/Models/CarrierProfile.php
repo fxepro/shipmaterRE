@@ -42,6 +42,7 @@ class CarrierProfile extends Model
         'dl_expiry',
         'dot_number',
         'dot_verified',
+        'mc_verified',
         'insurance_verified',
         'auto_policy_number', 'auto_insurer_name', 'auto_coverage_amount',
         'auto_effective_date', 'auto_expiry_date',
@@ -83,6 +84,7 @@ class CarrierProfile extends Model
     {
         return [
             'dot_verified'              => 'boolean',
+            'mc_verified'               => 'boolean',
             'identity_verified'         => 'boolean',
             'identity_verified_at'      => 'datetime',
             'insurance_verified'        => 'boolean',
