@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CarrierProfile;
 use App\Models\CarrierVerification;
+use App\Services\CheckrService;
 use App\Services\FmcsaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CarrierVerificationController extends Controller
 {
-    public function __construct(private FmcsaService $fmcsa) {}
+    public function __construct(
+        private FmcsaService  $fmcsa,
+        private CheckrService $checkr,
+    ) {}
 
     // ── POST /api/v1/carrier/verify/dot ──────────────────────────────────────
     // Lookup a USDOT number against the live FMCSA SAFER database.
@@ -119,6 +123,117 @@ class CarrierVerificationController extends Controller
                 ? 'MC number verified — carrier has active operating authority.'
                 : 'MC number found but operating authority is NOT active.',
         ]);
+    }
+
+    // ── POST /api/v1/carrier/background-check ────────────────────────────────
+    // Initiate a Checkr background check via hosted invitation.
+    // Candidate enters their own SSN on Checkr's secure form — we never see it.
+
+    public function initiateBackgroundCheck(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isCarrier(), 403);
+
+        $user    = $request->user();
+        $profile = $user->carrierProfile;
+
+        if (!$profile || !$user->name || !$profile->date_of_birth) {
+            return response()->json([
+                'error' => 'Complete your name and date of birth in the Personal tab before running a background check.',
+            ], 422);
+        }
+
+        // Reuse existing candidate or create a new one
+        $candidateId = $profile->checkr_candidate_id;
+
+        if (!$candidateId) {
+            $parts     = explode(' ', trim($user->name), 2);
+            $candidate = $this->checkr->createCandidate([
+                'first_name' => $parts[0],
+                'last_name'  => $parts[1] ?? '',
+                'email'      => $user->email,
+                'dob'        => $profile->date_of_birth->format('Y-m-d'),
+            ]);
+
+            if (!$candidate) {
+                return response()->json(['error' => 'Failed to create Checkr candidate. Try again.'], 500);
+            }
+
+            $candidateId = $candidate['id'];
+            $profile->update(['checkr_candidate_id' => $candidateId]);
+        }
+
+        // Create a hosted invitation — candidate fills SSN on Checkr's own form
+        $invitation = $this->checkr->createInvitation($candidateId, 'driver_pro');
+
+        if (!$invitation) {
+            return response()->json(['error' => 'Failed to create background check invitation. Try again.'], 500);
+        }
+
+        $invitationUrl = $invitation['invitation_url'];
+
+        $profile->update(['background_check_status' => 'invitation_sent']);
+
+        CarrierVerification::updateOrCreate(
+            ['carrier_profile_id' => $profile->id, 'check_type' => 'background'],
+            [
+                'status'      => 'pending',
+                'external_id' => $candidateId,
+                'result_data' => ['invitation_url' => $invitationUrl, 'invitation_id' => $invitation['id']],
+            ]
+        );
+
+        return response()->json([
+            'invitation_url' => $invitationUrl,
+            'message'        => 'Background check initiated. Complete the secure form — results in 3–5 business days.',
+        ]);
+    }
+
+    // ── POST /api/v1/checkr/webhook ───────────────────────────────────────────
+    // Receives Checkr events (public route, signed with HMAC-SHA256).
+
+    public function checkrWebhook(Request $request): JsonResponse
+    {
+        $payload   = $request->getContent();
+        $signature = $request->header('X-Checkr-Signature') ?? '';
+
+        if (!$this->checkr->verifyWebhookSignature($payload, $signature)) {
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
+        $event = $request->json()->all();
+        $type  = $event['type'] ?? '';
+        $obj   = $event['data']['object'] ?? [];
+
+        if ($type === 'report.completed') {
+            $candidateId = $obj['candidate_id'] ?? null;
+            $reportId    = $obj['id'] ?? null;
+            $result      = $obj['result'] ?? 'consider'; // clear | consider | suspended
+
+            $profile = CarrierProfile::where('checkr_candidate_id', $candidateId)->first();
+
+            if ($profile) {
+                $profile->update([
+                    'checkr_report_id'        => $reportId,
+                    'background_check_status' => $result,
+                ]);
+
+                CarrierVerification::updateOrCreate(
+                    ['carrier_profile_id' => $profile->id, 'check_type' => 'background'],
+                    [
+                        'status'      => $result === 'clear' ? 'passed' : 'failed',
+                        'external_id' => $reportId,
+                        'result_data' => [
+                            'result'    => $result,
+                            'report_id' => $reportId,
+                            'turnaround_time' => $obj['turnaround_time'] ?? null,
+                            'completed_at'    => $obj['completed_at'] ?? null,
+                        ],
+                    ]
+                );
+            }
+        }
+
+        return response()->json(['received' => true]);
     }
 
     // ── GET /api/v1/carrier/verifications ────────────────────────────────────

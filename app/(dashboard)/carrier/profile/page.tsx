@@ -298,7 +298,10 @@ export default function CarrierProfilePage() {
   // Stripe Identity state
   const [identityLoading, setIdentityLoading] = useState(false);
 
-  const { data: profile, isLoading, isError } = useQuery({
+  // Checkr background check state
+  const [bgCheckLoading, setBgCheckLoading] = useState(false);
+
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ['carrier-profile'],
     queryFn: () => api.get('/api/v1/carrier/profile').then(r => r.data?.data),
     retry: false,
@@ -1094,20 +1097,107 @@ export default function CarrierProfilePage() {
               </ul>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Status</p>
-                <p className="text-xs text-[var(--color-text-faint)] mt-0.5">Typically takes 3–5 business days</p>
+            {/* Status panel — changes based on background_check_status */}
+            {profile.background_check_status === 'clear' && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
+                <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">Background Check Passed</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">All checks clear — criminal, MVR, OFAC, sex offender registry.</p>
+                  {profile.background_check_completed_at && (
+                    <p className="text-xs text-emerald-600 mt-1">
+                      Completed {new Date(profile.background_check_completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
               </div>
-              <button
-                disabled={!profile.name || !profile.date_of_birth || !profile.cdl_number}
-                className="rounded-lg bg-[var(--color-teal)] text-white px-5 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-[var(--color-teal-light)]"
-                title={!profile.name || !profile.date_of_birth || !profile.cdl_number ? 'Complete Personal and DOT tabs first' : 'Run background check'}
-                onClick={() => toast.info('Background check integration coming — Checkr API key required')}
-              >
-                Run Background Check
-              </button>
-            </div>
+            )}
+
+            {profile.background_check_status === 'consider' && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Background Check — Under Review</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Results require manual review. Our team will follow up within 2 business days.</p>
+                </div>
+              </div>
+            )}
+
+            {profile.background_check_status === 'suspended' && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">Background Check — Not Passed</p>
+                  <p className="text-xs text-red-700 mt-0.5">Your background check did not meet the required criteria. Contact support if you believe this is an error.</p>
+                </div>
+              </div>
+            )}
+
+            {profile.background_check_status === 'pending' && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+                <Loader2 size={18} className="text-blue-600 shrink-0 mt-0.5 animate-spin" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Background Check In Progress</p>
+                  <p className="text-xs text-blue-700 mt-0.5">Checkr is processing your report. Typically 3–5 business days.</p>
+                </div>
+              </div>
+            )}
+
+            {profile.background_check_status === 'invitation_sent' && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+                <Clock size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-blue-800">Action Required — Complete Your Background Check</p>
+                  <p className="text-xs text-blue-700 mt-0.5 mb-3">A secure link has been created. You'll enter your SSN directly on Checkr's form — we never see it.</p>
+                  {profile.background_check_invitation_url && (
+                    <a
+                      href={profile.background_check_invitation_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 text-white px-4 py-2 text-xs font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      <ExternalLink size={12} /> Open Checkr Form
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Run button — only shown when not yet started or failed */}
+            {['not_started', 'suspended'].includes(profile.background_check_status ?? 'not_started') && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)]">
+                    {profile.background_check_status === 'suspended' ? 'Re-run Background Check' : 'Run Background Check'}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-faint)] mt-0.5">Typically takes 3–5 business days</p>
+                </div>
+                <button
+                  disabled={bgCheckLoading || !profile.name || !profile.date_of_birth}
+                  className="flex items-center gap-2 rounded-lg bg-[var(--color-teal)] text-white px-5 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-[var(--color-teal-light)] transition-colors"
+                  title={!profile.name || !profile.date_of_birth ? 'Complete name and date of birth in Personal tab first' : ''}
+                  onClick={async () => {
+                    setBgCheckLoading(true);
+                    try {
+                      const res = await verificationApi.initiateBackgroundCheck();
+                      const { invitation_url } = res.data;
+                      await refetch();
+                      if (invitation_url) window.open(invitation_url, '_blank');
+                      toast.success('Background check initiated — complete the secure Checkr form.');
+                    } catch (err: unknown) {
+                      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+                      toast.error(msg ?? 'Failed to initiate background check. Try again.');
+                    } finally {
+                      setBgCheckLoading(false);
+                    }
+                  }}
+                >
+                  {bgCheckLoading
+                    ? <><Loader2 size={13} className="animate-spin" /> Starting…</>
+                    : 'Run Background Check'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

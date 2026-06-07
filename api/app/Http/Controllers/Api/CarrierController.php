@@ -99,7 +99,13 @@ class CarrierController extends Controller
 
             // Insurance
             'insurance_verified'      => (bool) ($profile?->insurance_verified ?? false),
-            'background_check_status' => $profile?->background_check_status ?? 'not_started',
+            'background_check_status'       => $profile?->background_check_status ?? 'not_started',
+            'background_check_invitation_url' => $profile?->verifications
+                                                    ?->firstWhere('check_type', 'background')
+                                                    ?->result_data['invitation_url'] ?? null,
+            'background_check_completed_at' => $profile?->verifications
+                                                    ?->firstWhere('check_type', 'background')
+                                                    ?->updated_at?->toISOString(),
             'auto_policy_number'      => $profile?->auto_policy_number,
             'auto_insurer_name'       => $profile?->auto_insurer_name,
             'auto_coverage_amount'    => $profile?->auto_coverage_amount,

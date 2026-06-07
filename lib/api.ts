@@ -167,12 +167,13 @@ export const profileApi = {
   updateCarrier: (data: Record<string, unknown>) => api.put('/api/v1/carrier/profile', data),
 };
 
-// ── Carrier Verification (FMCSA + Stripe Identity) ──────────────────────
+// ── Carrier Verification (FMCSA + Stripe Identity + Checkr) ─────────────
 export const verificationApi = {
-  verifyDot:       (dotNumber: string) =>
-                     api.post('/api/v1/carrier/verify/dot', { dot_number: dotNumber }),
-  verifyMc:        (mcNumber: string) =>
-                     api.post('/api/v1/carrier/verify/mc', { mc_number: mcNumber }),
-  list:            () => api.get('/api/v1/carrier/verifications'),
-  identitySession: () => api.post('/api/v1/stripe/identity/session'),
+  verifyDot:             (dotNumber: string) =>
+                           api.post('/api/v1/carrier/verify/dot', { dot_number: dotNumber }),
+  verifyMc:              (mcNumber: string) =>
+                           api.post('/api/v1/carrier/verify/mc', { mc_number: mcNumber }),
+  list:                  () => api.get('/api/v1/carrier/verifications'),
+  identitySession:       () => api.post('/api/v1/stripe/identity/session'),
+  initiateBackgroundCheck: () => api.post('/api/v1/carrier/background-check'),
 };

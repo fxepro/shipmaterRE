@@ -26,6 +26,9 @@ Route::post('/track/{token}', [TrackController::class, 'confirm']);
 // ── Stripe webhook (public — Stripe signs it) ──────────────────────────
 Route::post('/stripe/webhook', [StripeConnectController::class, 'webhook']);
 
+// ── Checkr webhook (public — Checkr signs it) ─────────────────────────
+Route::post('/checkr/webhook', [CarrierVerificationController::class, 'checkrWebhook']);
+
 // ── Broadcasting auth ─────────────────────────────────────────────────
 Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {
     return \Illuminate\Support\Facades\Broadcast::auth($request);
@@ -84,9 +87,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stripe Identity
     Route::post('/stripe/identity/session',    [StripeConnectController::class, 'identitySession']);
 
-    // Carrier verification (FMCSA live lookup)
+    // Carrier verification (FMCSA live lookup + Checkr background check)
     Route::post('/carrier/verify/dot',         [CarrierVerificationController::class, 'verifyDot']);
     Route::post('/carrier/verify/mc',          [CarrierVerificationController::class, 'verifyMc']);
+    Route::post('/carrier/background-check',   [CarrierVerificationController::class, 'initiateBackgroundCheck']);
     Route::get('/carrier/verifications',       [CarrierVerificationController::class, 'index']);
 
     Route::get('/carrier/documents',           [CarrierController::class, 'getDocuments']);
