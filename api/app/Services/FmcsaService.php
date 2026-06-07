@@ -71,8 +71,16 @@ class FmcsaService
         }
 
         $content  = $response->json('content');
+        Log::info('[FMCSA] MC raw content', ['content' => $content]);
+
         // MC endpoint returns content.Carrier (array or single object)
-        $carriers = $content['Carrier'] ?? null;
+        $carriers = $content['Carrier'] ?? $content['carrier'] ?? null;
+
+        // Some responses wrap in array at top level
+        if (!$carriers && is_array($content) && isset($content[0])) {
+            $carriers = array_map(fn($item) => $item['carrier'] ?? $item, $content);
+        }
+
         if (!$carriers) return null;
 
         // Normalise: single object vs array
@@ -82,6 +90,8 @@ class FmcsaService
 
         // Prefer the first one that is allowed to operate, else just take first
         $carrier = collect($carriers)->firstWhere('allowedToOperate', 'Y') ?? $carriers[0];
+
+        Log::info('[FMCSA] MC raw carrier', ['allowedToOperate' => $carrier['allowedToOperate'] ?? 'MISSING', 'operatingStatus' => $carrier['operatingStatus'] ?? 'MISSING']);
 
         return $this->format($carrier);
     }

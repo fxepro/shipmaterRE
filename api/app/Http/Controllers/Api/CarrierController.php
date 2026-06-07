@@ -234,6 +234,13 @@ class CarrierController extends Controller
         $serviceTypeKeys = $validated['service_type_keys'] ?? null;
         $profileData = array_diff_key($validated, array_flip(['name', 'email', 'service_type_keys']));
 
+        // Sanitize number-only fields — strip prefixes like "MC-", "DOT-", spaces
+        foreach (['mc_number', 'dot_number', 'usdot_number'] as $field) {
+            if (isset($profileData[$field]) && $profileData[$field] !== null) {
+                $profileData[$field] = preg_replace('/\D/', '', $profileData[$field]) ?: null;
+            }
+        }
+
         // Update profile table fields
         $profile = CarrierProfile::updateOrCreate(['user_id' => $user->id], $profileData ?: []);
 
