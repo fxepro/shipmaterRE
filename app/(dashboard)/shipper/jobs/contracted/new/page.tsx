@@ -513,8 +513,11 @@ export default function NewContractedJobPage() {
         </p>
       </div>
 
-      {/* ── Gateway — always visible until stepper starts ── */}
-      {step < 1 && (
+      {/* Step indicator — always visible */}
+      <StepIndicator current={step} />
+
+      {/* ── Step 0: Contract ── */}
+      {step === 0 && (
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">
             How do you want to proceed?
@@ -654,12 +657,9 @@ export default function NewContractedJobPage() {
         </div>
       )}
 
-      {/* ── Stepper — shown from step 1 onwards ── */}
+      {/* ── Steps 1-3 ── */}
       {step >= 1 && (
         <>
-          {/* Step indicator — Contract shown as done */}
-          <StepIndicator current={step} />
-
           {/* ── Step 1: Build ── */}
           {step === 1 && (
             <div className="space-y-5">
