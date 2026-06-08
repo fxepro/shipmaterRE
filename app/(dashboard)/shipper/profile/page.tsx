@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi, profileApi, orgApi } from '@/lib/api';
+import { PlaidLinkButton } from '@/components/payments/PlaidLinkButton';
 import {
   User, Building2, CreditCard, Bell, Zap,
   Camera, Check, ChevronDown, Plus, Trash2,
@@ -702,14 +703,19 @@ function PaymentTab() {
             </div>
           )}
         </div>
-        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-          <div className="flex items-center gap-2 mb-4">
+        {/* ACH via Plaid */}
+        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+          <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-teal-pale)]"><Shield size={14} className="text-[var(--color-teal)]" /></div>
-            <div><p className="text-sm font-semibold text-[var(--color-text)]">Stripe Connect</p><p className="text-xs text-[var(--color-text-faint)]">Escrow, instant payouts and automatic holds</p></div>
-            <span className="ml-auto rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Coming soon</span>
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)]">ACH bank transfer (Plaid)</p>
+              <p className="text-xs text-[var(--color-text-faint)]">Pay freight invoices directly from your bank account</p>
+            </div>
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">Funds are held in escrow when a shipment is assigned and released to the carrier upon delivery confirmation.</p>
-          <button disabled className="mt-4 w-full rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-faint)] cursor-not-allowed">Connect Stripe account</button>
+          <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+            Connect your bank account to pay via ACH. Funds are verified instantly via Plaid and held in escrow until delivery is confirmed.
+          </p>
+          <PlaidLinkButton />
         </div>
       </div>
     </>

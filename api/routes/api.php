@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CarrierController;
+use App\Http\Controllers\Api\PlaidController;
+use App\Http\Controllers\Api\ShipperPaymentController;
 use App\Http\Controllers\Api\CarrierVerificationController;
 use App\Http\Controllers\Api\ClearinghouseController;
 use App\Http\Controllers\Api\StripeConnectController;
@@ -70,8 +72,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Bids
     Route::get('/shipments/{shipment}/bids',  [BidController::class, 'index']);
     Route::post('/shipments/{shipment}/bids', [BidController::class, 'store']);
-    Route::put('/bids/{bid}/accept',          [BidController::class, 'accept']);
-
     // ── Carrier operational routes — requires approved status ─────────────
     Route::middleware('carrier.approved')->group(function () {
         Route::get('/jobs',               [JobController::class, 'index']);
@@ -162,4 +162,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/contracts',             [ContractController::class, 'store']);
     Route::put('/contracts/{contract}',   [ContractController::class, 'update']);
     Route::delete('/contracts/{contract}',[ContractController::class, 'destroy']);
+
+    // ── Freight payments (shipper) ─────────────────────────────────────────
+    // Step 1: create PaymentIntent before accepting a bid
+    Route::post('/bids/{bid}/payment-intent', [ShipperPaymentController::class, 'createIntent']);
+    // Step 2: accept bid (after Stripe confirms authorization)
+    Route::put('/bids/{bid}/accept',          [ShipperPaymentController::class, 'accept']);
+    // Direct payment for contracted / pre-agreed shipments
+    Route::post('/shipper/pay/{shipment}',    [ShipperPaymentController::class, 'payShipment']);
+
+    // ── Plaid / ACH bank connection (shipper) ──────────────────────────────
+    Route::get('/shipper/plaid/link-token',    [PlaidController::class, 'linkToken']);
+    Route::post('/shipper/plaid/exchange',     [PlaidController::class, 'exchange']);
+    Route::get('/shipper/plaid/status',        [PlaidController::class, 'status']);
+    Route::delete('/shipper/plaid/disconnect', [PlaidController::class, 'disconnect']);
 });

@@ -28,6 +28,7 @@ interface TrackingData {
   distance_miles: number | null;
   carrier_name?: string;
   latest_ping?: { lat: number; lng: number; pinged_at: string } | null;
+  tracking_token?: string;
 }
 
 const STATUS_STEPS = ['pending', 'assigned', 'in_transit', 'delivered'];
@@ -116,6 +117,7 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ token
             {shipment.status === 'in_transit' && shipment.latest_ping ? (
               <LiveMap
                 shipmentId={shipment.id}
+                trackingToken={shipment.tracking_token ?? token}
                 initialCoordinates={{ lat: shipment.latest_ping.lat, lng: shipment.latest_ping.lng }}
                 pickupCoordinates={{ lat: shipment.pickup_lat!, lng: shipment.pickup_lng! }}
                 deliveryCoordinates={{ lat: shipment.delivery_lat!, lng: shipment.delivery_lng! }}

@@ -30,6 +30,10 @@ class ShipperProfile extends Model
         'hazmat_reg_url', 'hazmat_reg_expiry',
         // Notifications
         'notif_email', 'notif_sms',
+        // Plaid / ACH
+        'plaid_access_token', 'plaid_item_id', 'plaid_account_id',
+        'bank_last4', 'bank_name', 'bank_institution_name',
+        'plaid_connected_at', 'stripe_bank_source_id',
     ];
 
     protected function casts(): array
@@ -46,6 +50,7 @@ class ShipperProfile extends Model
             'email_verified_at'    => 'datetime',
             'phone_verified_at'    => 'datetime',
             'ein_verified_at'      => 'datetime',
+            'plaid_connected_at'   => 'datetime',
         ];
     }
 

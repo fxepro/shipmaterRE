@@ -11,6 +11,7 @@ use App\Models\ServiceType;
 use App\Models\Shipment;
 use App\Models\User;
 use App\Services\GeocodingService;
+use App\Services\PaymentService;
 use App\Services\RoutingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -234,6 +235,9 @@ class ShipmentController extends Controller
             'pinged_at'   => now(),
         ]));
 
+        // Eager-set relationship so event can access tracking_token for public broadcast channel
+        $ping->setRelation('shipment', $shipment);
+
         if ($shipment->status === 'assigned') {
             $shipment->update(['status' => 'in_transit']);
         }
@@ -299,6 +303,11 @@ class ShipmentController extends Controller
             'delivered_at'       => now(),
             'delivery_photo_url' => $data['delivery_photo_url'] ?? null,
         ]);
+
+        // Capture payment and transfer to carrier's Stripe Connect account
+        if ($shipment->payment_intent_id && $shipment->payment_status === 'authorized') {
+            app(PaymentService::class)->captureAndTransfer($shipment);
+        }
 
         $shipment->load(['shipper', 'carrier.carrierProfile', 'receiver', 'latestPing']);
 

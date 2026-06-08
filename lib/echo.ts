@@ -1,21 +1,24 @@
-import Echo from 'laravel-echo';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Pusher from 'pusher-js';
 import { getStoredToken } from './api';
 
 declare global {
   interface Window {
-    Pusher: typeof Pusher;
-    Echo: Echo;
+    // NOTE: Window.Pusher is already declared as `unknown` by pusher-js — we
+    // only declare Echo here to avoid a duplicate-declaration TS error.
+    Echo: any;
   }
 }
 
-let echo: Echo | null = null;
+let echo: any = null;
 
-export function getEcho(): Echo {
+export async function getEcho(): Promise<any> {
   if (echo) return echo;
   if (typeof window === 'undefined') throw new Error('Echo is client-only');
 
-  window.Pusher = Pusher;
+  const { default: Echo } = await import('laravel-echo');
+  // Use a cast so we bypass the pusher-js Window.Pusher: unknown constraint
+  (window as any).Pusher = Pusher;
 
   echo = new Echo({
     broadcaster:       'reverb',
@@ -43,11 +46,12 @@ export function disconnectEcho(): void {
 }
 
 export type PingPayload = {
-  id:          number;
-  shipment_id: number;
-  lat:         number;
-  lng:         number;
-  speed:       number | null;
-  eta:         string | null;
-  pinged_at:   string;
+  id:            number;
+  shipment_id:   number;
+  lat:           number;
+  lng:           number;
+  speed:         number | null;
+  eta:           string | null;
+  state_crossed: string | null;
+  timestamp:     string;
 };

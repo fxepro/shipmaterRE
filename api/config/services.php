@@ -40,6 +40,12 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'plaid' => [
+        'client_id' => env('PLAID_CLIENT_ID'),
+        'secret'    => env('PLAID_SECRET'),
+        'env'       => env('PLAID_ENV', 'sandbox'),
+    ],
+
     'fmcsa' => [
         'key' => env('FMCSA_API_KEY'),
     ],

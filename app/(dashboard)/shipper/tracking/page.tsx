@@ -354,41 +354,49 @@ export default function LiveTrackingPage() {
 
   // ── Subscribe to Reverb WebSocket when a shipment is selected ──────
   useEffect(() => {
-    // Leave previous channel
+    // Leave previous channel synchronously before async setup
     if (channelRef.current) {
-      channelRef.current.stopListening('.ping.received');
+      channelRef.current.stopListening('.GpsPingReceived');
       channelRef.current = null;
     }
     if (!selectedId) return;
 
-    try {
-      const echo = getEcho();
-      const channel = echo.private(`shipment.${selectedId}`);
-      channel.listen('.ping.received', (payload: PingPayload) => {
-        // Inject the new ping directly into the query cache — no round-trip needed
-        qc.setQueryData(['live-shipment', selectedId], (old: any) => {
-          if (!old?.data?.data) return old;
-          return {
-            ...old,
-            data: {
-              ...old.data,
+    let destroyed = false;
+
+    (async () => {
+      try {
+        const echo = await getEcho();
+        if (destroyed) return;
+
+        const channel = echo.private(`shipment.${selectedId}`);
+        // broadcastAs() = 'GpsPingReceived' — leading dot bypasses Laravel namespace
+        channel.listen('.GpsPingReceived', (payload: PingPayload) => {
+          // Inject the new ping directly into the query cache — no round-trip needed
+          qc.setQueryData(['live-shipment', selectedId], (old: any) => {
+            if (!old?.data?.data) return old;
+            return {
+              ...old,
               data: {
-                ...old.data.data,
-                latest_ping: payload,
-                status: old.data.data.status === 'assigned' ? 'in_transit' : old.data.data.status,
+                ...old.data,
+                data: {
+                  ...old.data.data,
+                  latest_ping: payload,
+                  status: old.data.data.status === 'assigned' ? 'in_transit' : old.data.data.status,
+                },
               },
-            },
-          };
+            };
+          });
         });
-      });
-      channelRef.current = channel;
-    } catch {
-      // Reverb not running — fallback to polling (already set above)
-    }
+        channelRef.current = channel;
+      } catch {
+        // Reverb not running — fallback to polling (already set above)
+      }
+    })();
 
     return () => {
+      destroyed = true;
       if (channelRef.current) {
-        channelRef.current.stopListening('.ping.received');
+        channelRef.current.stopListening('.GpsPingReceived');
         channelRef.current = null;
       }
     };

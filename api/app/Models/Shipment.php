@@ -27,6 +27,7 @@ class Shipment extends Model
         'distance_miles', 'estimated_duration_mins',
         'agreed_cost', 'tracking_token',
         'delivered_at', 'delivery_photo_url', 'route_polyline',
+        'payment_intent_id', 'payment_status', 'platform_fee_cents', 'transfer_id',
     ];
 
     protected function casts(): array
@@ -45,6 +46,7 @@ class Shipment extends Model
             'weight_lbs'            => 'decimal:2',
             'distance_miles'        => 'decimal:2',
             'agreed_cost'           => 'decimal:2',
+            'platform_fee_cents'    => 'integer',
         ];
     }
 

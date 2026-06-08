@@ -18,26 +18,38 @@ class ShipmentPingReceived implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
+            // Private — for authenticated carrier dashboard / shipper dashboard
             new PrivateChannel("shipment.{$this->ping->shipment_id}"),
         ];
+
+        // Public — for the unauthenticated public tracking page (/track/{token})
+        $token = $this->ping->shipment?->tracking_token;
+        if ($token) {
+            $channels[] = new Channel("tracking.{$token}");
+        }
+
+        return $channels;
     }
 
+    // Keep the name aligned with what the frontend listens for.
+    // LiveMap: channel.listen('.GpsPingReceived', cb)  ← leading dot = bypass namespace
     public function broadcastAs(): string
     {
-        return 'ping.received';
+        return 'GpsPingReceived';
     }
 
     public function broadcastWith(): array
     {
         return [
-            'id'          => $this->ping->id,
-            'shipment_id' => $this->ping->shipment_id,
-            'lat'         => (float) $this->ping->lat,
-            'lng'         => (float) $this->ping->lng,
-            'speed'       => $this->ping->speed ? (float) $this->ping->speed : null,
-            'eta'         => $this->ping->eta,
-            'pinged_at'   => $this->ping->pinged_at?->toISOString(),
+            'id'            => $this->ping->id,
+            'shipment_id'   => $this->ping->shipment_id,
+            'lat'           => (float) $this->ping->lat,
+            'lng'           => (float) $this->ping->lng,
+            'speed'         => $this->ping->speed ? (float) $this->ping->speed : null,
+            'eta'           => $this->ping->eta,
+            'state_crossed' => null,   // computed & filled in future (reverse geocode delta)
+            'timestamp'     => $this->ping->pinged_at?->toISOString(),
         ];
     }
 }

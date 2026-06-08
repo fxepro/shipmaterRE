@@ -61,7 +61,7 @@ export const shipmentApi = {
   get:           (id: number) => api.get(`/api/v1/shipments/${id}`),
   create:        (data: Record<string, unknown>) => api.post('/api/v1/shipments', data),
   getBids:       (id: number) => api.get(`/api/v1/shipments/${id}/bids`),
-  ping:          (id: number, data: { lat: number; lng: number }) => api.post(`/api/v1/shipments/${id}/ping`, data),
+  ping:          (id: number, data: { lat: number; lng: number; speed?: number | null }) => api.post(`/api/v1/shipments/${id}/ping`, data),
   acceptOffer:   (id: number) => api.put(`/api/v1/shipments/${id}/accept-offer`),
   declineOffer:  (id: number) => api.put(`/api/v1/shipments/${id}/decline-offer`),
   start:         (id: number) => api.put(`/api/v1/shipments/${id}/start`),
@@ -72,9 +72,28 @@ export const shipmentApi = {
 // ── Bids ──────────────────────────────────────────────────────────────
 export const bidApi = {
   place:         (shipmentId: number, data: Record<string, unknown>) => api.post(`/api/v1/shipments/${shipmentId}/bids`, data),
-  accept:        (bidId: number) => api.put(`/api/v1/bids/${bidId}/accept`),
+  /** Step 1: create PaymentIntent for bid amount (returns client_secret) */
+  paymentIntent: (bidId: number) => api.post(`/api/v1/bids/${bidId}/payment-intent`),
+  /** Step 2: confirm bid acceptance after Stripe authorization */
+  accept:        (bidId: number, paymentIntentId: string) =>
+                   api.put(`/api/v1/bids/${bidId}/accept`, { payment_intent_id: paymentIntentId }),
   withdraw:      (bidId: number) => api.put(`/api/v1/bids/${bidId}/withdraw`),
   carrierOffers: (params?: Record<string, unknown>) => api.get('/api/v1/carrier/offers', { params }),
+};
+
+// ── Freight payments (shipper) ────────────────────────────────────────
+export const freightPaymentApi = {
+  /** Pay a contracted / direct-offer shipment (agreed_cost already set) */
+  payShipment: (shipmentId: number) => api.post(`/api/v1/shipper/pay/${shipmentId}`),
+};
+
+// ── Plaid / ACH bank connection (shipper) ─────────────────────────────
+export const plaidApi = {
+  linkToken:   () => api.get('/api/v1/shipper/plaid/link-token'),
+  exchange:    (data: { public_token: string; account_id: string; institution_name?: string }) =>
+                 api.post('/api/v1/shipper/plaid/exchange', data),
+  status:      () => api.get('/api/v1/shipper/plaid/status'),
+  disconnect:  () => api.delete('/api/v1/shipper/plaid/disconnect'),
 };
 
 // ── Jobs (carrier) ────────────────────────────────────────────────────
