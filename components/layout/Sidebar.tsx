@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, DollarSign, User,
   Truck, BarChart2, Users, AlertTriangle, LogOut, Route, MapPin, Building2, FileText,
-  Briefcase, PlusCircle, Radio, ClipboardList, BookOpen,
+  Briefcase, PlusCircle, Radio, ClipboardList, BookOpen, Warehouse,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/user';
@@ -31,26 +31,21 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
       ],
     },
     {
-      section: 'Open Market',
+      section: 'Jobs',
       items: [
-        { label: 'Post Job', href: '/shipper/jobs/new',    icon: PlusCircle    },
-        { label: 'My Jobs',  href: '/shipper/jobs',        icon: ClipboardList },
-        { label: 'Offers',   href: '/shipper/jobs/offers', icon: Radio         },
-      ],
-    },
-    {
-      section: 'Contracted',
-      items: [
-        { label: 'New Job',  href: '/shipper/jobs/contracted/new', icon: PlusCircle    },
-        { label: 'Jobs',     href: '/shipper/jobs/contracted',     icon: ClipboardList },
+        { label: 'Create Job',  href: '/shipper/jobs/new',          icon: PlusCircle    },
+        { label: 'My Jobs',     href: '/shipper/jobs',              icon: ClipboardList },
+        { label: 'Offers',      href: '/shipper/jobs/offers',       icon: Radio         },
+        { label: 'Contracted',  href: '/shipper/jobs/contracted',   icon: Briefcase     },
       ],
     },
     {
       section: 'Network',
       items: [
-        { label: 'Carriers',   href: '/shipper/carriers',   icon: Truck    },
-        { label: 'Contracts',  href: '/shipper/contracts',  icon: FileText },
-        { label: 'Locations',  href: '/shipper/locations',  icon: MapPin   },
+        { label: 'Carriers',            href: '/shipper/carriers',              icon: Truck     },
+        { label: 'Contracts',           href: '/shipper/contracts',             icon: FileText  },
+        { label: 'Pickup Addresses',    href: '/shipper/locations?type=pickup', icon: Warehouse },
+        { label: 'Delivery Addresses',  href: '/shipper/locations',             icon: Users     },
       ],
     },
     {

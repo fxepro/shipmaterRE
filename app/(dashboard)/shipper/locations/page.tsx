@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   MapPin, Plus, X, Search, ChevronDown, Warehouse, Users,
@@ -339,11 +340,20 @@ function LocationCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
-  const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('pickup');
+  const qc         = useQueryClient();
+  const params     = useSearchParams();
+  const initTab    = (params.get('type') === 'delivery' ? 'delivery' : 'pickup') as ActiveTab;
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initTab);
   const [search, setSearch]       = useState('');
   const [showAdd, setShowAdd]     = useState(false);
   const [editing, setEditing]     = useState<Location | null>(null);
+
+  // Sync tab if user navigates between the two sidebar links
+  useEffect(() => {
+    const t = params.get('type');
+    if (t === 'delivery') setActiveTab('delivery');
+    else if (t === 'pickup') setActiveTab('pickup');
+  }, [params]);
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['locations'],
