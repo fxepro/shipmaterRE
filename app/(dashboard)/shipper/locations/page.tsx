@@ -9,7 +9,6 @@ import {
   MapPin, Trash2, CheckCircle2, ArrowUpDown,
 } from 'lucide-react';
 import { locationApi } from '@/lib/api';
-import { formatDistanceToNow } from 'date-fns';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,10 +43,11 @@ const DAY_LABELS: Record<string, string> = {
   mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun',
 };
 
-function timeAgo(val: string | null): string {
+function fmtDate(val: string | null): string {
   if (!val) return '—';
-  try { return formatDistanceToNow(new Date(val), { addSuffix: true }); }
-  catch { return '—'; }
+  try {
+    return new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return '—'; }
 }
 
 // ── Sort icon ─────────────────────────────────────────────────────────────────
@@ -144,7 +144,7 @@ function LocationPanel({
             {!isNew && (
               <p className="text-xs text-[var(--color-text-faint)] mt-0.5 capitalize">
                 {init!.type} · Used {init!.usage_count}×
-                {init!.last_used_at && ` · Last used ${timeAgo(init!.last_used_at)}`}
+                {init!.last_used_at && ` · Last used ${fmtDate(init!.last_used_at)}`}
               </p>
             )}
           </div>
@@ -507,22 +507,22 @@ export default function LocationsPage() {
                   </th>
 
                   <th onClick={() => toggleSort('usage_count')}
-                    className={thCls('usage_count', 'w-[8%] text-right')}>
-                    <span className="flex items-center justify-end gap-1.5">
+                    className={thCls('usage_count', 'w-[8%] text-center')}>
+                    <span className="flex items-center justify-center gap-1.5">
                       Used <SortIcon field="usage_count" active={sortField} dir={sortDir} />
                     </span>
                   </th>
 
                   <th onClick={() => toggleSort('last_used_at')}
-                    className={thCls('last_used_at', 'w-[14%]')}>
-                    <span className="flex items-center gap-1.5">
+                    className={thCls('last_used_at', 'w-[14%] text-center')}>
+                    <span className="flex items-center justify-center gap-1.5">
                       Last used <SortIcon field="last_used_at" active={sortField} dir={sortDir} />
                     </span>
                   </th>
 
                   <th onClick={() => toggleSort('created_at')}
-                    className={thCls('created_at', 'w-[13%]')}>
-                    <span className="flex items-center gap-1.5">
+                    className={thCls('created_at', 'w-[13%] text-center')}>
+                    <span className="flex items-center justify-center gap-1.5">
                       Added <SortIcon field="created_at" active={sortField} dir={sortDir} />
                     </span>
                   </th>
@@ -582,20 +582,20 @@ export default function LocationsPage() {
                     </td>
 
                     {/* Used */}
-                    <td className="px-4 py-3.5 text-right">
-                      <span className={`font-semibold ${loc.usage_count > 0 ? 'text-[var(--color-teal)]' : 'text-[var(--color-text-faint)]'}`}>
+                    <td className="px-4 py-3.5 text-center">
+                      <span className={`font-semibold tabular-nums ${loc.usage_count > 0 ? 'text-[var(--color-teal)]' : 'text-[var(--color-text-faint)]'}`}>
                         {loc.usage_count}
                       </span>
                     </td>
 
                     {/* Last used */}
-                    <td className="px-4 py-3.5 text-xs text-[var(--color-text-faint)]">
-                      {timeAgo(loc.last_used_at)}
+                    <td className="px-4 py-3.5 text-xs text-center text-[var(--color-text-faint)]">
+                      {fmtDate(loc.last_used_at)}
                     </td>
 
                     {/* Added */}
-                    <td className="px-4 py-3.5 text-xs text-[var(--color-text-faint)]">
-                      {timeAgo(loc.created_at)}
+                    <td className="px-4 py-3.5 text-xs text-center text-[var(--color-text-faint)]">
+                      {fmtDate(loc.created_at)}
                     </td>
                   </tr>
                 ))}
