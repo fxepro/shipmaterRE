@@ -33,7 +33,7 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
     {
       section: 'Jobs',
       items: [
-        { label: 'Create Job',  href: '/shipper/jobs/new',          icon: PlusCircle    },
+        { label: 'Create Job',  href: '/shipper/jobs/contracted/new', icon: PlusCircle    },
         { label: 'My Jobs',     href: '/shipper/jobs',              icon: ClipboardList },
         { label: 'Offers',      href: '/shipper/jobs/offers',       icon: Radio         },
         { label: 'Contracted',  href: '/shipper/jobs/contracted',   icon: Briefcase     },
