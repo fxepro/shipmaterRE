@@ -501,7 +501,7 @@ export default function NewContractedJobPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
 
       {/* Page header */}
       <div>
@@ -513,27 +513,38 @@ export default function NewContractedJobPage() {
         </p>
       </div>
 
-      {/* ── Gateway ── */}
-      {gatewayMode === null && (
+      {/* ── Gateway — always visible until stepper starts ── */}
+      {step < 1 && (
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-[0.07em]">
+          <p className="text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">
             How do you want to proceed?
           </p>
+
           <div className="grid grid-cols-2 gap-4">
 
             {/* Present Contract */}
             <button
               onClick={() => setGatewayMode('present')}
-              className="group relative rounded-2xl border-2 border-[var(--color-cream-dark)] bg-[var(--color-white)] p-6 text-left hover:border-[var(--color-teal)] transition-all hover:shadow-md"
+              className={`group relative rounded-2xl border-2 bg-[var(--color-white)] p-6 text-left transition-all hover:shadow-md ${
+                gatewayMode === 'present'
+                  ? 'border-[var(--color-teal)] shadow-sm'
+                  : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]'
+              }`}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-teal-pale)] group-hover:bg-[var(--color-teal)] transition-colors mb-4">
-                <Briefcase size={22} className="text-[var(--color-teal)] group-hover:text-white transition-colors" />
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl mb-4 transition-colors ${
+                gatewayMode === 'present' ? 'bg-[var(--color-teal)]' : 'bg-[var(--color-teal-pale)] group-hover:bg-[var(--color-teal)]'
+              }`}>
+                <Briefcase size={22} className={`transition-colors ${
+                  gatewayMode === 'present' ? 'text-white' : 'text-[var(--color-teal)] group-hover:text-white'
+                }`} />
               </div>
               <p className="text-base font-bold text-[var(--color-text)]">Present Contract</p>
               <p className="mt-1 text-sm text-[var(--color-text-faint)] leading-snug">
                 Use an existing carrier contract. Rate and terms are already agreed.
               </p>
-              <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-[var(--color-teal)] opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className={`mt-4 flex items-center gap-1 text-sm font-semibold text-[var(--color-teal)] transition-opacity ${
+                gatewayMode === 'present' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}>
                 Select contract <ArrowRight size={14} />
               </div>
             </button>
@@ -556,110 +567,119 @@ export default function NewContractedJobPage() {
             </button>
 
           </div>
-        </div>
-      )}
 
-      {/* ── 4-step flow (Present Contract path) ── */}
-      {gatewayMode === 'present' && (
-        <>
-          {/* Step indicator */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setGatewayMode(null); setContractId(null); setStep(0); }}
-              className="flex items-center gap-1 text-xs text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"
-            >
-              <ChevronLeft size={13} /> Change
-            </button>
-            <StepIndicator current={step} />
-          </div>
+          {/* Contract list — expands inline when Present Contract selected */}
+          {gatewayMode === 'present' && (
+            <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-6 space-y-4">
+              <h2 className="text-sm font-semibold text-[var(--color-text)]">Select contract</h2>
 
-          {/* ── Step 1: Contract ── */}
-          {step === 0 && (
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-6 space-y-4">
-                <h2 className="text-base font-semibold text-[var(--color-text)]">Select contract</h2>
+              {contractsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse h-16 rounded-xl bg-[var(--color-cream)]" />
+                  ))}
+                </div>
+              ) : contracts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--color-cream-dark)] py-8 text-center">
+                  <FileText size={28} className="mx-auto text-[var(--color-cream-dark)] mb-2" />
+                  <p className="text-sm text-[var(--color-text-muted)]">No active contracts</p>
+                  <a href="/shipper/contracts" className="mt-2 inline-block text-sm font-semibold text-[var(--color-teal)] hover:underline">
+                    Create a contract first
+                  </a>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {contracts.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        setContractId(c.id);
+                        if (c.optimization_mode) setOptimMode(c.optimization_mode as any);
+                      }}
+                      className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
+                        contractId === c.id
+                          ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]'
+                          : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]'
+                      }`}
+                    >
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${contractId === c.id ? 'bg-[var(--color-teal)]' : 'bg-[var(--color-slate)]'}`}>
+                        <FileText size={15} className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-[var(--color-text)]">{c.carrier}</p>
+                        <p className="text-xs text-[var(--color-text-faint)]">{c.carrier_company} · {c.rate_type}{c.rate ? ` · $${c.rate}` : ''}</p>
+                      </div>
+                      {contractId === c.id && <Check size={16} className="shrink-0 text-[var(--color-teal)]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {contractsLoading ? (
-                  <div className="space-y-2">
-                    {[1,2].map(i => (
-                      <div key={i} className="animate-pulse h-16 rounded-xl bg-[var(--color-cream)]" />
-                    ))}
-                  </div>
-                ) : contracts.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--color-cream-dark)] py-8 text-center">
-                    <FileText size={28} className="mx-auto text-[var(--color-cream-dark)] mb-2" />
-                    <p className="text-sm text-[var(--color-text-muted)]">No active contracts</p>
-                    <a href="/shipper/contracts" className="mt-2 inline-block text-sm font-semibold text-[var(--color-teal)] hover:underline">
-                      Create a contract first
-                    </a>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {contracts.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => {
-                          setContractId(c.id);
-                          if (c.optimization_mode) setOptimMode(c.optimization_mode as any);
-                        }}
-                        className={`w-full flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
-                          contractId === c.id
+              {/* Optimisation mode — shown after contract picked */}
+              {contractId && (
+                <div>
+                  <label className={labelCls}>Route optimisation</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: 'shortest_route',  label: 'Shortest Route',  desc: 'Freely interleave pickups & dropoffs' },
+                      { value: 'cluster_pickups', label: 'Cluster Pickups', desc: 'All pickups first, then dropoffs'       },
+                    ] as const).map(opt => (
+                      <button key={opt.value} onClick={() => setOptimMode(opt.value)}
+                        className={`rounded-xl border p-3 text-left transition-all ${
+                          optimMode === opt.value
                             ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]'
                             : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]'
-                        }`}
-                      >
-                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${contractId === c.id ? 'bg-[var(--color-teal)]' : 'bg-[var(--color-slate)]'}`}>
-                          <FileText size={15} className="text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[var(--color-text)]">{c.carrier}</p>
-                          <p className="text-xs text-[var(--color-text-faint)]">{c.carrier_company} · {c.rate_type}{c.rate ? ` · $${c.rate}` : ''}</p>
-                        </div>
-                        {contractId === c.id && <Check size={16} className="text-[var(--color-teal)]" />}
+                        }`}>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">{opt.label}</p>
+                        <p className="text-xs text-[var(--color-text-faint)] mt-0.5">{opt.desc}</p>
                       </button>
                     ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {contractId && (
-                  <div>
-                    <label className={labelCls}>Route optimisation</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {([
-                        { value: 'shortest_route',  label: 'Shortest Route',  desc: 'Freely interleave pickups & dropoffs' },
-                        { value: 'cluster_pickups', label: 'Cluster Pickups', desc: 'All pickups first, then dropoffs'       },
-                      ] as const).map(opt => (
-                        <button key={opt.value} onClick={() => setOptimMode(opt.value)}
-                          className={`rounded-xl border p-3 text-left transition-all ${
-                            optimMode === opt.value
-                              ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]'
-                              : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]'
-                          }`}>
-                          <p className="text-sm font-semibold text-[var(--color-text)]">{opt.label}</p>
-                          <p className="text-xs text-[var(--color-text-faint)] mt-0.5">{opt.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end">
+              {/* Proceed button */}
+              <div className="flex justify-end pt-2 border-t border-[var(--color-cream-dark)]">
                 <button onClick={() => setStep(1)} disabled={!canProceedStep1}
                   className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all ${
                     canProceedStep1
                       ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
                       : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
                   }`}>
-                  Next: Build manifest <ChevronRight size={15} />
+                  Build manifest <ChevronRight size={15} />
                 </button>
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* ── Step 2: Build ── */}
+      {/* ── Stepper — shown from step 1 onwards ── */}
+      {step >= 1 && (
+        <>
+          {/* Step indicator — Contract shown as done */}
+          <StepIndicator current={step} />
+
+          {/* ── Step 1: Build ── */}
           {step === 1 && (
             <div className="space-y-5">
+              {/* Contract banner */}
+              {selectedContract && (
+                <div className="flex items-center gap-3 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-teal)]">
+                    <FileText size={13} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-[var(--color-text-faint)]">Contract</p>
+                    <p className="text-sm font-semibold text-[var(--color-text)]">{selectedContract.carrier} · {selectedContract.carrier_company}</p>
+                  </div>
+                  <button onClick={() => { setStep(0); setGatewayMode('present'); }}
+                    className="text-xs text-[var(--color-text-faint)] hover:text-[var(--color-teal)] transition-colors">
+                    Change
+                  </button>
+                </div>
+              )}
+
               <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
                 <h2 className="text-base font-semibold text-[var(--color-text)]">Job details</h2>
                 <div className="grid grid-cols-2 gap-3">
