@@ -18,14 +18,15 @@ return [
         ? explode(',', env('CORS_ALLOWED_ORIGINS'))
         : [
             'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:3002',
             'http://127.0.0.1:3000',
-            'http://127.0.0.1:3001',
-            'http://127.0.0.1:3002',
         ],
 
-    'allowed_origins_patterns' => [],
+    // Any localhost / LAN port during local dev (frontend is pinned to :3000).
+    'allowed_origins_patterns' => env('CORS_ALLOWED_ORIGINS') ? [] : [
+        '#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#',
+        '#^https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$#',
+        '#^https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$#',
+    ],
 
     'allowed_headers' => ['*'],
 

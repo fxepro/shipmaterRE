@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+/** Local API is always http://127.0.0.1:8000 — see package.json / api/composer.json serve script. */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: API_BASE_URL,
   withCredentials: false,
   headers: {
     Accept: 'application/json',
@@ -142,6 +145,29 @@ export const contractApi = {
   create:  (data: Record<string, unknown>) => api.post('/api/v1/contracts', data),
   update:  (id: number, data: Record<string, unknown>) => api.put(`/api/v1/contracts/${id}`, data),
   destroy: (id: number) => api.delete(`/api/v1/contracts/${id}`),
+};
+
+// ── Locations address book ────────────────────────────────────────────
+export const locationApi = {
+  list:    (params?: Record<string, unknown>) => api.get('/api/v1/locations', { params }),
+  create:  (data: Record<string, unknown>)    => api.post('/api/v1/locations', data),
+  update:  (id: number, data: Record<string, unknown>) => api.put(`/api/v1/locations/${id}`, data),
+  destroy: (id: number)                       => api.delete(`/api/v1/locations/${id}`),
+};
+
+// ── Freight jobs (contracted) ─────────────────────────────────────────
+export const freightJobApi = {
+  // Shipper
+  shipperList: (params?: Record<string, unknown>) => api.get('/api/v1/shipper/freight-jobs', { params }),
+  create:      (data: Record<string, unknown>)    => api.post('/api/v1/shipper/freight-jobs', data),
+  get:         (id: number)                       => api.get(`/api/v1/shipper/freight-jobs/${id}`),
+  optimise:    (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/optimise`),
+  post:        (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/post`),
+  // Carrier
+  carrierList: (params?: Record<string, unknown>) => api.get('/api/v1/carrier/freight-jobs', { params }),
+  carrierGet:  (id: number)                       => api.get(`/api/v1/carrier/freight-jobs/${id}`),
+  updateStop:  (jobId: number, stopId: number, data: Record<string, unknown>) =>
+                 api.patch(`/api/v1/carrier/freight-jobs/${jobId}/stops/${stopId}`, data),
 };
 
 // ── Blog ───────────────────────────────────────────────────────────────

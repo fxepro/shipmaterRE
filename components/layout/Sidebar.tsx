@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, DollarSign, User,
   Truck, BarChart2, Users, AlertTriangle, LogOut, Route, MapPin, Building2, FileText,
-  Briefcase, PlusCircle, Radio, ClipboardList,
+  Briefcase, PlusCircle, Radio, ClipboardList, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/user';
@@ -31,18 +31,38 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
       ],
     },
     {
-      section: 'Jobs',
+      section: 'Open Market',
       items: [
-        { label: 'Create Job', href: '/shipper/jobs/new',    icon: PlusCircle    },
-        { label: 'My Jobs',    href: '/shipper/jobs',        icon: ClipboardList },
-        { label: 'Offers',     href: '/shipper/jobs/offers', icon: Radio         },
+        { label: 'Post Job', href: '/shipper/jobs/new',    icon: PlusCircle    },
+        { label: 'My Jobs',  href: '/shipper/jobs',        icon: ClipboardList },
+        { label: 'Offers',   href: '/shipper/jobs/offers', icon: Radio         },
+      ],
+    },
+    {
+      section: 'Contracted',
+      items: [
+        { label: 'New Job',  href: '/shipper/jobs/contracted/new', icon: PlusCircle    },
+        { label: 'Jobs',     href: '/shipper/jobs/contracted',     icon: ClipboardList },
       ],
     },
     {
       section: 'Network',
       items: [
-        { label: 'Carriers',  href: '/shipper/carriers',  icon: Truck    },
-        { label: 'Contracts', href: '/shipper/contracts', icon: FileText },
+        { label: 'Carriers',   href: '/shipper/carriers',   icon: Truck    },
+        { label: 'Contracts',  href: '/shipper/contracts',  icon: FileText },
+        { label: 'Locations',  href: '/shipper/locations',  icon: MapPin   },
+      ],
+    },
+    {
+      section: 'Reports',
+      items: [
+        { label: 'Reports', href: '/shipper/reports', icon: BarChart2 },
+      ],
+    },
+    {
+      section: 'Resources',
+      items: [
+        { label: 'Resources', href: '/shipper/resources', icon: BookOpen },
       ],
     },
     {
@@ -64,6 +84,18 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
         { label: 'Available', href: '/carrier/jobs',    icon: Briefcase     },
         { label: 'My Jobs',   href: '/carrier/my-jobs', icon: ClipboardList },
         { label: 'Offers',    href: '/carrier/offers',  icon: Radio         },
+      ],
+    },
+    {
+      section: 'Reports',
+      items: [
+        { label: 'Reports', href: '/carrier/reports', icon: BarChart2 },
+      ],
+    },
+    {
+      section: 'Resources',
+      items: [
+        { label: 'Resources', href: '/carrier/resources', icon: BookOpen },
       ],
     },
     {

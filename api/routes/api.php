@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\CarrierVerificationController;
 use App\Http\Controllers\Api\ClearinghouseController;
 use App\Http\Controllers\Api\StripeConnectController;
 use App\Http\Controllers\Api\ContractController;
+use App\Http\Controllers\Api\FreightJobController;
+use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\PreferredCarrierController;
@@ -162,6 +164,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/contracts',             [ContractController::class, 'store']);
     Route::put('/contracts/{contract}',   [ContractController::class, 'update']);
     Route::delete('/contracts/{contract}',[ContractController::class, 'destroy']);
+
+    // ── Locations address book ────────────────────────────────────────────────
+    Route::get('/locations',              [LocationController::class, 'index']);
+    Route::post('/locations',             [LocationController::class, 'store']);
+    Route::put('/locations/{location}',   [LocationController::class, 'update']);
+    Route::delete('/locations/{location}',[LocationController::class, 'destroy']);
+
+    // ── Freight jobs (contracted work) ────────────────────────────────────────
+    Route::get('/shipper/freight-jobs',                              [FreightJobController::class, 'shipperIndex']);
+    Route::post('/shipper/freight-jobs',                             [FreightJobController::class, 'store']);
+    Route::get('/shipper/freight-jobs/{job}',                        [FreightJobController::class, 'show']);
+    Route::post('/shipper/freight-jobs/{job}/optimise',              [FreightJobController::class, 'optimise']);
+    Route::post('/shipper/freight-jobs/{job}/post',                  [FreightJobController::class, 'post']);
+
+    Route::get('/carrier/freight-jobs',                              [FreightJobController::class, 'carrierIndex']);
+    Route::get('/carrier/freight-jobs/{job}',                        [FreightJobController::class, 'show']);
+    Route::patch('/carrier/freight-jobs/{job}/stops/{stop}',         [FreightJobController::class, 'updateStop']);
 
     // ── Freight payments (shipper) ─────────────────────────────────────────
     // Step 1: create PaymentIntent before accepting a bid
