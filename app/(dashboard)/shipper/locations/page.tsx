@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  MapPin, Plus, X, Search, ChevronDown, Warehouse, Users,
-  Phone, Mail, Clock, Pencil, Trash2, Loader2, Star,
+  MapPin, Plus, Search, Warehouse, Users,
+  Phone, Clock, Pencil, Trash2, Loader2, Star,
+  X, Mail, ChevronRight, CheckCircle2,
 } from 'lucide-react';
 import { locationApi } from '@/lib/api';
 
@@ -38,66 +39,64 @@ const DAY_LABELS: Record<string, string> = {
   mon:'Mon', tue:'Tue', wed:'Wed', thu:'Thu', fri:'Fri', sat:'Sat', sun:'Sun',
 };
 
-// ── Location Form Modal ───────────────────────────────────────────────────────
+// ── Location Panel (overlay — slides in from right) ───────────────────────────
 
-function LocationModal({
-  initial,
+function LocationPanel({
+  location,
   defaultType,
   onClose,
 }: {
-  initial?: Location;
+  location: Location | 'new';
   defaultType: ActiveTab;
   onClose: () => void;
 }) {
-  const qc = useQueryClient();
-  const isEdit = !!initial;
+  const qc     = useQueryClient();
+  const isNew  = location === 'new';
+  const init   = isNew ? null : location as Location;
 
   const [form, setForm] = useState({
-    type:          initial?.type          ?? defaultType,
-    name:          initial?.name          ?? '',
-    contact_name:  initial?.contact_name  ?? '',
-    contact_phone: initial?.contact_phone ?? '',
-    contact_email: initial?.contact_email ?? '',
-    address:       initial?.address       ?? '',
-    city:          initial?.city          ?? '',
-    state:         initial?.state         ?? '',
-    zip:           initial?.zip           ?? '',
-    notes:         initial?.notes         ?? '',
-    is_default:    initial?.is_default    ?? false,
+    type:          (init?.type          ?? defaultType) as LocationType,
+    name:          init?.name          ?? '',
+    contact_name:  init?.contact_name  ?? '',
+    contact_phone: init?.contact_phone ?? '',
+    contact_email: init?.contact_email ?? '',
+    address:       init?.address       ?? '',
+    city:          init?.city          ?? '',
+    state:         init?.state         ?? '',
+    zip:           init?.zip           ?? '',
+    notes:         init?.notes         ?? '',
+    is_default:    init?.is_default    ?? false,
     hours: DAYS.reduce((acc, d) => ({
       ...acc,
-      [d]: initial?.operating_hours?.[d] ?? '',
+      [d]: init?.operating_hours?.[d] ?? '',
     }), {} as Record<string, string>),
   });
 
-  const set = (k: keyof typeof form) => (v: string | boolean) =>
+  const set    = (k: keyof typeof form) => (v: string | boolean) =>
     setForm(f => ({ ...f, [k]: v }));
-
-  const setHour = (day: string, val: string) =>
-    setForm(f => ({ ...f, hours: { ...f.hours, [day]: val } }));
+  const setHr  = (d: string, v: string) =>
+    setForm(f => ({ ...f, hours: { ...f.hours, [d]: v } }));
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const hours = Object.fromEntries(
-        Object.entries(form.hours).filter(([, v]) => v.trim())
-      );
+      const hours = Object.fromEntries(Object.entries(form.hours).filter(([, v]) => v.trim()));
       const payload = {
-        type:          form.type,
-        name:          form.name,
-        contact_name:  form.contact_name  || null,
-        contact_phone: form.contact_phone || null,
-        contact_email: form.contact_email || null,
-        address:       form.address,
-        city:          form.city,
-        state:         form.state,
-        zip:           form.zip,
-        notes:         form.notes || null,
-        is_default:    form.is_default,
+        type:            form.type,
+        name:            form.name,
+        contact_name:    form.contact_name  || null,
+        contact_phone:   form.contact_phone || null,
+        contact_email:   form.contact_email || null,
+        address:         form.address,
+        city:            form.city,
+        state:           form.state,
+        zip:             form.zip,
+        notes:           form.notes         || null,
+        is_default:      form.is_default,
         operating_hours: Object.keys(hours).length ? hours : null,
       };
-      return isEdit
-        ? locationApi.update(initial!.id, payload)
-        : locationApi.create(payload);
+      return isNew
+        ? locationApi.create(payload)
+        : locationApi.update((init as Location).id, payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['locations'] });
@@ -105,61 +104,81 @@ function LocationModal({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => locationApi.destroy((init as Location).id),
+    onSuccess:  () => { qc.invalidateQueries({ queryKey: ['locations'] }); onClose(); },
+  });
+
   const valid = form.name && form.address && form.city && form.state && form.zip;
 
   const inputCls = 'w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20';
   const labelCls = 'block mb-1.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]';
+  const secHead  = (t: string) => (
+    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-teal)] border-b border-[var(--color-cream-dark)] pb-1.5 mb-3 mt-1">{t}</p>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-xl rounded-2xl bg-[var(--color-white)] shadow-2xl max-h-[92vh] flex flex-col">
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed right-0 top-0 z-50 h-full w-1/2 min-w-[520px] bg-[var(--color-cream)] shadow-2xl flex flex-col overflow-hidden">
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-cream-dark)]">
-          <h3 className="text-base font-semibold text-[var(--color-text)]">
-            {isEdit ? 'Edit location' : 'Add location'}
-          </h3>
-          <button onClick={onClose} className="rounded-lg p-2 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] transition-colors">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)]">
+          <div>
+            <p className="text-base font-semibold text-[var(--color-text)]">
+              {isNew ? 'Add location' : init!.name}
+            </p>
+            {!isNew && (
+              <p className="text-xs text-[var(--color-text-faint)] mt-0.5 capitalize">
+                {init!.type} address · Used {init!.usage_count}×
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] hover:text-[var(--color-text)] transition-colors"
+          >
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        {/* Scrollable form */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-          {/* Type */}
-          <div>
-            <label className={labelCls}>Location type</label>
-            <div className="flex gap-2">
-              {(['pickup','delivery','both'] as LocationType[]).map(t => (
-                <button
-                  key={t}
-                  onClick={() => set('type')(t)}
-                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-all ${
-                    form.type === t
-                      ? 'bg-[var(--color-teal)] text-white border-[var(--color-teal)]'
-                      : 'border-[var(--color-cream-dark)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]'
-                  }`}
-                >
-                  {t === 'pickup' ? 'Warehouse / Pickup' : t === 'delivery' ? 'Customer / Delivery' : 'Both'}
-                </button>
-              ))}
-            </div>
+          {secHead('Type')}
+          <div className="flex gap-2">
+            {(['pickup','delivery','both'] as LocationType[]).map(t => (
+              <button
+                key={t}
+                onClick={() => set('type')(t)}
+                className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold capitalize transition-all ${
+                  form.type === t
+                    ? 'bg-[var(--color-teal)] text-white border-[var(--color-teal)]'
+                    : 'border-[var(--color-cream-dark)] bg-[var(--color-white)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)]'
+                }`}
+              >
+                {t === 'pickup' ? 'Warehouse / Pickup' : t === 'delivery' ? 'Customer / Delivery' : 'Both'}
+              </button>
+            ))}
           </div>
 
-          {/* Name */}
-          <div>
-            <label className={labelCls}>Location name</label>
-            <input value={form.name} onChange={e => set('name')(e.target.value)}
-              placeholder={form.type === 'pickup' ? 'e.g. Chicago Warehouse A' : 'e.g. Milwaukee Customer'}
-              className={inputCls} />
-          </div>
+          {secHead('Location name')}
+          <input
+            value={form.name}
+            onChange={e => set('name')(e.target.value)}
+            placeholder={form.type === 'pickup' ? 'e.g. Chicago Warehouse A' : 'e.g. Milwaukee Customer'}
+            className={inputCls}
+          />
 
-          {/* Address */}
-          <div>
-            <label className={labelCls}>Address</label>
-            <input value={form.address} onChange={e => set('address')(e.target.value)}
-              placeholder="Street address" className={inputCls} />
-          </div>
+          {secHead('Address')}
+          <input value={form.address} onChange={e => set('address')(e.target.value)}
+            placeholder="Street address" className={inputCls} />
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-1">
               <label className={labelCls}>City</label>
@@ -175,10 +194,10 @@ function LocationModal({
             </div>
           </div>
 
-          {/* Contact */}
+          {secHead('Contact')}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Contact name <span className="normal-case font-normal opacity-60">optional</span></label>
+              <label className={labelCls}>Name <span className="normal-case font-normal opacity-60">optional</span></label>
               <input value={form.contact_name} onChange={e => set('contact_name')(e.target.value)}
                 placeholder="Dock manager" className={inputCls} />
             </div>
@@ -189,35 +208,33 @@ function LocationModal({
             </div>
           </div>
 
-          {/* Operating hours */}
-          <div>
-            <label className={labelCls}>Operating hours <span className="normal-case font-normal opacity-60">optional</span></label>
-            <div className="grid grid-cols-7 gap-1">
-              {DAYS.map(d => (
-                <div key={d} className="text-center">
-                  <p className="text-[10px] font-semibold text-[var(--color-text-faint)] mb-1">{DAY_LABELS[d]}</p>
-                  <input
-                    value={form.hours[d]}
-                    onChange={e => setHour(d, e.target.value)}
-                    placeholder="08-17"
-                    className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-1 py-1.5 text-[10px] text-center focus:border-[var(--color-teal)] focus:outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="mt-1 text-[11px] text-[var(--color-text-faint)]">Format: 08-17 or 08:00-17:00</p>
+          {secHead('Operating Hours')}
+          <div className="grid grid-cols-7 gap-1">
+            {DAYS.map(d => (
+              <div key={d} className="text-center">
+                <p className="text-[10px] font-semibold text-[var(--color-text-faint)] mb-1">{DAY_LABELS[d]}</p>
+                <input
+                  value={form.hours[d]}
+                  onChange={e => setHr(d, e.target.value)}
+                  placeholder="08-17"
+                  className="w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-1 py-1.5 text-[10px] text-center focus:border-[var(--color-teal)] focus:outline-none"
+                />
+              </div>
+            ))}
           </div>
+          <p className="text-[11px] text-[var(--color-text-faint)]">Format: 08-17 or 08:00-17:00. Leave blank for closed.</p>
 
-          {/* Notes */}
-          <div>
-            <label className={labelCls}>Dock instructions / notes <span className="normal-case font-normal opacity-60">optional</span></label>
-            <textarea value={form.notes} onChange={e => set('notes')(e.target.value)}
-              rows={2} placeholder="e.g. Use Gate B, call ahead 30 min"
-              className={`${inputCls} resize-none`} />
-          </div>
+          {secHead('Notes')}
+          <textarea
+            value={form.notes}
+            onChange={e => set('notes')(e.target.value)}
+            rows={3}
+            placeholder="e.g. Use Gate B, call ahead 30 min, fragile only…"
+            className={`${inputCls} resize-none`}
+          />
 
           {/* Default toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-cream)] px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-3">
             <div>
               <p className="text-sm font-medium text-[var(--color-text)]">Set as default</p>
               <p className="text-xs text-[var(--color-text-faint)]">Pre-selected when building jobs</p>
@@ -235,53 +252,71 @@ function LocationModal({
               }`} />
             </button>
           </div>
+
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-[var(--color-cream-dark)] bg-[var(--color-cream)]">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] transition-colors">
-            Cancel
-          </button>
-          <button
-            onClick={() => saveMutation.mutate()}
-            disabled={!valid || saveMutation.isPending}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all ${
-              valid && !saveMutation.isPending
-                ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
-                : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
-            }`}
-          >
-            {saveMutation.isPending && <Loader2 size={13} className="animate-spin" />}
-            {isEdit ? 'Save changes' : 'Add location'}
-          </button>
+        <div className="shrink-0 border-t border-[var(--color-cream-dark)] bg-[var(--color-white)] px-6 py-4">
+          <div className="flex gap-3">
+            {!isNew && (
+              <button
+                onClick={() => { if (confirm('Delete this location?')) deleteMutation.mutate(); }}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] px-3.5 py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-red-300 hover:text-red-500 transition-colors disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                Delete
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => saveMutation.mutate()}
+              disabled={!valid || saveMutation.isPending}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                valid && !saveMutation.isPending
+                  ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
+                  : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
+              }`}
+            >
+              {saveMutation.isPending && <Loader2 size={13} className="animate-spin" />}
+              {isNew ? 'Add location' : 'Save changes'}
+            </button>
+          </div>
         </div>
+
       </div>
-    </div>
+    </>
   );
 }
 
-// ── Location Card ─────────────────────────────────────────────────────────────
+// ── Location Row ──────────────────────────────────────────────────────────────
 
-function LocationCard({
+function LocationRow({
   loc,
-  onEdit,
-  onDelete,
-  deleting,
+  onClick,
 }: {
   loc: Location;
-  onEdit: () => void;
-  onDelete: () => void;
-  deleting: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] p-4 flex gap-4 group hover:border-[var(--color-teal)] transition-colors">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-4 bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] px-5 py-4 text-left hover:border-[var(--color-teal)] hover:shadow-sm transition-all group"
+    >
+      {/* Icon */}
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-teal-pale)]">
-        {loc.type === 'pickup' || loc.type === 'both'
-          ? <Warehouse size={18} className="text-[var(--color-teal)]" />
-          : <Users size={18} className="text-[var(--color-teal)]" />
+        {loc.type !== 'delivery'
+          ? <Warehouse size={17} className="text-[var(--color-teal)]" />
+          : <Users     size={17} className="text-[var(--color-teal)]" />
         }
       </div>
 
+      {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-semibold text-[var(--color-text)] truncate">{loc.name}</p>
@@ -300,55 +335,41 @@ function LocationCard({
           {loc.address}, {loc.city}, {loc.state} {loc.zip}
         </p>
         <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-[var(--color-text-faint)]">
-          {loc.contact_name  && <span className="flex items-center gap-1"><Users size={10} />{loc.contact_name}</span>}
-          {loc.contact_phone && <span className="flex items-center gap-1"><Phone size={10} />{loc.contact_phone}</span>}
+          {loc.contact_name  && <span className="flex items-center gap-1"><Users size={10}/>{loc.contact_name}</span>}
+          {loc.contact_phone && <span className="flex items-center gap-1"><Phone size={10}/>{loc.contact_phone}</span>}
           {loc.operating_hours && Object.keys(loc.operating_hours).length > 0 && (
             <span className="flex items-center gap-1">
-              <Clock size={10} />
+              <Clock size={10}/>
               {Object.entries(loc.operating_hours).slice(0, 2).map(([d, h]) => `${DAY_LABELS[d]} ${h}`).join(', ')}
               {Object.keys(loc.operating_hours).length > 2 && '…'}
             </span>
           )}
           {loc.usage_count > 0 && (
-            <span className="text-[var(--color-teal)]">Used {loc.usage_count}×</span>
+            <span className="text-[var(--color-teal)] font-medium">Used {loc.usage_count}×</span>
           )}
         </div>
         {loc.notes && (
-          <p className="mt-1.5 text-xs text-[var(--color-text-faint)] italic truncate">{loc.notes}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-faint)] italic truncate">{loc.notes}</p>
         )}
       </div>
 
-      <div className="flex shrink-0 items-start gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="rounded-lg p-1.5 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] hover:text-[var(--color-teal)] transition-colors"
-        >
-          <Pencil size={13} />
-        </button>
-        <button
-          onClick={onDelete}
-          disabled={deleting}
-          className="rounded-lg p-1.5 text-[var(--color-text-faint)] hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40"
-        >
-          {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-        </button>
-      </div>
-    </div>
+      {/* Arrow */}
+      <ChevronRight size={16} className="shrink-0 text-[var(--color-text-faint)] opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
-  const qc         = useQueryClient();
-  const params     = useSearchParams();
-  const initTab    = (params.get('type') === 'delivery' ? 'delivery' : 'pickup') as ActiveTab;
-  const [activeTab, setActiveTab] = useState<ActiveTab>(initTab);
-  const [search, setSearch]       = useState('');
-  const [showAdd, setShowAdd]     = useState(false);
-  const [editing, setEditing]     = useState<Location | null>(null);
+  const qc      = useQueryClient();
+  const params  = useSearchParams();
 
-  // Sync tab if user navigates between the two sidebar links
+  const initTab = (params.get('type') === 'delivery' ? 'delivery' : 'pickup') as ActiveTab;
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initTab);
+  const [search,    setSearch]    = useState('');
+  const [panel,     setPanel]     = useState<Location | 'new' | null>(null);
+
   useEffect(() => {
     const t = params.get('type');
     if (t === 'delivery') setActiveTab('delivery');
@@ -363,28 +384,22 @@ export default function LocationsPage() {
   const all: Location[] = res?.data?.data ?? [];
 
   const filtered = all.filter(loc => {
-    const matchTab = loc.type === activeTab || loc.type === 'both';
-    const matchSearch = !search || [loc.name, loc.city, loc.address].some(
-      f => f?.toLowerCase().includes(search.toLowerCase())
-    );
+    const matchTab    = loc.type === activeTab || loc.type === 'both';
+    const matchSearch = !search || [loc.name, loc.city, loc.address, loc.contact_name]
+      .some(f => f?.toLowerCase().includes(search.toLowerCase()));
     return matchTab && matchSearch;
   });
 
   const pickupCount   = all.filter(l => l.type === 'pickup'   || l.type === 'both').length;
   const deliveryCount = all.filter(l => l.type === 'delivery' || l.type === 'both').length;
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => locationApi.destroy(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['locations'] }),
-  });
-
   return (
     <>
-      {(showAdd || editing) && (
-        <LocationModal
-          initial={editing ?? undefined}
+      {panel !== null && (
+        <LocationPanel
+          location={panel}
           defaultType={activeTab}
-          onClose={() => { setShowAdd(false); setEditing(null); }}
+          onClose={() => setPanel(null)}
         />
       )}
 
@@ -396,11 +411,11 @@ export default function LocationsPage() {
               Locations
             </h1>
             <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">
-              Saved warehouses and customer addresses — reusable across all jobs
+              Saved addresses reused across all jobs — warehouses and customers
             </p>
           </div>
           <button
-            onClick={() => setShowAdd(true)}
+            onClick={() => setPanel('new')}
             className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-colors"
           >
             <Plus size={15} /> Add location
@@ -410,8 +425,8 @@ export default function LocationsPage() {
         {/* Tabs */}
         <div className="flex items-center gap-1 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-1 w-fit">
           {([
-            { key: 'pickup'   as ActiveTab, label: 'Warehouses', icon: Warehouse, count: pickupCount   },
-            { key: 'delivery' as ActiveTab, label: 'Customers',  icon: Users,     count: deliveryCount },
+            { key: 'pickup'   as ActiveTab, label: 'Pickup Addresses',   icon: Warehouse, count: pickupCount   },
+            { key: 'delivery' as ActiveTab, label: 'Delivery Addresses', icon: Users,     count: deliveryCount },
           ]).map(({ key, label, icon: Icon, count }) => (
             <button
               key={key}
@@ -445,7 +460,7 @@ export default function LocationsPage() {
         {/* List */}
         {isLoading ? (
           <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="h-24 rounded-xl bg-[var(--color-cream)] animate-pulse" />
             ))}
           </div>
@@ -453,11 +468,14 @@ export default function LocationsPage() {
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-cream-dark)] py-16 text-center">
             <MapPin size={32} className="text-[var(--color-cream-dark)] mb-3" />
             <p className="text-sm font-medium text-[var(--color-text-muted)]">
-              {search ? 'No locations match your search' : `No ${activeTab === 'pickup' ? 'warehouses' : 'customers'} yet`}
+              {search
+                ? 'No locations match your search'
+                : `No ${activeTab === 'pickup' ? 'pickup addresses' : 'delivery addresses'} yet`
+              }
             </p>
             {!search && (
               <button
-                onClick={() => setShowAdd(true)}
+                onClick={() => setPanel('new')}
                 className="mt-3 text-sm font-semibold text-[var(--color-teal)] hover:underline"
               >
                 Add your first {activeTab === 'pickup' ? 'warehouse' : 'customer'}
@@ -465,14 +483,12 @@ export default function LocationsPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filtered.map(loc => (
-              <LocationCard
+              <LocationRow
                 key={loc.id}
                 loc={loc}
-                onEdit={() => setEditing(loc)}
-                onDelete={() => deleteMutation.mutate(loc.id)}
-                deleting={deleteMutation.isPending && deleteMutation.variables === loc.id}
+                onClick={() => setPanel(loc)}
               />
             ))}
           </div>
