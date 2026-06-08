@@ -12,7 +12,7 @@ class Location extends Model
         'contact_name', 'contact_phone', 'contact_email',
         'address', 'city', 'state', 'zip', 'country',
         'lat', 'lng', 'operating_hours', 'notes',
-        'is_default', 'usage_count',
+        'is_default', 'usage_count', 'last_used_at',
     ];
 
     protected function casts(): array
@@ -22,6 +22,7 @@ class Location extends Model
             'is_default'      => 'boolean',
             'lat'             => 'float',
             'lng'             => 'float',
+            'last_used_at'    => 'datetime',
         ];
     }
 
@@ -32,6 +33,9 @@ class Location extends Model
 
     public function incrementUsage(): void
     {
-        $this->increment('usage_count');
+        $this->update([
+            'usage_count'  => $this->usage_count + 1,
+            'last_used_at' => now(),
+        ]);
     }
 }
