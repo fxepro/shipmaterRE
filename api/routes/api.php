@@ -176,6 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shipper/freight-jobs',                             [FreightJobController::class, 'store']);
     Route::get('/shipper/freight-jobs/{job}',                        [FreightJobController::class, 'show']);
     Route::post('/shipper/freight-jobs/{job}/optimise',              [FreightJobController::class, 'optimise']);
+    Route::patch('/shipper/freight-jobs/{job}/billing',              [FreightJobController::class, 'saveBilling']);
     Route::post('/shipper/freight-jobs/{job}/post',                  [FreightJobController::class, 'post']);
 
     Route::get('/carrier/freight-jobs',                              [FreightJobController::class, 'carrierIndex']);

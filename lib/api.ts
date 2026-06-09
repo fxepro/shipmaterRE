@@ -162,6 +162,7 @@ export const freightJobApi = {
   create:      (data: Record<string, unknown>)    => api.post('/api/v1/shipper/freight-jobs', data),
   get:         (id: number)                       => api.get(`/api/v1/shipper/freight-jobs/${id}`),
   optimise:    (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/optimise`),
+  saveBilling: (id: number, data: Record<string, unknown>) => api.patch(`/api/v1/shipper/freight-jobs/${id}/billing`, data),
   post:        (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/post`),
   // Carrier
   carrierList: (params?: Record<string, unknown>) => api.get('/api/v1/carrier/freight-jobs', { params }),

@@ -15,7 +15,7 @@ class FreightJob extends Model
         'title', 'reference_number', 'special_instructions',
         'total_weight_lbs', 'status', 'optimization_mode',
         'route_distance_miles', 'route_duration_minutes',
-        'route_optimized_at', 'route_snapshot',
+        'route_optimized_at', 'route_snapshot', 'cost_breakdown',
         'payment_amount_cents', 'payment_status', 'posted_at',
     ];
 
@@ -23,6 +23,7 @@ class FreightJob extends Model
     {
         return [
             'route_snapshot'        => 'array',
+            'cost_breakdown'        => 'array',
             'route_optimized_at'    => 'datetime',
             'posted_at'             => 'datetime',
             'route_distance_miles'  => 'float',

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class JobStop extends Model
 {
     protected $fillable = [
-        'freight_job_id', 'location_id', 'stop_type', 'sequence', 'optimized_sequence',
+        'freight_job_id', 'location_id', 'name', 'stop_type', 'sequence', 'optimized_sequence',
         'contact_name', 'contact_phone',
         'address', 'city', 'state', 'zip',
         'lat', 'lng',

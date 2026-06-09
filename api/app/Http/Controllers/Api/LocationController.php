@@ -28,6 +28,10 @@ class LocationController extends Controller
             });
         }
 
+        if ($request->boolean('is_default')) {
+            $query->where('is_default', true);
+        }
+
         $locations = $query->orderByDesc('usage_count')->orderBy('name')->get();
 
         return response()->json(['data' => $locations]);

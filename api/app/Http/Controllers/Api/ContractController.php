@@ -43,8 +43,14 @@ class ContractController extends Controller
     // ── GET /contracts ────────────────────────────────────────────────────────
     public function index(Request $request): JsonResponse
     {
-        $contracts = Contract::with('carrier.carrierProfile')
-            ->where('shipper_id', $request->user()->id)
+        $query = Contract::with('carrier.carrierProfile')
+            ->where('shipper_id', $request->user()->id);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $contracts = $query
             ->orderByRaw("CASE status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 WHEN 'draft' THEN 2 ELSE 3 END")
             ->orderByDesc('created_at')
             ->get()

@@ -58,7 +58,7 @@ class FreightJobController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'contract_id'                            => 'required|exists:contracts,id',
+            'contract_id'                            => 'nullable|exists:contracts,id',
             'title'                                  => 'nullable|string|max:200',
             'reference_number'                       => 'nullable|string|max:100',
             'special_instructions'                   => 'nullable|string',
@@ -68,6 +68,7 @@ class FreightJobController extends Controller
             'stops.*.stop_type'                      => 'required|in:pickup,dropoff',
             'stops.*.sequence'                       => 'required|integer|min:1',
             'stops.*.location_id'                    => 'nullable|exists:locations,id',
+            'stops.*.name'                           => 'nullable|string|max:200',
             'stops.*.contact_name'                   => 'nullable|string|max:100',
             'stops.*.contact_phone'                  => 'nullable|string|max:20',
             'stops.*.address'                        => 'required|string',
@@ -90,20 +91,22 @@ class FreightJobController extends Controller
             'stops.*.items.*.sku'                    => 'nullable|string|max:100',
         ]);
 
-        $contract = Contract::findOrFail($data['contract_id']);
-        abort_if($contract->shipper_id !== $request->user()->id, 403);
+        $contract = $data['contract_id'] ? Contract::findOrFail($data['contract_id']) : null;
+        if ($contract) {
+            abort_if($contract->shipper_id !== $request->user()->id, 403);
+        }
 
         return DB::transaction(function () use ($data, $contract, $request) {
             $job = FreightJob::create([
-                'contract_id'          => $contract->id,
+                'contract_id'          => $contract?->id,
                 'shipper_id'           => $request->user()->id,
-                'carrier_id'           => $contract->carrier_id,
+                'carrier_id'           => $contract?->carrier_id,
                 'org_id'               => $request->user()->org_id ?? null,
                 'title'                => $data['title'] ?? null,
                 'reference_number'     => $data['reference_number'] ?? null,
                 'special_instructions' => $data['special_instructions'] ?? null,
                 'total_weight_lbs'     => $data['total_weight_lbs'] ?? null,
-                'optimization_mode'    => $data['optimization_mode'] ?? $contract->optimization_mode,
+                'optimization_mode'    => $data['optimization_mode'] ?? $contract?->optimization_mode ?? 'shortest_route',
                 'status'               => 'draft',
             ]);
 
@@ -113,6 +116,7 @@ class FreightJobController extends Controller
                 $stop = JobStop::create([
                     'freight_job_id'       => $job->id,
                     'location_id'          => $stopData['location_id'] ?? null,
+                    'name'                 => $stopData['name'] ?? null,
                     'stop_type'            => $stopData['stop_type'],
                     'sequence'             => $stopData['sequence'],
                     'contact_name'         => $stopData['contact_name'] ?? null,
@@ -192,6 +196,27 @@ class FreightJobController extends Controller
             'route_duration_minutes' => $result['duration_minutes'],
             'route_optimized_at'     => now(),
             'route_snapshot'         => $result,
+        ]);
+
+        $job->load('stops');
+        return response()->json(['data' => $job]);
+    }
+
+    // ── Save billing ─────────────────────────────────────────────────────────
+
+    public function saveBilling(Request $request, FreightJob $job): JsonResponse
+    {
+        abort_if($job->shipper_id !== $request->user()->id, 403);
+        abort_if($job->status !== 'draft', 422, 'Can only update billing on draft jobs.');
+
+        $data = $request->validate([
+            'payment_amount_cents' => 'required|integer|min:0',
+            'cost_breakdown'       => 'required|array',
+        ]);
+
+        $job->update([
+            'payment_amount_cents' => $data['payment_amount_cents'],
+            'cost_breakdown'       => $data['cost_breakdown'],
         ]);
 
         $job->load('stops');
