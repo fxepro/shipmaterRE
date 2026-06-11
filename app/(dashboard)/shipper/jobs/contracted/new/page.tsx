@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -728,17 +728,15 @@ export default function NewContractedJobPage() {
     enabled:  showContracts,
   });
 
-  // Default locations — fetched once when Build step is active
-  const { data: defaultPickupRes  } = useQuery({
+  // Default locations — pre-fetched on page load so they're ready when Build step opens
+  const { data: defaultPickupRes,   isFetching: pickupFetching  } = useQuery({
     queryKey: ['locations', 'default', 'pickup'],
     queryFn:  () => locationApi.list({ type: 'pickup',   is_default: true }),
-    enabled:  step === 1,
     staleTime: Infinity,
   });
   const { data: defaultDeliveryRes } = useQuery({
     queryKey: ['locations', 'default', 'delivery'],
     queryFn:  () => locationApi.list({ type: 'delivery', is_default: true }),
-    enabled:  step === 1,
     staleTime: Infinity,
   });
 
@@ -786,6 +784,35 @@ export default function NewContractedJobPage() {
   function removeStop(localId: string) {
     setStops(prev => prev.filter(s => s.localId !== localId));
   }
+
+  // ── Auto-init first pickup on Build step ───────────────────────────────────
+  // Waits until the default-pickup query has resolved (pickupFetching = false)
+  // so the stop is pre-filled with the default address if one exists.
+  useEffect(() => {
+    if (step !== 1 || stops.length > 0 || pickupFetching) return;
+    const d = defaultPickup;
+    setStops([{
+      localId:             uid(),
+      stopType:            'pickup',
+      sequence:            1,
+      locationId:          d?.id          ?? undefined,
+      name:                d?.name        ?? '',
+      address:             d?.address     ?? '',
+      city:                d?.city        ?? '',
+      state:               d?.state       ?? '',
+      zip:                 d?.zip         ?? '',
+      lat:                 d?.lat         ?? undefined,
+      lng:                 d?.lng         ?? undefined,
+      contactName:         d?.contact_name  ?? '',
+      contactPhone:        d?.contact_phone ?? '',
+      scheduledDate:       '',
+      windowStart:         '',
+      windowEnd:           '',
+      weightLbs:           '',
+      specialInstructions: '',
+      items:               [],
+    }]);
+  }, [step, defaultPickup, pickupFetching]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
