@@ -1,7 +1,30 @@
 import axios from 'axios';
 
-/** Local API is always http://127.0.0.1:8000 — see package.json / api/composer.json serve script. */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
+/**
+ * Production browser: same-origin /api/* (proxied by next.config rewrites).
+ * Local dev: http://127.0.0.1:8000 (or NEXT_PUBLIC_API_URL).
+ * Avoids baking a Railway URL into the client JS bundle.
+ */
+function resolveApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.startsWith('192.168.');
+    if (!isLocal) return '';
+  }
+
+  if (process.env.NEXT_PUBLIC_API_PROXY === 'true') return '';
+
+  return (
+    process.env.API_PROXY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    'http://127.0.0.1:8000'
+  );
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

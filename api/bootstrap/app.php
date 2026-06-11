@@ -15,10 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Pure Bearer-token API — no session, no CSRF.
-        $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
-        ]);
+        // CORS must run globally so OPTIONS preflight is handled before routing.
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 
         $middleware->alias([
             'carrier.approved' => \App\Http\Middleware\RequireCarrierApproval::class,
