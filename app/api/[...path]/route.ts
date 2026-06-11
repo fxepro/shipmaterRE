@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs'; // need Node.js fetch + Buffer, not Edge
+export const dynamic = 'force-dynamic'; // never cache — every request hits the backend
 
 const BACKEND = (
   process.env.API_PROXY_URL ??
@@ -48,6 +49,9 @@ async function proxy(
       method:  req.method,
       headers: reqHeaders,
       body:    body ? Buffer.from(body) : undefined,
+      // Prevent Next.js extended fetch from caching or deduplicating proxied
+      // requests — every call must reach the backend independently.
+      cache:   'no-store',
     });
   } catch (err) {
     console.error('[api-proxy] fetch error →', url, err);
