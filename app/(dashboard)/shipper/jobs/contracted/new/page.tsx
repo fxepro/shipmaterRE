@@ -1360,13 +1360,13 @@ export default function NewContractedJobPage() {
                     className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                     <ChevronLeft size={15} /> Prev
                   </button>
-                  <button onClick={() => setStep(3)} disabled={!optimised}
+                  <button onClick={() => setStep(jobType === 'open' ? 4 : 3)} disabled={!optimised}
                     className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all ${
                       optimised
                         ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
                         : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
                     }`}>
-                    Next: Billing <ChevronRight size={15} />
+                    {jobType === 'open' ? 'Next: Review' : 'Next: Billing'} <ChevronRight size={15} />
                   </button>
                 </div>
 
@@ -1376,6 +1376,33 @@ export default function NewContractedJobPage() {
 
           {/* ── Step 3: Billing ── */}
           {step === 3 && createdJob && (() => {
+            // Open-market jobs skip billing — carriers bid their own price.
+            if (jobType === 'open') {
+              return (
+                <div className="space-y-5">
+                  <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-8 text-center space-y-3">
+                    <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-xl bg-[var(--color-teal-pale)]">
+                      <Package size={22} className="text-[var(--color-teal)]" />
+                    </div>
+                    <p className="text-base font-bold text-[var(--color-text)]">Open market — no fixed price</p>
+                    <p className="text-sm text-[var(--color-text-faint)] max-w-sm mx-auto">
+                      Carriers will bid on this job. You review offers and accept the best one.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setStep(2)}
+                      className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+                      <ChevronLeft size={15} /> Prev
+                    </button>
+                    <button onClick={() => setStep(4)}
+                      className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-all">
+                      Next: Review <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             const billing = calcBilling(selectedContract, createdJob);
             return (
               <div className="space-y-5">
@@ -1621,15 +1648,15 @@ export default function NewContractedJobPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <button onClick={() => setStep(3)}
+                  <button onClick={() => setStep(jobType === 'open' ? 2 : 3)}
                     className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                     <ChevronLeft size={15} /> Prev
                   </button>
                   <button onClick={() => postMutation.mutate()} disabled={postMutation.isPending}
                     className="flex items-center gap-2 rounded-xl bg-[var(--color-teal)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-colors disabled:opacity-60">
                     {postMutation.isPending
-                      ? <><Loader2 size={13} className="animate-spin" /> Dispatching…</>
-                      : <><Send size={15} /> Dispatch to carrier</>
+                      ? <><Loader2 size={13} className="animate-spin" /> Posting…</>
+                      : <><Send size={15} /> {jobType === 'open' ? 'Post to market' : 'Dispatch to carrier'}</>
                     }
                   </button>
                 </div>
