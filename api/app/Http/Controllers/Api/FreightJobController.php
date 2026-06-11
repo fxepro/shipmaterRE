@@ -25,6 +25,8 @@ class FreightJobController extends Controller
             ->with(['contract', 'stops'])
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
             ->when($request->filled('contract_id'), fn($q) => $q->where('contract_id', $request->contract_id))
+            ->when($request->type === 'contracted', fn($q) => $q->whereNotNull('contract_id'))
+            ->when($request->type === 'open',       fn($q) => $q->whereNull('contract_id'))
             ->orderByDesc('created_at')
             ->get();
 

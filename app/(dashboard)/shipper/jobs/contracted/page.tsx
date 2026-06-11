@@ -33,7 +33,7 @@ export default function ContractedJobsPage() {
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['shipper-freight-jobs', filter],
-    queryFn:  () => freightJobApi.shipperList(filter !== 'all' ? { status: filter } : undefined),
+    queryFn:  () => freightJobApi.shipperList({ type: 'contracted', ...(filter !== 'all' && { status: filter }) }),
   });
 
   const jobs: any[] = res?.data?.data ?? [];
