@@ -66,7 +66,7 @@ class FreightJobController extends Controller
             'special_instructions'                   => 'nullable|string',
             'total_weight_lbs'                       => 'nullable|integer',
             'optimization_mode'                      => 'nullable|in:cluster_pickups,shortest_route',
-            'stops'                                  => 'required|array|min:2',
+            'stops'                                  => 'required|array|min:1',
             'stops.*.stop_type'                      => 'required|in:pickup,dropoff',
             'stops.*.sequence'                       => 'required|integer|min:1',
             'stops.*.location_id'                    => 'nullable|exists:locations,id',
@@ -163,7 +163,7 @@ class FreightJobController extends Controller
                 }
             }
 
-            $job->load('stops.pickupItems');
+            $job->load('stops.pickupItems.deliveryStop');
             return response()->json(['data' => $job], 201);
         });
     }
@@ -200,7 +200,7 @@ class FreightJobController extends Controller
             'route_snapshot'         => $result,
         ]);
 
-        $job->load('stops');
+        $job->load('stops.pickupItems.deliveryStop');
         return response()->json(['data' => $job]);
     }
 
@@ -221,7 +221,7 @@ class FreightJobController extends Controller
             'cost_breakdown'       => $data['cost_breakdown'],
         ]);
 
-        $job->load('stops');
+        $job->load('stops.pickupItems.deliveryStop');
         return response()->json(['data' => $job]);
     }
 

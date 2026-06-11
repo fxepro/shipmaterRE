@@ -661,6 +661,7 @@ function RouteResult({ job }: { job: any }) {
   );
   return (
     <div className="space-y-3">
+      {/* Distance / duration stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-4 text-center">
           <p className="text-2xl font-bold text-[var(--color-slate)]">{job.route_distance_miles?.toFixed(0) ?? '—'}</p>
@@ -673,19 +674,55 @@ function RouteResult({ job }: { job: any }) {
           <p className="text-xs text-[var(--color-text-faint)] mt-0.5">est. drive time</p>
         </div>
       </div>
+
+      {/* Stop list with items */}
       <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] overflow-hidden">
-        {ordered.map((stop: any, i: number) => (
-          <div key={stop.id} className={`flex items-center gap-4 px-4 py-3 ${i < ordered.length - 1 ? 'border-b border-[var(--color-cream-dark)]' : ''}`}>
-            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${stop.stop_type === 'pickup' ? 'bg-[var(--color-teal)]' : 'bg-amber-500'}`}>
-              {i + 1}
+        {ordered.map((stop: any, i: number) => {
+          const isPickup = stop.stop_type === 'pickup';
+          return (
+            <div key={stop.id} className={`px-4 py-3.5 ${i < ordered.length - 1 ? 'border-b border-[var(--color-cream-dark)]' : ''}`}>
+              <div className="flex items-start gap-3">
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white mt-0.5 ${isPickup ? 'bg-[var(--color-teal)]' : 'bg-[var(--color-slate)]'}`}>
+                  {String.fromCharCode(65 + i)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[var(--color-text)] capitalize">
+                      {isPickup ? 'Pickup' : 'Dropoff'}{stop.name ? ` — ${stop.name}` : ''}
+                    </p>
+                    {stop.window_start && (
+                      <p className="shrink-0 text-xs text-[var(--color-text-faint)]">{stop.window_start} – {stop.window_end}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--color-text-faint)] truncate mt-0.5">{stop.address}, {stop.city}, {stop.state}</p>
+                  {stop.scheduled_date && (
+                    <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                      {new Date(stop.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                  {/* Items on pickup stops */}
+                  {isPickup && stop.pickup_items?.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {stop.pickup_items.map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-1.5 text-xs text-[var(--color-text-faint)]">
+                          <Package size={10} className="shrink-0 text-[var(--color-teal)]" />
+                          <span className="font-medium text-[var(--color-text-muted)]">{item.quantity}× {item.unit}</span>
+                          <span>— {item.description}</span>
+                          {item.delivery_stop && (
+                            <>
+                              <ArrowRight size={9} className="shrink-0" />
+                              <span>{item.delivery_stop.name || `${item.delivery_stop.city}, ${item.delivery_stop.state}`}</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--color-text)] capitalize">{stop.stop_type} — {stop.city}, {stop.state}</p>
-              <p className="text-xs text-[var(--color-text-faint)] truncate">{stop.address}</p>
-            </div>
-            {stop.window_start && <p className="shrink-0 text-xs text-[var(--color-text-faint)]">{stop.window_start}–{stop.window_end}</p>}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
