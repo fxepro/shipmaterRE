@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,16 +6,32 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Package, Truck } from 'lucide-react';
 import { authApi, setStoredToken } from '@/lib/api';
 import { getRolePath } from '@/lib/auth';
-type RegisterRole = 'shipper' | 'carrier' | 'receiver';
+
+const B = {
+  teal:     '#90E0EF',
+  tealDark: '#0096C7',
+  tealBg:   '#E0F7FA',
+  darkSec:  '#0A2E40',
+  darkCard: '#0A1520',
+  gray100:  '#161616',
+  gray70:   '#525252',
+  gray50:   '#8D8D8D',
+  gray10:   '#F4F4F4',
+  white:    '#FFFFFF',
+  red:      '#C0392B',
+  redBg:    '#FEF2F2',
+};
+const IBM = "'IBM Plex Sans', system-ui, sans-serif";
 
 const schema = z.object({
   name:                  z.string().min(2, 'Name is required'),
   email:                 z.string().email('Enter a valid email'),
   password:              z.string().min(8, 'At least 8 characters'),
   password_confirmation: z.string(),
-  role:                  z.enum(['shipper', 'carrier', 'receiver']),
+  role:                  z.enum(['shipper', 'carrier']),
   company_name:          z.string().optional(),
 }).refine((d) => d.password === d.password_confirmation, {
   message: "Passwords don't match",
@@ -24,11 +40,32 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const ROLES: { value: RegisterRole; label: string; description: string }[] = [
-  { value: 'shipper',  label: 'Shipper',  description: 'Post freight jobs and manage shipments' },
-  { value: 'carrier',  label: 'Carrier',  description: 'Bid on jobs and transport freight' },
-  { value: 'receiver', label: 'Receiver', description: 'Track incoming deliveries' },
+const ROLES = [
+  {
+    value:       'shipper' as const,
+    label:       'Shipper',
+    icon:        Package,
+    description: 'Post jobs, hire verified providers, track every delivery live.',
+  },
+  {
+    value:       'carrier' as const,
+    label:       'Carrier',
+    icon:        Truck,
+    description: 'Browse matching loads, bid or get hired direct, get paid fast.',
+  },
 ];
+
+const inputStyle = {
+  width: '100%',
+  fontFamily: IBM,
+  fontSize: 15,
+  color: B.gray100,
+  background: B.gray10,
+  border: '1px solid transparent',
+  borderRadius: 6,
+  padding: '10px 14px',
+  boxSizing: 'border-box' as const,
+};
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -55,114 +92,213 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-cream)] px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-            Create an account
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">Join Shipmater today</p>
-        </div>
+    <div style={{
+      fontFamily: IBM,
+      WebkitFontSmoothing: 'antialiased',
+      minHeight: '100vh',
+      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${B.darkSec} 100%)`,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 16px',
+    }}>
 
-        <div className="bg-[var(--color-white)] rounded-2xl border border-[var(--color-cream-dark)] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Role selection */}
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-2">
-                I am a…
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {ROLES.map((role) => (
-                  <button
-                    key={role.value}
-                    type="button"
-                    onClick={() => setValue('role', role.value)}
-                    className={`rounded-lg border p-3 text-left text-xs transition-all ${
-                      selectedRole === role.value
-                        ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)] text-[var(--color-teal)]'
-                        : 'border-[var(--color-cream-dark)] bg-[var(--color-cream)] text-[var(--color-text-muted)] hover:border-[var(--color-teal-light)]'
-                    }`}
-                  >
-                    <p className="font-medium">{role.label}</p>
-                    <p className="mt-0.5 text-xs opacity-70">{role.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Wordmark */}
+      <Link href="/" style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', marginBottom: 36 }}>
+        Shipmater
+      </Link>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">Full Name</label>
-                <input
-                  className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                  placeholder="Jane Smith"
-                  {...register('name')}
-                />
-                {errors.name && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">Company (optional)</label>
-                <input
-                  className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                  placeholder="Acme Logistics"
-                  {...register('company_name')}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">Email</label>
-              <input
-                type="email"
-                className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                placeholder="you@company.com"
-                {...register('email')}
-              />
-              {errors.email && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.email.message}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">Password</label>
-                <input
-                  type="password"
-                  className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                  placeholder="••••••••"
-                  {...register('password')}
-                />
-                {errors.password && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.password.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">Confirm Password</label>
-                <input
-                  type="password"
-                  className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                  placeholder="••••••••"
-                  {...register('password_confirmation')}
-                />
-                {errors.password_confirmation && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.password_confirmation.message}</p>}
-              </div>
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-lg bg-[var(--color-slate)] py-2.5 text-sm font-medium text-white hover:bg-[var(--color-slate-80)] disabled:opacity-60 transition-colors"
-            >
-              {isSubmitting ? 'Creating account…' : 'Create account'}
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
-          Already have an account?{' '}
-          <Link href="/login" className="font-medium text-[var(--color-teal)] hover:underline">Sign in</Link>
+      {/* Card */}
+      <div style={{
+        width: '100%',
+        maxWidth: 460,
+        background: B.white,
+        borderRadius: 10,
+        padding: '40px 36px',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.30)',
+      }}>
+        <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: 22, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
+          Create an account
+        </h1>
+        <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
+          Join Shipmater — free to get started
         </p>
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+
+          {/* Role selector */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 10 }}>
+              I am a…
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {ROLES.map(({ value, label, icon: Icon, description }) => {
+                const active = selectedRole === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setValue('role', value)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      padding: '14px 16px',
+                      borderRadius: 8,
+                      border: `2px solid ${active ? B.tealDark : B.gray10}`,
+                      background: active ? B.tealBg : B.gray10,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}
+                  >
+                    {/* Radio dot + icon row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        border: `2px solid ${active ? B.tealDark : B.gray50}`,
+                        background: active ? B.tealDark : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: B.white }} />}
+                      </div>
+                      <Icon size={16} color={active ? B.tealDark : B.gray50} />
+                    </div>
+                    <div>
+                      <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: 14, color: active ? B.tealDark : B.gray100, marginBottom: 2 }}>
+                        {label}
+                      </p>
+                      <p style={{ fontFamily: IBM, fontSize: 12, color: active ? B.tealDark : B.gray50, lineHeight: 1.5, opacity: active ? 0.85 : 1 }}>
+                        {description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Name + Company */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+                Full name
+              </label>
+              <input
+                style={inputStyle}
+                className="outline-none focus:border-[#0096C7]"
+                placeholder="Jane Smith"
+                {...register('name')}
+              />
+              {errors.name && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.name.message}</p>}
+            </div>
+            <div>
+              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+                Company <span style={{ color: B.gray50, fontWeight: 400 }}>(optional)</span>
+              </label>
+              <input
+                style={inputStyle}
+                className="outline-none focus:border-[#0096C7]"
+                placeholder="Acme Logistics"
+                {...register('company_name')}
+              />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              autoComplete="email"
+              style={inputStyle}
+              className="outline-none focus:border-[#0096C7]"
+              placeholder="you@company.com"
+              {...register('email')}
+            />
+            {errors.email && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>}
+          </div>
+
+          {/* Password + Confirm */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+            <div>
+              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+                Password
+              </label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                style={inputStyle}
+                className="outline-none focus:border-[#0096C7]"
+                placeholder="••••••••"
+                {...register('password')}
+              />
+              {errors.password && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>}
+            </div>
+            <div>
+              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+                Confirm
+              </label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                style={inputStyle}
+                className="outline-none focus:border-[#0096C7]"
+                placeholder="••••••••"
+                {...register('password_confirmation')}
+              />
+              {errors.password_confirmation && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password_confirmation.message}</p>}
+            </div>
+          </div>
+
+          {/* API error */}
+          {error && (
+            <div style={{ background: B.redBg, border: '1px solid #FECACA', borderRadius: 6, padding: '10px 14px', marginBottom: 18 }}>
+              <p style={{ fontFamily: IBM, fontSize: 13, color: B.red }}>{error}</p>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              fontFamily: IBM,
+              fontSize: 15,
+              fontWeight: 600,
+              color: B.white,
+              background: isSubmitting ? B.gray50 : B.tealDark,
+              border: 'none',
+              borderRadius: 6,
+              padding: '12px',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            }}
+            className="hover:opacity-90 transition-opacity"
+          >
+            {isSubmitting ? 'Creating account…' : `Create ${selectedRole} account`}
+          </button>
+        </form>
       </div>
+
+      {/* Sign in link */}
+      <p style={{ fontFamily: IBM, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
+        Already have an account?{' '}
+        <Link href="/login" style={{ color: B.teal, fontWeight: 500, textDecoration: 'none' }}
+          className="hover:underline">
+          Sign in
+        </Link>
+      </p>
+
     </div>
   );
 }

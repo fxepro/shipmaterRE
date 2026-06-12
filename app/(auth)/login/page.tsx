@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,7 +7,22 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { login, getRolePath } from '@/lib/auth';
-import { setDemoUser } from '@/lib/demo';
+
+const B = {
+  teal:     '#90E0EF',
+  tealDark: '#0096C7',
+  tealBg:   '#E0F7FA',
+  darkSec:  '#0A2E40',
+  darkCard: '#0A1520',
+  gray100:  '#161616',
+  gray70:   '#525252',
+  gray50:   '#8D8D8D',
+  gray10:   '#F4F4F4',
+  white:    '#FFFFFF',
+  red:      '#C0392B',
+  redBg:    '#FEF2F2',
+};
+const IBM = "'IBM Plex Sans', system-ui, sans-serif";
 
 const schema = z.object({
   email:    z.string().email('Enter a valid email'),
@@ -34,7 +49,7 @@ export default function LoginPage() {
       if (status === 422 || status === 401) {
         setError(msg ?? 'Invalid email or password.');
       } else if (!status) {
-        setError('Cannot reach the API. Check NEXT_PUBLIC_API_URL and that the backend is running.');
+        setError('Cannot reach the server. Please try again.');
       } else {
         setError(`Login failed (${status}): ${msg ?? 'unknown error'}`);
       }
@@ -42,93 +57,143 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-cream)] px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-            Shipmater
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">Sign in to your account</p>
-        </div>
+    <div style={{
+      fontFamily: IBM,
+      WebkitFontSmoothing: 'antialiased',
+      minHeight: '100vh',
+      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${B.darkSec} 100%)`,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 16px',
+    }}>
 
-        <div className="bg-[var(--color-white)] rounded-2xl border border-[var(--color-cream-dark)] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">
-                Email
-              </label>
-              <input
-                type="email"
-                autoComplete="email"
-                className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                placeholder="you@company.com"
-                {...register('email')}
-              />
-              {errors.email && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.email.message}</p>}
-            </div>
+      {/* Wordmark */}
+      <Link href="/" style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', marginBottom: 36 }}>
+        Shipmater
+      </Link>
 
-            <div>
-              <label className="block text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                className="w-full bg-[var(--color-cream)] border border-[var(--color-cream-dark)] rounded-lg px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none focus:border-[var(--color-teal)] transition-colors"
-                placeholder="••••••••"
-                {...register('password')}
-              />
-              {errors.password && <p className="mt-1 text-xs text-[var(--color-danger)]">{errors.password.message}</p>}
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-2 w-full rounded-lg bg-[var(--color-slate)] py-2.5 text-sm font-medium text-white hover:bg-[var(--color-slate-80)] disabled:opacity-60 transition-colors"
-            >
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-medium text-[var(--color-teal)] hover:underline">
-            Create one
-          </Link>
+      {/* Card */}
+      <div style={{
+        width: '100%',
+        maxWidth: 400,
+        background: B.white,
+        borderRadius: 10,
+        padding: '40px 36px',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.30)',
+      }}>
+        <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: 22, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
+          Sign in
+        </h1>
+        <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
+          Welcome back to Shipmater
         </p>
 
-        {/* Demo mode */}
-        <div className="mt-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-px flex-1 bg-[var(--color-cream-dark)]" />
-            <span className="text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-text-faint)]">
-              or browse demo
-            </span>
-            <div className="h-px flex-1 bg-[var(--color-cream-dark)]" />
+        <form onSubmit={handleSubmit(onSubmit)}>
+
+          {/* Email */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="you@company.com"
+              style={{
+                width: '100%',
+                fontFamily: IBM,
+                fontSize: 15,
+                color: B.gray100,
+                background: B.gray10,
+                border: `1px solid ${errors.email ? B.red : 'transparent'}`,
+                borderRadius: 6,
+                padding: '10px 14px',
+                boxSizing: 'border-box',
+              }}
+              className="outline-none focus:border-[#0096C7]"
+              {...register('email')}
+            />
+            {errors.email && (
+              <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(['shipper', 'carrier', 'receiver', 'admin'] as const).map((role) => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => {
-                  const user = setDemoUser(role);
-                  router.replace(getRolePath(user.role));
-                }}
-                className="rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] py-2 text-xs font-medium capitalize text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
-              >
-                {role}
-              </button>
-            ))}
+
+          {/* Password */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <label style={{ fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70 }}>
+                Password
+              </label>
+              <Link href="/forgot-password" style={{ fontFamily: IBM, fontSize: 12, color: B.tealDark, textDecoration: 'none' }}
+                className="hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              style={{
+                width: '100%',
+                fontFamily: IBM,
+                fontSize: 15,
+                color: B.gray100,
+                background: B.gray10,
+                border: `1px solid ${errors.password ? B.red : 'transparent'}`,
+                borderRadius: 6,
+                padding: '10px 14px',
+                boxSizing: 'border-box',
+              }}
+              className="outline-none focus:border-[#0096C7]"
+              {...register('password')}
+            />
+            {errors.password && (
+              <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>
+            )}
           </div>
-        </div>
+
+          {/* API error */}
+          {error && (
+            <div style={{ background: B.redBg, border: `1px solid #FECACA`, borderRadius: 6, padding: '10px 14px', marginBottom: 18 }}>
+              <p style={{ fontFamily: IBM, fontSize: 13, color: B.red }}>{error}</p>
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              fontFamily: IBM,
+              fontSize: 15,
+              fontWeight: 600,
+              color: B.white,
+              background: isSubmitting ? B.gray50 : B.tealDark,
+              border: 'none',
+              borderRadius: 6,
+              padding: '12px',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              transition: 'opacity 0.15s',
+            }}
+            className="hover:opacity-90"
+          >
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
       </div>
+
+      {/* Register link */}
+      <p style={{ fontFamily: IBM, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
+        Don&apos;t have an account?{' '}
+        <Link href="/register" style={{ color: B.teal, fontWeight: 500, textDecoration: 'none' }}
+          className="hover:underline">
+          Create one
+        </Link>
+      </p>
+
     </div>
   );
 }

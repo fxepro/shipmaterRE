@@ -1,71 +1,96 @@
 import Link from 'next/link';
 
+const B = {
+  teal:     '#90E0EF',
+  tealDark: '#0096C7',
+  darkCard: '#0A1520',
+  white:    '#FFFFFF',
+};
+const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+
+const COLS = [
+  {
+    heading: 'Product',
+    links: [
+      ['Features',   '/features'],
+      ['Use Cases',  '/use-cases'],
+      ['Blog',       '/blog'],
+    ],
+  },
+  {
+    heading: 'Solutions',
+    links: [
+      ['For Shippers', '/shippers'],
+      ['For Carriers', '/carriers'],
+    ],
+  },
+  {
+    heading: 'Account',
+    links: [
+      ['Sign in',  '/login'],
+      ['Register', '/register'],
+    ],
+  },
+  {
+    heading: 'Trust & Safety',
+    links: [
+      ['Platform Compliance',   '/compliance'],
+      ['Carrier Requirements',  '/provider-compliance'],
+      ['Verification',          '/verification'],
+    ],
+  },
+  {
+    heading: 'Legal',
+    links: [
+      ['Privacy Policy', '/privacy'],
+      ['Terms of Use',   '/terms'],
+      ['Cookie Policy',  '/cookies'],
+    ],
+  },
+];
+
 export function Footer() {
-  const year = new Date().getFullYear();
-
   return (
-    <footer className="border-t border-[var(--color-cream-dark)] bg-[var(--color-white)]">
-      <div className="mx-auto max-w-6xl px-6 py-10 space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-8">
+    <footer style={{ background: B.darkCard, borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: IBM }}>
+      <div className="mx-auto max-w-[1200px] px-6 py-14">
 
+        {/* Top row */}
+        <div className="flex flex-wrap items-start justify-between gap-10 mb-12">
           <div>
-            <span className="text-base font-semibold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-              Shipmater
-            </span>
-            <p className="mt-1 text-xs text-[var(--color-text-faint)] max-w-[200px]">
-              Freight tracking and dispatch, built for every role.
+            <p style={{ fontWeight: 700, fontSize: 20, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Shipmater</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 6, maxWidth: 200, lineHeight: 1.6 }}>
+              Dispatch · Live Tracking · Safe Carry
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-10 text-sm">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Product</p>
-              <div className="space-y-1.5">
-                <Link href="/features"   className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Features</Link>
-                <Link href="/industries" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Industries</Link>
-                <Link href="/blog"       className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Blog</Link>
+          <div className="flex flex-wrap gap-10">
+            {COLS.map(({ heading, links }) => (
+              <div key={heading}>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)', marginBottom: 12 }}>
+                  {heading}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {links.map(([label, href]) => (
+                    <Link key={href} href={href}
+                      style={{ fontSize: 14, color: 'rgba(255,255,255,0.50)', textDecoration: 'none' }}
+                      className="hover:text-white transition-colors">
+                      {label}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Solutions</p>
-              <div className="space-y-1.5">
-                <Link href="/shippers"  className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">For Shippers</Link>
-                <Link href="/carriers"  className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">For Carriers</Link>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Account</p>
-              <div className="space-y-1.5">
-                <Link href="/login"    className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Sign in</Link>
-                <Link href="/register" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Register</Link>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Trust & Safety</p>
-              <div className="space-y-1.5">
-                <Link href="/compliance"          className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Platform Compliance</Link>
-                <Link href="/provider-compliance" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Carrier Requirements</Link>
-                <Link href="/verification"        className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Verification</Link>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-faint)]">Legal</p>
-              <div className="space-y-1.5">
-                <Link href="/privacy" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Privacy Policy</Link>
-                <Link href="/terms"   className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Terms of Use</Link>
-                <Link href="/cookies" className="block text-[var(--color-text-muted)] hover:text-[var(--color-teal)] transition-colors">Cookie Policy</Link>
-              </div>
-            </div>
+            ))}
           </div>
-
         </div>
 
-        <div className="border-t border-[var(--color-cream-dark)] pt-6">
-          <p className="text-xs text-[var(--color-text-faint)]">© {year} Shipmater. All rights reserved.</p>
+        {/* Bottom row */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>© 2026 Shipmater. All rights reserved.</p>
+          <div style={{ display: 'flex', gap: 20 }}>
+            <Link href="/privacy" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms"   style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/cookies" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Cookies</Link>
+          </div>
         </div>
       </div>
     </footer>
