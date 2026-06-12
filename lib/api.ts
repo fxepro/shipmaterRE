@@ -192,6 +192,27 @@ export const freightJobApi = {
   carrierGet:  (id: number)                       => api.get(`/api/v1/carrier/freight-jobs/${id}`),
   updateStop:  (jobId: number, stopId: number, data: Record<string, unknown>) =>
                  api.patch(`/api/v1/carrier/freight-jobs/${jobId}/stops/${stopId}`, data),
+  // Offers — carrier
+  submitOffer:   (jobId: number, data: { amount: number; note?: string }) =>
+                   api.post(`/api/v1/carrier/freight-jobs/${jobId}/offers`, data),
+  withdrawOffer: (jobId: number, offerId: number) =>
+                   api.delete(`/api/v1/carrier/freight-jobs/${jobId}/offers/${offerId}`),
+  // Offers — shipper (all jobs)
+  shipperAllOffers: (params?: Record<string, unknown>) =>
+                   api.get('/api/v1/shipper/offers', { params }),
+  // Offers — shipper (per job)
+  listOffers:    (jobId: number) =>
+                   api.get(`/api/v1/shipper/freight-jobs/${jobId}/offers`),
+  acceptOffer:   (jobId: number, offerId: number) =>
+                   api.post(`/api/v1/shipper/freight-jobs/${jobId}/offers/${offerId}/accept`),
+  declineOffer:  (jobId: number, offerId: number) =>
+                   api.post(`/api/v1/shipper/freight-jobs/${jobId}/offers/${offerId}/decline`),
+  // Offer terms — shipper saves quote requirements on open job
+  saveTerms:     (jobId: number, data: { quote_requirements: Record<string, unknown> }) =>
+                   api.patch(`/api/v1/shipper/freight-jobs/${jobId}/terms`, data),
+  // Carrier: all my offers across all jobs
+  carrierMyOffers: (params?: Record<string, unknown>) =>
+                   api.get('/api/v1/carrier/my-offers', { params }),
 };
 
 // ── Blog ───────────────────────────────────────────────────────────────

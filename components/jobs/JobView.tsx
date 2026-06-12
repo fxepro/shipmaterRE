@@ -5,13 +5,15 @@ import Link from 'next/link';
 import {
   ChevronLeft, Package, Truck, Route, CheckCircle2, Clock,
   AlertCircle, FileText, Receipt, Warehouse, Flag,
-  ArrowRight, ChevronRight, Loader2, MapPin, Navigation2,
+  ArrowRight, ChevronRight, Loader2, MapPin, Navigation2, Pencil,
+  DollarSign, X, Star, BadgeCheck, MessageSquare, Globe, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { freightJobApi } from '@/lib/api';
 import { RouteMap } from '@/components/RouteMap';
 import type { RouteMapStop } from '@/components/RouteMap';
+import { OfferPanel } from '@/components/jobs/OfferPanel';
 
 // ── Status configs ─────────────────────────────────────────────────────────────
 
@@ -39,8 +41,9 @@ const NEXT_ACTION: Record<string, { label: string; status: string } | null> = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function fmtAmt(n: number) {
-  return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+function fmtAmt(n: number | string | null | undefined) {
+  const v = parseFloat(String(n ?? 0)) || 0;
+  return '$' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 function fmtDate(d: string) {
@@ -84,15 +87,23 @@ function SectionCard({ icon: Icon, title, children }: {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export interface JobViewProps {
-  job:          any;
-  role:         'shipper' | 'carrier';
-  backHref:     string;
-  backLabel:    string;
+  job:            any;
+  role:           'shipper' | 'carrier';
+  backHref:       string;
+  backLabel:      string;
   onStopUpdated?: () => void;
+  onJobUpdated?:  () => void;   // called after an offer is accepted/declined so parent refetches
 }
 
-export function JobView({ job, role, backHref, backLabel, onStopUpdated }: JobViewProps) {
-  const [pendingStop, setPendingStop] = useState<number | null>(null);
+function fmt(n: number | string | null | undefined) {
+  const v = parseFloat(String(n ?? 0)) || 0;
+  return '$' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUpdated }: JobViewProps) {
+  const [pendingStop,   setPendingStop]   = useState<number | null>(null);
+  const [showOfferPanel, setShowOfferPanel] = useState(false);
+  const qc = useQueryClient();
 
   const isContracted = !!job.contract_id;
 
@@ -127,6 +138,50 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated }: JobVi
     onSuccess: () => { toast.success('Stop updated.'); setPendingStop(null); onStopUpdated?.(); },
     onError:   () => { toast.error('Failed to update stop.'); setPendingStop(null); },
   });
+
+  // ── Offers (shipper actions) ───────────────────────────────────────────────
+  const [pendingOffer, setPendingOffer] = useState<number | null>(null);
+
+  const acceptOfferMutation = useMutation({
+    mutationFn: (offerId: number) => freightJobApi.acceptOffer(job.id, offerId),
+    onMutate:   (offerId) => setPendingOffer(offerId),
+    onSuccess:  () => {
+      toast.success('Offer accepted — carrier has been assigned.');
+      setPendingOffer(null);
+      onJobUpdated?.();
+    },
+    onError:    () => { toast.error('Failed to accept offer.'); setPendingOffer(null); },
+  });
+
+  const declineOfferMutation = useMutation({
+    mutationFn: (offerId: number) => freightJobApi.declineOffer(job.id, offerId),
+    onMutate:   (offerId) => setPendingOffer(offerId),
+    onSuccess:  () => {
+      toast.success('Offer declined.');
+      setPendingOffer(null);
+      onJobUpdated?.();
+    },
+    onError:    () => { toast.error('Failed to decline offer.'); setPendingOffer(null); },
+  });
+
+  const withdrawOfferMutation = useMutation({
+    mutationFn: (offerId: number) => freightJobApi.withdrawOffer(job.id, offerId),
+    onSuccess:  () => { toast.success('Offer withdrawn.'); onJobUpdated?.(); },
+    onError:    () => toast.error('Failed to withdraw offer.'),
+  });
+
+  // Carrier's own offer on this job (loaded with job.offers filtered server-side)
+  const myOffer = role === 'carrier'
+    ? (job.offers ?? []).find((o: any) => o.status === 'pending' || o.status === 'accepted')
+    : null;
+
+  const isOpenMarket = !job.carrier_id && job.status === 'posted';
+  const canMakeOffer = role === 'carrier' && isOpenMarket && !myOffer;
+
+  // Shipper: show offers section for open jobs
+  const offers: any[] = role === 'shipper' && !job.carrier_id
+    ? (job.offers ?? []).filter((o: any) => ['pending', 'accepted', 'rejected'].includes(o.status))
+    : [];
 
   return (
     <div className="space-y-5">
@@ -170,6 +225,57 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated }: JobVi
             <p className="mt-1 text-sm font-mono text-[var(--color-text-faint)]">{job.reference_number}</p>
           )}
         </div>
+
+        {/* Edit button — draft + shipper only */}
+        {role === 'shipper' && job.status === 'draft' && (
+          <Link
+            href={`/shipper/jobs/contracted/new?edit=${job.id}`}
+            className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+          >
+            <Pencil size={13} /> Edit draft
+          </Link>
+        )}
+
+        {/* Make an Offer — carrier on open market job */}
+        {canMakeOffer && (
+          <button
+            onClick={() => setShowOfferPanel(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-[var(--color-teal)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-colors"
+          >
+            <DollarSign size={14} /> Make an Offer
+          </button>
+        )}
+
+        {/* Offer pending chip — carrier already has an active offer */}
+        {role === 'carrier' && myOffer && myOffer.status === 'pending' && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs font-semibold text-amber-700">
+              Offer pending · {fmt(myOffer.amount)}
+            </span>
+            <button
+              onClick={() => withdrawOfferMutation.mutate(myOffer.id)}
+              disabled={withdrawOfferMutation.isPending}
+              className="ml-1 rounded p-0.5 text-amber-500 hover:text-amber-700 transition-colors disabled:opacity-50"
+              title="Withdraw offer"
+            >
+              {withdrawOfferMutation.isPending
+                ? <Loader2 size={12} className="animate-spin" />
+                : <X size={12} />
+              }
+            </button>
+          </div>
+        )}
+
+        {/* Offer accepted chip */}
+        {role === 'carrier' && myOffer && myOffer.status === 'accepted' && (
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2">
+            <CheckCircle2 size={13} className="text-emerald-600" />
+            <span className="text-xs font-semibold text-emerald-700">
+              Offer accepted · {fmt(myOffer.amount)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Body: 2-col */}
@@ -348,6 +454,59 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated }: JobVi
             </SectionCard>
           )}
 
+          {/* Offer Terms (open jobs — visible to both shipper and carrier) */}
+          {!isContracted && job.quote_requirements && (() => {
+            const qr = job.quote_requirements;
+            const RATE_LABEL: Record<string, string> = {
+              flat:     'Flat rate',
+              per_mile: 'Per mile',
+              hourly:   'Hourly',
+            };
+            const rows: { label: string; value: string; highlight?: boolean }[] = [
+              { label: 'Rate type', value: RATE_LABEL[qr.rate_type] ?? qr.rate_type, highlight: true },
+              ...(qr.require_fuel_surcharge  ? [{ label: 'Fuel surcharge',     value: 'Required'                                              }] : []),
+              ...(qr.require_detention_rate  ? [{ label: 'Detention rate',     value: `Required · ${qr.free_time_hrs ?? 2} free hrs`          }] : []),
+              ...(qr.require_equipment_type  ? [{ label: 'Equipment type',     value: qr.equipment_type_hint ? `Required · hint: ${qr.equipment_type_hint}` : 'Required' }] : []),
+              ...(qr.require_max_weight      ? [{ label: 'Max weight',         value: 'Required'                                              }] : []),
+              ...(qr.require_payment_terms   ? [{ label: 'Payment terms',      value: qr.payment_terms_hint  ? `Required · suggest: ${qr.payment_terms_hint}` : 'Required' }] : []),
+            ];
+            const presetLabel = qr.preset
+              ? qr.preset.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+              : null;
+
+            return (
+              <SectionCard icon={Tag} title="Offer Terms">
+                {presetLabel && (
+                  <div className="flex items-center gap-2 pb-3 mb-1 border-b border-[var(--color-cream-dark)]">
+                    <span className="rounded-full bg-[var(--color-teal-pale)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-teal)]">
+                      {presetLabel}
+                    </span>
+                    {role === 'shipper' && (
+                      <span className="text-xs text-[var(--color-text-faint)]">preset</span>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-0">
+                  {rows.map((row, i) => (
+                    <div key={i} className={`flex items-center justify-between py-2.5 ${
+                      i < rows.length - 1 ? 'border-b border-[var(--color-cream-dark)]' : ''
+                    }`}>
+                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[var(--color-text-faint)]">{row.label}</p>
+                      <p className={`text-sm font-semibold ${row.highlight ? 'text-[var(--color-teal)]' : 'text-[var(--color-text)]'}`}>
+                        {row.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {role === 'shipper' && (
+                  <p className="mt-3 pt-3 border-t border-[var(--color-cream-dark)] text-xs text-[var(--color-text-faint)]">
+                    Carriers must provide these fields when submitting an offer.
+                  </p>
+                )}
+              </SectionCard>
+            );
+          })()}
+
           {/* Billing (contracted + has breakdown) */}
           {isContracted && job.cost_breakdown && (
             <SectionCard icon={Receipt} title="Billing">
@@ -365,8 +524,124 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated }: JobVi
             </SectionCard>
           )}
 
+          {/* Offers (shipper · open jobs only) */}
+          {role === 'shipper' && !isContracted && (
+            <SectionCard icon={Globe} title={`Offers${offers.length > 0 ? ` (${offers.length})` : ''}`}>
+              {offers.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-faint)]">
+                  No offers yet. Carriers viewing this job can submit an offer.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {offers.map((offer: any) => {
+                    const isPending   = offer.status === 'pending';
+                    const isAccepted  = offer.status === 'accepted';
+                    const isRejected  = offer.status === 'rejected';
+                    const isActing    = pendingOffer === offer.id;
+                    const distMiles   = job.route_distance_miles ? parseFloat(job.route_distance_miles) : null;
+                    const perMile     = distMiles && offer.amount > 0 ? offer.amount / distMiles : null;
+
+                    return (
+                      <div
+                        key={offer.id}
+                        className={`rounded-xl border p-4 space-y-2 ${
+                          isAccepted ? 'border-emerald-200 bg-emerald-50' :
+                          isRejected ? 'border-[var(--color-cream-dark)] bg-[var(--color-cream)] opacity-60' :
+                                       'border-[var(--color-cream-dark)] bg-[var(--color-white)]'
+                        }`}
+                      >
+                        {/* Carrier + amount row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-semibold text-[var(--color-text)]">
+                                {offer.carrier_name || 'Carrier'}
+                              </p>
+                              {offer.carrier_dot && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-600">
+                                  <BadgeCheck size={11} /> DOT
+                                </span>
+                              )}
+                              {offer.carrier_rating > 0 && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600">
+                                  <Star size={10} className="fill-amber-400 text-amber-400" />
+                                  {offer.carrier_rating.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                            {perMile && (
+                              <p className="text-xs text-[var(--color-text-faint)]">
+                                {fmt(perMile)}/mi
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-lg font-bold text-[var(--color-slate)] tabular-nums shrink-0">
+                            {fmt(offer.amount)}
+                          </p>
+                        </div>
+
+                        {/* Note */}
+                        {offer.note && (
+                          <p className="flex items-start gap-1.5 text-xs text-[var(--color-text-muted)]">
+                            <MessageSquare size={11} className="mt-0.5 shrink-0" />
+                            {offer.note}
+                          </p>
+                        )}
+
+                        {/* Status badge or action buttons */}
+                        {isAccepted ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                            <CheckCircle2 size={11} /> Accepted
+                          </span>
+                        ) : isRejected ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-faint)]">
+                            Declined
+                          </span>
+                        ) : isPending && !job.carrier_id ? (
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => acceptOfferMutation.mutate(offer.id)}
+                              disabled={isActing}
+                              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-teal)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-teal-dark)] disabled:opacity-60 transition-colors"
+                            >
+                              {isActing && acceptOfferMutation.isPending
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <CheckCircle2 size={11} />
+                              }
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => declineOfferMutation.mutate(offer.id)}
+                              disabled={isActing}
+                              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-red-300 hover:text-red-600 disabled:opacity-60 transition-colors"
+                            >
+                              {isActing && declineOfferMutation.isPending
+                                ? <Loader2 size={11} className="animate-spin" />
+                                : <X size={11} />
+                              }
+                              Decline
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
         </div>
       </div>
+
+      {/* Offer panel overlay */}
+      {showOfferPanel && (
+        <OfferPanel
+          job={job}
+          onClose={() => setShowOfferPanel(false)}
+          onSuccess={() => { onJobUpdated?.(); qc.invalidateQueries({ queryKey: ['carrier-job', job.id] }); }}
+        />
+      )}
     </div>
   );
 }

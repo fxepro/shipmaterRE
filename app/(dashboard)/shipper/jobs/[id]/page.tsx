@@ -46,6 +46,7 @@ export default function ShipperJobPage({ params }: { params: Promise<{ id: strin
       backHref={isContracted ? '/shipper/jobs/contracted' : '/shipper/jobs'}
       backLabel={isContracted ? 'Contracted Jobs' : 'My Jobs'}
       onStopUpdated={() => qc.invalidateQueries({ queryKey: ['shipper-job', jobId] })}
+      onJobUpdated={()  => qc.invalidateQueries({ queryKey: ['shipper-job', jobId] })}
     />
   );
 }

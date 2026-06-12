@@ -16,6 +16,7 @@ class FreightJob extends Model
         'total_weight_lbs', 'status', 'optimization_mode',
         'route_distance_miles', 'route_duration_minutes',
         'route_optimized_at', 'route_snapshot', 'cost_breakdown',
+        'quote_requirements',
         'payment_amount_cents', 'payment_status', 'posted_at',
     ];
 
@@ -24,6 +25,7 @@ class FreightJob extends Model
         return [
             'route_snapshot'        => 'array',
             'cost_breakdown'        => 'array',
+            'quote_requirements'    => 'array',
             'route_optimized_at'    => 'datetime',
             'posted_at'             => 'datetime',
             'route_distance_miles'  => 'float',
@@ -35,6 +37,7 @@ class FreightJob extends Model
     public function carrier(): BelongsTo   { return $this->belongsTo(User::class, 'carrier_id'); }
     public function stops(): HasMany       { return $this->hasMany(JobStop::class)->orderBy('optimized_sequence')->orderBy('sequence'); }
     public function evidence(): HasMany    { return $this->hasMany(JobEvidence::class); }
+    public function offers(): HasMany      { return $this->hasMany(FreightJobOffer::class)->latest(); }
 
     public function pickupStops(): HasMany
     {

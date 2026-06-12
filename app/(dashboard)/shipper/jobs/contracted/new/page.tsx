@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   ChevronRight, ChevronLeft, Check, FileText, ClipboardList,
   Route, Send, Plus, X, Search, Loader2,
   Warehouse, Users, ChevronDown, Package, ArrowRight,
   Briefcase, Sparkles, CheckCircle2, AlertCircle, Clock,
-  DollarSign, Receipt,
+  DollarSign, Receipt, Tag,
 } from 'lucide-react';
 import { contractApi, locationApi, freightJobApi } from '@/lib/api';
 import { RouteMap, type RouteMapStop } from '@/components/RouteMap';
@@ -135,6 +135,102 @@ interface Stop {
 const UNITS = ['pallet','box','piece','bag','drum','crate','other'];
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
+// ── Offer Terms ───────────────────────────────────────────────────────────────
+
+interface QuoteTerms {
+  preset:                  string | null;
+  rate_type:               'flat' | 'per_mile' | 'hourly';
+  require_fuel_surcharge:  boolean;
+  require_detention_rate:  boolean;
+  free_time_hrs:           number;
+  require_equipment_type:  boolean;
+  equipment_type_hint:     string;
+  require_max_weight:      boolean;
+  require_payment_terms:   boolean;
+  payment_terms_hint:      string;
+}
+
+const QUOTE_PRESETS: { id: string; label: string; desc: string; defaults: Omit<QuoteTerms, 'preset'> }[] = [
+  {
+    id: 'standard_freight', label: 'Standard Freight', desc: 'Dry van, general cargo',
+    defaults: { rate_type: 'per_mile', require_fuel_surcharge: true,  require_detention_rate: true,
+      free_time_hrs: 2, require_equipment_type: false, equipment_type_hint: '',
+      require_max_weight: false, require_payment_terms: true, payment_terms_hint: 'Net 30' },
+  },
+  {
+    id: 'temperature_controlled', label: 'Temperature Controlled', desc: 'Refrigerated / frozen',
+    defaults: { rate_type: 'per_mile', require_fuel_surcharge: true,  require_detention_rate: true,
+      free_time_hrs: 2, require_equipment_type: true, equipment_type_hint: 'Reefer',
+      require_max_weight: true, require_payment_terms: true, payment_terms_hint: 'Net 30' },
+  },
+  {
+    id: 'medical', label: 'Medical', desc: 'Pharma, medical supplies',
+    defaults: { rate_type: 'flat', require_fuel_surcharge: false, require_detention_rate: false,
+      free_time_hrs: 0, require_equipment_type: true, equipment_type_hint: 'Temp-controlled',
+      require_max_weight: false, require_payment_terms: true, payment_terms_hint: 'Net 15' },
+  },
+  {
+    id: 'heavy_equipment', label: 'Heavy Equipment', desc: 'Oversized / construction',
+    defaults: { rate_type: 'flat', require_fuel_surcharge: true,  require_detention_rate: true,
+      free_time_hrs: 4, require_equipment_type: true, equipment_type_hint: 'Lowboy / RGN',
+      require_max_weight: true, require_payment_terms: true, payment_terms_hint: 'Net 30' },
+  },
+  {
+    id: 'hazmat', label: 'Hazmat', desc: 'Hazardous materials',
+    defaults: { rate_type: 'per_mile', require_fuel_surcharge: true,  require_detention_rate: true,
+      free_time_hrs: 2, require_equipment_type: true, equipment_type_hint: 'Hazmat-certified',
+      require_max_weight: false, require_payment_terms: true, payment_terms_hint: 'Net 30' },
+  },
+  {
+    id: 'flatbed_open_deck', label: 'Flatbed / Open Deck', desc: 'Steel, lumber, machinery',
+    defaults: { rate_type: 'per_mile', require_fuel_surcharge: true,  require_detention_rate: true,
+      free_time_hrs: 2, require_equipment_type: true, equipment_type_hint: 'Flatbed',
+      require_max_weight: true, require_payment_terms: false, payment_terms_hint: '' },
+  },
+  {
+    id: 'expedited', label: 'Expedited', desc: 'Time-critical / express',
+    defaults: { rate_type: 'flat', require_fuel_surcharge: false, require_detention_rate: false,
+      free_time_hrs: 1, require_equipment_type: false, equipment_type_hint: '',
+      require_max_weight: false, require_payment_terms: true, payment_terms_hint: 'Net 7' },
+  },
+];
+
+const DEFAULT_TERMS: QuoteTerms = {
+  preset: null, rate_type: 'per_mile',
+  require_fuel_surcharge: true,  require_detention_rate: false, free_time_hrs: 2,
+  require_equipment_type: false, equipment_type_hint:    '',
+  require_max_weight:     false, require_payment_terms:  true,  payment_terms_hint: 'Net 30',
+};
+
+function TermsToggle({ checked, onChange, label, desc }: {
+  checked:  boolean;
+  onChange: (v: boolean) => void;
+  label:    string;
+  desc:     string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`flex items-center gap-3 w-full rounded-xl border px-3.5 py-3 text-left transition-all ${
+        checked
+          ? 'border-[var(--color-teal)] bg-[var(--color-white)]'
+          : 'border-[var(--color-cream-dark)] bg-[var(--color-white)] opacity-60 hover:opacity-90'
+      }`}
+    >
+      <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+        checked ? 'border-[var(--color-teal)] bg-[var(--color-teal)]' : 'border-[var(--color-cream-dark)]'
+      }`}>
+        {checked && <Check size={10} className="text-white" />}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-[var(--color-text)]">{label}</p>
+        <p className="text-xs text-[var(--color-text-faint)]">{desc}</p>
+      </div>
+    </button>
+  );
+}
+
 // ── Step Indicator ────────────────────────────────────────────────────────────
 
 const PLATFORM_FEE_RATE = 0.15;
@@ -214,15 +310,14 @@ function fmt(n: number) {
   return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-const STEPS = [
-  { label: 'Contract',  icon: FileText      },
-  { label: 'Build',     icon: ClipboardList },
-  { label: 'Route',     icon: Route         },
-  { label: 'Billing',   icon: DollarSign    },
-  { label: 'Send',      icon: Send          },
-];
-
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, step3Label = 'Billing' }: { current: number; step3Label?: string }) {
+  const STEPS = [
+    { label: 'Contract',   icon: FileText      },
+    { label: 'Build',      icon: ClipboardList },
+    { label: 'Route',      icon: Route         },
+    { label: step3Label,   icon: step3Label === 'Offer Terms' ? Tag : DollarSign },
+    { label: 'Send',       icon: Send          },
+  ];
   return (
     <div className="flex items-center gap-0">
       {STEPS.map((step, i) => {
@@ -731,7 +826,13 @@ function RouteResult({ job }: { job: any }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NewContractedJobPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const editParam    = searchParams.get('edit');
+  const editJobId    = editParam ? Number(editParam) : null;
+
+  // Tracks whether we've pre-populated the wizard from an existing draft
+  const editInitialized = useRef(false);
 
   // Step 0 selections
   const [jobType,       setJobType]       = useState<JobType>(null);
@@ -757,12 +858,25 @@ export default function NewContractedJobPage() {
   const [optimised,      setOptimised]      = useState(false);
   const [routeGeometry,  setRouteGeometry]  = useState<[number, number][] | null>(null);
 
+  // Step 3 – Offer Terms (open jobs only)
+  const [quoteTerms, setQuoteTerms] = useState<QuoteTerms>(DEFAULT_TERMS);
+
   // ── Queries ────────────────────────────────────────────────────────────────
 
   const { data: contractsRes, isLoading: contractsLoading } = useQuery({
     queryKey: ['contracts', 'active'],
     queryFn:  () => contractApi.list({ status: 'active' }),
-    enabled:  showContracts,
+    // Load contracts when the table is open OR when editing a contracted job
+    // (needed so selectedContract resolves at the Billing step).
+    enabled:  showContracts || !!(editJobId && contractId),
+  });
+
+  // When editing an existing draft, fetch that job to pre-populate the wizard.
+  const { data: editJobRes, isLoading: editJobLoading } = useQuery({
+    queryKey: ['shipper-job', editJobId],
+    queryFn:  () => freightJobApi.get(editJobId!),
+    enabled:  !!editJobId,
+    staleTime: Infinity,
   });
 
   // Default locations — pre-fetched on page load so they're ready when Build step opens
@@ -825,8 +939,9 @@ export default function NewContractedJobPage() {
   // ── Auto-init first pickup on Build step ───────────────────────────────────
   // Waits until the default-pickup query has resolved (pickupFetching = false)
   // so the stop is pre-filled with the default address if one exists.
+  // Skipped in edit mode — stops are loaded from the existing draft instead.
   useEffect(() => {
-    if (step !== 1 || stops.length > 0 || pickupFetching) return;
+    if (step !== 1 || stops.length > 0 || pickupFetching || editJobId) return;
     const d = defaultPickup;
     setStops([{
       localId:             uid(),
@@ -849,7 +964,103 @@ export default function NewContractedJobPage() {
       specialInstructions: '',
       items:               [],
     }]);
-  }, [step, defaultPickup, pickupFetching]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, defaultPickup, pickupFetching, editJobId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Edit-mode: pre-populate wizard from existing draft ─────────────────────
+  // Runs once when the edit job query resolves. Sets all wizard state fields
+  // from the saved job and jumps to the step matching the job's completion state.
+  useEffect(() => {
+    const job = editJobRes?.data?.data;
+    if (!job || editInitialized.current) return;
+    editInitialized.current = true;
+
+    const type: JobType = job.contract_id ? 'contracted' : 'open';
+    setJobType(type);
+    setContractId(job.contract_id ?? null);
+    setTitle(job.title ?? '');
+    setRefNum(job.reference_number ?? '');
+    setInstructions(job.special_instructions ?? '');
+    setOptimMode(job.optimization_mode ?? 'shortest_route');
+    setCreatedJob(job);
+
+    // Convert API pickup stops → local Stop[] format
+    const pickupStops: Stop[] = (job.stops ?? [])
+      .filter((s: any) => s.stop_type === 'pickup')
+      .sort((a: any, b: any) => a.sequence - b.sequence)
+      .map((s: any): Stop => ({
+        localId:             uid(),
+        stopType:            'pickup',
+        sequence:            s.sequence,
+        locationId:          s.location_id ?? undefined,
+        name:                s.name ?? '',
+        contactName:         s.contact_name ?? '',
+        contactPhone:        s.contact_phone ?? '',
+        address:             s.address ?? '',
+        city:                s.city ?? '',
+        state:               s.state ?? '',
+        zip:                 s.zip ?? '',
+        lat:                 s.lat ? parseFloat(s.lat) : undefined,
+        lng:                 s.lng ? parseFloat(s.lng) : undefined,
+        scheduledDate:       s.scheduled_date ?? '',
+        windowStart:         s.window_start ?? '',
+        windowEnd:           s.window_end ?? '',
+        weightLbs:           String(s.weight_lbs ?? ''),
+        specialInstructions: s.special_instructions ?? '',
+        items: (s.pickup_items ?? []).map((item: any): ManifestItem => ({
+          localId:            uid(),
+          description:        item.description ?? '',
+          quantity:           item.quantity ?? 1,
+          unit:               item.unit ?? 'pallet',
+          weightLbs:          String(item.weight_lbs ?? ''),
+          sku:                item.sku ?? '',
+          deliveryLocationId: item.delivery_stop?.location_id ?? null,
+          deliveryName:       item.delivery_stop?.name ?? '',
+          deliveryAddress:    item.delivery_stop?.address ?? '',
+          deliveryCity:       item.delivery_stop?.city ?? '',
+          deliveryState:      item.delivery_stop?.state ?? '',
+          deliveryZip:        item.delivery_stop?.zip ?? '',
+          deliveryLat:        item.delivery_stop?.lat ? parseFloat(item.delivery_stop.lat) : null,
+          deliveryLng:        item.delivery_stop?.lng ? parseFloat(item.delivery_stop.lng) : null,
+        })),
+      }));
+
+    setStops(pickupStops);
+
+    // Load offer terms if present
+    if (job.quote_requirements) {
+      const qr = job.quote_requirements;
+      setQuoteTerms({
+        preset:                  qr.preset                 ?? null,
+        rate_type:               qr.rate_type              ?? 'per_mile',
+        require_fuel_surcharge:  qr.require_fuel_surcharge ?? false,
+        require_detention_rate:  qr.require_detention_rate ?? false,
+        free_time_hrs:           qr.free_time_hrs          ?? 2,
+        require_equipment_type:  qr.require_equipment_type ?? false,
+        equipment_type_hint:     qr.equipment_type_hint    ?? '',
+        require_max_weight:      qr.require_max_weight     ?? false,
+        require_payment_terms:   qr.require_payment_terms  ?? false,
+        payment_terms_hint:      qr.payment_terms_hint     ?? '',
+      });
+    }
+
+    // Jump to the step that matches the job's completion state:
+    //   has billing saved          → Review & Send (step 4)
+    //   contracted + route         → Billing (step 3)
+    //   open + route + terms saved → Review & Send (step 4)
+    //   open + route, no terms yet → Offer Terms (step 3)
+    //   no route yet               → Build (step 1)
+    if (job.cost_breakdown) {
+      setOptimised(true);
+      fetchRouteGeometry(job);
+      setStep(4);
+    } else if (job.route_distance_miles) {
+      setOptimised(true);
+      fetchRouteGeometry(job);
+      setStep(type === 'open' && job.quote_requirements ? 4 : 3);
+    } else {
+      setStep(1);
+    }
+  }, [editJobRes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
@@ -979,11 +1190,22 @@ export default function NewContractedJobPage() {
     onSuccess: res => { setCreatedJob(res.data.data); setStep(4); },
   });
 
+  const termsMutation = useMutation({
+    mutationFn: () => freightJobApi.saveTerms(createdJob.id, { quote_requirements: quoteTerms as unknown as Record<string, unknown> }),
+    onSuccess: res => { setCreatedJob(res.data.data); setStep(4); },
+  });
+
   const postMutation = useMutation({
     mutationFn: () => freightJobApi.post(createdJob.id),
-    onSuccess:  res => {
-      setCreatedJob(res.data.data);           // status is now 'posted' in state
-      router.push('/shipper/jobs/contracted');
+    onSuccess: res => {
+      const posted = res.data.data;
+      setCreatedJob(posted);
+      // Route to the correct viewer based on whether a contract is attached
+      const isCtd = !!posted.contract_id;
+      router.push(isCtd
+        ? `/shipper/jobs/contracted/${posted.id}`
+        : `/shipper/jobs/${posted.id}`
+      );
     },
   });
 
@@ -997,21 +1219,38 @@ export default function NewContractedJobPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  // Show skeleton while the edit draft is being fetched so the user never
+  // sees a flash of the type-selection screen before jumping to the right step.
+  if (editJobId && editJobLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 rounded-xl bg-[var(--color-cream)] animate-pulse" />
+        <div className="flex gap-2">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-9 flex-1 rounded-xl bg-[var(--color-cream)] animate-pulse" />)}
+        </div>
+        <div className="h-64 rounded-2xl bg-[var(--color-cream)] animate-pulse" />
+        <div className="h-48 rounded-2xl bg-[var(--color-cream)] animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
 
       {/* Page header */}
       <div>
         <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-          New Contracted Job
+          {editJobId ? 'Edit Draft Job' : 'New Job'}
         </h1>
         <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">
-          Build a multi-stop job manifest and dispatch to your carrier
+          {editJobId
+            ? 'Continue building your saved draft and dispatch when ready'
+            : 'Build a multi-stop job manifest and dispatch to your carrier'}
         </p>
       </div>
 
       {/* Step indicator — always visible */}
-      <StepIndicator current={step} />
+      <StepIndicator current={step} step3Label={jobType === 'open' ? 'Offer Terms' : 'Billing'} />
 
       {/* ── Step 0: Contract ── */}
       {step === 0 && (
@@ -1243,9 +1482,12 @@ export default function NewContractedJobPage() {
                       : 'Open'}
                   </p>
                 </div>
-                <button onClick={() => setStep(0)} className="text-xs text-[var(--color-text-faint)] hover:text-[var(--color-teal)] transition-colors">
-                  Change
-                </button>
+                {/* Hide "Change" in edit mode — the type is locked to the existing job */}
+                {!editJobId && (
+                  <button onClick={() => setStep(0)} className="text-xs text-[var(--color-text-faint)] hover:text-[var(--color-teal)] transition-colors">
+                    Change
+                  </button>
+                )}
               </div>
 
               <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
@@ -1291,11 +1533,19 @@ export default function NewContractedJobPage() {
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <button onClick={() => setStep(0)}
+                {/* In edit mode: go back to the job view page instead of type-selection */}
+                <button
+                  onClick={() => editJobId
+                    ? router.push(jobType === 'contracted'
+                        ? `/shipper/jobs/contracted/${editJobId}`
+                        : `/shipper/jobs/${editJobId}`)
+                    : setStep(0)}
                   className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
-                  <ChevronLeft size={15} /> Prev
+                  <ChevronLeft size={15} /> {editJobId ? 'Back to job' : 'Prev'}
                 </button>
-                <button onClick={() => createMutation.mutate()}
+                {/* In edit mode: job already exists — skip createMutation and go straight to Route */}
+                <button
+                  onClick={() => createdJob ? setStep(2) : createMutation.mutate()}
                   disabled={createMutation.isPending}
                   className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all ${
                     !createMutation.isPending
@@ -1424,13 +1674,13 @@ export default function NewContractedJobPage() {
                     className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                     <ChevronLeft size={15} /> Prev
                   </button>
-                  <button onClick={() => setStep(jobType === 'open' ? 4 : 3)} disabled={!optimised}
+                  <button onClick={() => setStep(3)} disabled={!optimised}
                     className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all ${
                       optimised
                         ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
                         : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
                     }`}>
-                    {jobType === 'open' ? 'Next: Review' : 'Next: Billing'} <ChevronRight size={15} />
+                    {jobType === 'open' ? 'Next: Offer Terms' : 'Next: Billing'} <ChevronRight size={15} />
                   </button>
                 </div>
 
@@ -1438,29 +1688,168 @@ export default function NewContractedJobPage() {
             );
           })()}
 
-          {/* ── Step 3: Billing ── */}
+          {/* ── Step 3: Offer Terms (open) or Billing (contracted) ── */}
           {step === 3 && createdJob && (() => {
-            // Open-market jobs skip billing — carriers bid their own price.
+            // ── Open jobs: Offer Terms ────────────────────────────────────────
             if (jobType === 'open') {
+              const inputSm = 'w-full rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-1.5 text-sm focus:border-[var(--color-teal)] focus:outline-none';
               return (
                 <div className="space-y-5">
-                  <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-8 text-center space-y-3">
-                    <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-xl bg-[var(--color-teal-pale)]">
-                      <Package size={22} className="text-[var(--color-teal)]" />
+
+                  <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] overflow-hidden">
+
+                    {/* Card header */}
+                    <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-cream-dark)] bg-[var(--color-cream)]">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-teal)]">
+                        <Tag size={14} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[var(--color-text)]">Offer Terms</p>
+                        <p className="text-xs text-[var(--color-text-faint)]">Define what carriers must quote on for this job</p>
+                      </div>
                     </div>
-                    <p className="text-base font-bold text-[var(--color-text)]">Open market — no fixed price</p>
-                    <p className="text-sm text-[var(--color-text-faint)] max-w-sm mx-auto">
-                      Carriers will bid on this job. You review offers and accept the best one.
-                    </p>
+
+                    <div className="p-5 space-y-6">
+
+                      {/* Preset grid */}
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)] mb-3">Choose a preset</p>
+                        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                          {QUOTE_PRESETS.map(preset => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setQuoteTerms({ ...preset.defaults, preset: preset.id })}
+                              className={`rounded-xl border-2 p-3.5 text-left transition-all ${
+                                quoteTerms.preset === preset.id
+                                  ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]'
+                                  : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]/50 hover:bg-[var(--color-cream)]'
+                              }`}
+                            >
+                              <p className={`text-sm font-bold leading-snug ${quoteTerms.preset === preset.id ? 'text-[var(--color-teal)]' : 'text-[var(--color-text)]'}`}>
+                                {preset.label}
+                              </p>
+                              <p className="text-[11px] text-[var(--color-text-faint)] mt-0.5 leading-snug">{preset.desc}</p>
+                              {quoteTerms.preset === preset.id && (
+                                <div className="mt-2 flex items-center gap-1 text-[var(--color-teal)]">
+                                  <Check size={11} />
+                                  <span className="text-[10px] font-semibold">Selected</span>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Terms customizer */}
+                      <div className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Customize terms</p>
+
+                        {/* Rate type */}
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-2">Rate type</p>
+                          <div className="flex gap-2">
+                            {([
+                              { value: 'flat',     label: 'Flat'     },
+                              { value: 'per_mile', label: 'Per Mile' },
+                              { value: 'hourly',   label: 'Hourly'   },
+                            ] as const).map(rt => (
+                              <button key={rt.value} type="button"
+                                onClick={() => setQuoteTerms(prev => ({ ...prev, rate_type: rt.value }))}
+                                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                                  quoteTerms.rate_type === rt.value
+                                    ? 'border-[var(--color-teal)] bg-[var(--color-teal)] text-white'
+                                    : 'border-[var(--color-cream-dark)] bg-[var(--color-white)] text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)]'
+                                }`}>
+                                {rt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Toggle fields */}
+                        <div className="space-y-2">
+                          <TermsToggle
+                            checked={quoteTerms.require_fuel_surcharge}
+                            onChange={v => setQuoteTerms(prev => ({ ...prev, require_fuel_surcharge: v }))}
+                            label="Fuel surcharge"
+                            desc="Carrier must quote a fuel surcharge amount"
+                          />
+                          <TermsToggle
+                            checked={quoteTerms.require_detention_rate}
+                            onChange={v => setQuoteTerms(prev => ({ ...prev, require_detention_rate: v }))}
+                            label="Detention rate"
+                            desc="Carrier must quote detention rate and free time"
+                          />
+                          {quoteTerms.require_detention_rate && (
+                            <div className="ml-7 flex items-center gap-2 mt-1">
+                              <label className="text-xs text-[var(--color-text-faint)] whitespace-nowrap">Free time hours:</label>
+                              <input type="number" min={0} max={24}
+                                value={quoteTerms.free_time_hrs}
+                                onChange={e => setQuoteTerms(prev => ({ ...prev, free_time_hrs: parseInt(e.target.value) || 0 }))}
+                                className="w-16 rounded-lg border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-2 py-1 text-sm text-center focus:border-[var(--color-teal)] focus:outline-none" />
+                            </div>
+                          )}
+                          <TermsToggle
+                            checked={quoteTerms.require_equipment_type}
+                            onChange={v => setQuoteTerms(prev => ({ ...prev, require_equipment_type: v }))}
+                            label="Equipment type"
+                            desc="Carrier must specify the equipment type they'll use"
+                          />
+                          {quoteTerms.require_equipment_type && (
+                            <div className="ml-7 mt-1">
+                              <input type="text"
+                                value={quoteTerms.equipment_type_hint}
+                                onChange={e => setQuoteTerms(prev => ({ ...prev, equipment_type_hint: e.target.value }))}
+                                placeholder="Hint shown to carriers, e.g. Reefer, Flatbed…"
+                                className={inputSm} />
+                            </div>
+                          )}
+                          <TermsToggle
+                            checked={quoteTerms.require_max_weight}
+                            onChange={v => setQuoteTerms(prev => ({ ...prev, require_max_weight: v }))}
+                            label="Max weight capacity"
+                            desc="Carrier must state their maximum payload capacity"
+                          />
+                          <TermsToggle
+                            checked={quoteTerms.require_payment_terms}
+                            onChange={v => setQuoteTerms(prev => ({ ...prev, require_payment_terms: v }))}
+                            label="Payment terms"
+                            desc="Carrier must specify their required payment terms"
+                          />
+                          {quoteTerms.require_payment_terms && (
+                            <div className="ml-7 mt-1">
+                              <input type="text"
+                                value={quoteTerms.payment_terms_hint}
+                                onChange={e => setQuoteTerms(prev => ({ ...prev, payment_terms_hint: e.target.value }))}
+                                placeholder="Default suggestion, e.g. Net 30"
+                                className={inputSm} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
+
+                  {/* Prev / Confirm */}
                   <div className="flex items-center justify-between">
                     <button onClick={() => setStep(2)}
                       className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                       <ChevronLeft size={15} /> Prev
                     </button>
-                    <button onClick={() => setStep(4)}
-                      className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm transition-all">
-                      Next: Review <ChevronRight size={15} />
+                    <button
+                      onClick={() => termsMutation.mutate()}
+                      disabled={termsMutation.isPending}
+                      className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all ${
+                        !termsMutation.isPending
+                          ? 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'
+                          : 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed'
+                      }`}>
+                      {termsMutation.isPending
+                        ? <><Loader2 size={13} className="animate-spin" /> Saving…</>
+                        : <>Confirm &amp; Review <ChevronRight size={15} /></>
+                      }
                     </button>
                   </div>
                 </div>
@@ -1626,15 +2015,29 @@ export default function NewContractedJobPage() {
                 <h2 className="text-base font-semibold text-[var(--color-text)]">Review & dispatch</h2>
 
                 <div className="rounded-xl bg-[var(--color-cream)] p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <FileText size={14} className="text-[var(--color-teal)]" />
-                    <div>
-                      <p className="text-xs text-[var(--color-text-faint)]">Contract</p>
-                      <p className="text-sm font-semibold text-[var(--color-text)]">
-                        {selectedContract?.carrier} · {selectedContract?.carrierCompany}
-                      </p>
+                  {jobType === 'contracted' ? (
+                    <div className="flex items-center gap-3">
+                      <FileText size={14} className="text-[var(--color-teal)]" />
+                      <div>
+                        <p className="text-xs text-[var(--color-text-faint)]">Contract</p>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">
+                          {selectedContract?.carrier} · {selectedContract?.carrierCompany}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Tag size={14} className="text-[var(--color-teal)]" />
+                      <div>
+                        <p className="text-xs text-[var(--color-text-faint)]">Job type</p>
+                        <p className="text-sm font-semibold text-[var(--color-text)]">
+                          Open market · {createdJob.quote_requirements?.preset
+                            ? QUOTE_PRESETS.find(p => p.id === createdJob.quote_requirements.preset)?.label ?? createdJob.quote_requirements.preset
+                            : 'Custom terms'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {title && (
                     <div className="flex items-center gap-3">
                       <Package size={14} className="text-[var(--color-teal)]" />
@@ -1693,13 +2096,47 @@ export default function NewContractedJobPage() {
                   );
                 })()}
 
+                {/* Offer terms summary for open jobs */}
+                {jobType === 'open' && createdJob.quote_requirements && (() => {
+                  const qr = createdJob.quote_requirements;
+                  const termLines: { label: string; value: string }[] = [
+                    { label: 'Rate type', value: qr.rate_type === 'per_mile' ? 'Per Mile' : qr.rate_type === 'hourly' ? 'Hourly' : 'Flat Rate' },
+                    ...(qr.require_fuel_surcharge  ? [{ label: 'Fuel surcharge',     value: 'Required' }] : []),
+                    ...(qr.require_detention_rate  ? [{ label: 'Detention rate',     value: `Required · ${qr.free_time_hrs ?? 2}h free` }] : []),
+                    ...(qr.require_equipment_type  ? [{ label: 'Equipment type',     value: qr.equipment_type_hint || 'Required' }] : []),
+                    ...(qr.require_max_weight      ? [{ label: 'Max weight',         value: 'Required' }] : []),
+                    ...(qr.require_payment_terms   ? [{ label: 'Payment terms',      value: qr.payment_terms_hint || 'Required' }] : []),
+                  ];
+                  return (
+                    <div className="rounded-xl border border-[var(--color-cream-dark)] overflow-hidden">
+                      <div className="px-4 py-2.5 bg-[var(--color-cream)] border-b border-[var(--color-cream-dark)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-text-faint)]">Offer terms carriers must provide</p>
+                      </div>
+                      {termLines.map((l, i) => (
+                        <div key={i} className={`flex items-center justify-between px-4 py-2.5 text-sm ${i < termLines.length - 1 ? 'border-b border-[var(--color-cream-dark)]' : ''}`}>
+                          <span className="text-[var(--color-text-muted)]">{l.label}</span>
+                          <span className="font-semibold text-[var(--color-text)]">{l.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
                 <RouteResult job={createdJob} />
 
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-sm text-amber-800">
-                    <strong>Carrier will be notified immediately.</strong> No acceptance required — the existing contract covers this job.
-                  </p>
-                </div>
+                {jobType === 'contracted' ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-sm text-amber-800">
+                      <strong>Carrier will be notified immediately.</strong> No acceptance required — the existing contract covers this job.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-[var(--color-teal)]/30 bg-[var(--color-teal-pale)] px-4 py-3">
+                    <p className="text-sm text-[var(--color-teal)]">
+                      <strong>Open market posting.</strong> Carriers will submit offers with the terms you defined. You review offers and accept the best one.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {createdJob.status === 'posted' ? (
@@ -1712,7 +2149,7 @@ export default function NewContractedJobPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <button onClick={() => setStep(jobType === 'open' ? 2 : 3)}
+                  <button onClick={() => setStep(3)}
                     className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
                     <ChevronLeft size={15} /> Prev
                   </button>

@@ -37,21 +37,64 @@ class FreightJobController extends Controller
 
     public function carrierIndex(Request $request): JsonResponse
     {
-        $jobs = FreightJob::where('carrier_id', $request->user()->id)
-            ->with(['contract', 'stops', 'shipper'])
+        $uid = $request->user()->id;
+
+        $jobs = FreightJob::with(['contract', 'stops', 'shipper'])
+            // Jobs assigned to this carrier  OR  open posted jobs on the market
+            ->where(function ($q) use ($uid) {
+                $q->where('carrier_id', $uid)
+                  ->orWhere(function ($inner) {
+                      $inner->whereNull('carrier_id')->where('status', 'posted');
+                  });
+            })
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
-            ->orderByDesc('posted_at')
+            ->when($request->type === 'assigned',    fn($q) => $q->where('carrier_id', $uid))
+            ->when($request->type === 'open_market', fn($q) => $q->whereNull('carrier_id')->where('status', 'posted'))
+            ->orderByDesc('created_at')
             ->get();
 
         return response()->json(['data' => $jobs]);
     }
 
-    // ── Show ──────────────────────────────────────────────────────────────────
+    // ── Show (shipper) ────────────────────────────────────────────────────────
 
     public function show(Request $request, FreightJob $job): JsonResponse
     {
         $this->authorise($request, $job);
-        $job->load(['contract', 'stops.pickupItems.deliveryStop', 'stops.deliveryItems.pickupStop', 'stops.evidence', 'shipper', 'carrier']);
+        $job->load([
+            'contract',
+            'stops.pickupItems.deliveryStop',
+            'stops.deliveryItems.pickupStop',
+            'stops.evidence',
+            'shipper',
+            'carrier',
+            'offers.carrier',
+        ]);
+        return response()->json(['data' => $job]);
+    }
+
+    // ── Show (carrier) ────────────────────────────────────────────────────────
+    // A carrier may view:
+    //   - any job assigned to them (carrier_id = uid)
+    //   - any open-market job that is live (carrier_id IS NULL + status = posted)
+
+    public function carrierShow(Request $request, FreightJob $job): JsonResponse
+    {
+        $uid = $request->user()->id;
+        $canView = $job->carrier_id === $uid
+            || (is_null($job->carrier_id) && $job->status === 'posted');
+
+        abort_if(!$canView, 403, 'You do not have access to this job.');
+
+        $job->load([
+            'contract',
+            'stops.pickupItems.deliveryStop',
+            'stops.deliveryItems.pickupStop',
+            'stops.evidence',
+            'shipper',
+            'carrier',
+            'offers' => fn($q) => $q->where('carrier_id', $uid),
+        ]);
         return response()->json(['data' => $job]);
     }
 
@@ -201,6 +244,44 @@ class FreightJobController extends Controller
         ]);
 
         $job->load('stops.pickupItems.deliveryStop');
+        return response()->json(['data' => $job]);
+    }
+
+    // ── Save offer terms (open jobs only) ────────────────────────────────────
+    // PATCH /api/v1/shipper/freight-jobs/{job}/terms
+
+    public function saveTerms(Request $request, FreightJob $job): JsonResponse
+    {
+        abort_if($job->shipper_id !== $request->user()->id, 403);
+        abort_if($job->status !== 'draft', 422, 'Can only update terms on draft jobs.');
+        abort_unless(is_null($job->contract_id), 422, 'Only open jobs use offer terms.');
+
+        $data = $request->validate([
+            'quote_requirements'                        => 'required|array',
+            'quote_requirements.preset'                 => 'nullable|string|max:30',
+            'quote_requirements.rate_type'              => 'required|in:flat,per_mile,hourly',
+            'quote_requirements.require_fuel_surcharge' => 'boolean',
+            'quote_requirements.require_detention_rate' => 'boolean',
+            'quote_requirements.free_time_hrs'          => 'integer|min:0|max:24',
+            'quote_requirements.require_equipment_type' => 'boolean',
+            'quote_requirements.equipment_type_hint'    => 'nullable|string|max:50',
+            'quote_requirements.require_max_weight'     => 'boolean',
+            'quote_requirements.require_payment_terms'  => 'boolean',
+            'quote_requirements.payment_terms_hint'     => 'nullable|string|max:20',
+        ]);
+
+        $job->update(['quote_requirements' => $data['quote_requirements']]);
+
+        $job->load([
+            'contract',
+            'stops.pickupItems.deliveryStop',
+            'stops.deliveryItems.pickupStop',
+            'stops.evidence',
+            'shipper',
+            'carrier',
+            'offers.carrier',
+        ]);
+
         return response()->json(['data' => $job]);
     }
 
