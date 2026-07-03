@@ -16,19 +16,22 @@ interface ShipmentPanelProps {
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="flex items-start justify-between gap-6 py-2.5 border-b border-[var(--color-cream-dark)] last:border-0">
-      <span className="text-sm text-[var(--color-text-faint)] shrink-0 w-36">{label}</span>
-      <span className="text-sm font-medium text-[var(--color-text)] text-right">{value}</span>
+    <div
+      className="flex items-start justify-between gap-6 py-2.5 last:border-0"
+      style={{ borderBottom: '1px solid var(--border)' }}
+    >
+      <span className="text-sm shrink-0 w-36" style={{ color: 'var(--text-faint)' }}>{label}</span>
+      <span className="text-sm font-medium text-right" style={{ color: 'var(--text)' }}>{value}</span>
     </div>
   );
 }
 
 function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
+    <div className="card card-body">
       <div className="flex items-center gap-2 mb-3">
-        <Icon size={15} className="text-[var(--color-teal)]" />
-        <p className="text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">{title}</p>
+        <Icon size={15} style={{ color: 'var(--primary)' }} />
+        <p className="overline">{title}</p>
       </div>
       {children}
     </div>
@@ -75,22 +78,26 @@ export function ShipmentPanel({ shipmentId, onClose }: ShipmentPanelProps) {
 
       {/* Panel — 50% width */}
       <div
-        className={`fixed right-0 top-0 z-50 h-full w-1/2 min-w-[520px] bg-[var(--color-cream)] shadow-2xl flex flex-col transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 z-50 h-full w-1/2 min-w-[520px] shadow-2xl flex flex-col transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ background: 'var(--bg)' }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)] px-6 py-5">
+        <div
+          className="flex items-start justify-between gap-4 px-6 py-5"
+          style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}
+        >
           {isLoading || !s ? (
             <div className="space-y-2">
-              <div className="h-5 w-56 rounded bg-[var(--color-cream-dark)] animate-pulse" />
-              <div className="h-4 w-32 rounded bg-[var(--color-cream-dark)] animate-pulse" />
+              <div className="h-5 w-56 rounded animate-pulse" style={{ background: 'var(--border)' }} />
+              <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'var(--border)' }} />
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-[var(--color-text)]">{s.item_description}</h2>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--text)' }}>{s.item_description}</h2>
                 <StatusPill status={s.status} />
               </div>
-              <div className="mt-1.5 flex items-center gap-2 text-sm text-[var(--color-text-faint)]">
+              <div className="mt-1.5 flex items-center gap-2 text-sm" style={{ color: 'var(--text-faint)' }}>
                 <Hash size={12} />
                 <span className="font-mono">{s.tracking_token}</span>
                 {s.item_category && (
@@ -101,7 +108,7 @@ export function ShipmentPanel({ shipmentId, onClose }: ShipmentPanelProps) {
           )}
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-2 text-[var(--color-text-faint)] hover:bg-[var(--color-cream)] hover:text-[var(--color-text)] transition-colors"
+            className="btn-ghost shrink-0 rounded-lg p-2"
           >
             <X size={18} />
           </button>
@@ -113,7 +120,7 @@ export function ShipmentPanel({ shipmentId, onClose }: ShipmentPanelProps) {
           {isLoading && (
             <div className="space-y-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-28 rounded-xl bg-[var(--color-cream-dark)] animate-pulse" />
+                <div key={i} className="h-28 rounded-xl animate-pulse" style={{ background: 'var(--border)' }} />
               ))}
             </div>
           )}
@@ -122,7 +129,7 @@ export function ShipmentPanel({ shipmentId, onClose }: ShipmentPanelProps) {
             <>
               {/* Map */}
               {(mapPickup && mapDelivery) && (
-                <div className="h-[260px] rounded-xl overflow-hidden border border-[var(--color-cream-dark)]">
+                <div className="h-[260px] rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
                   <StaticRouteMap pickup={mapPickup} delivery={mapDelivery} />
                 </div>
               )}

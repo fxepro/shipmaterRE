@@ -81,6 +81,11 @@ export const authApi = {
   me:       () => api.get('/api/v1/user'),
 };
 
+// ── Marketing / white-label leads (public) ────────────────────────────
+export const marketingApi = {
+  submitLead: (data: Record<string, unknown>) => api.post('/api/v1/platform-leads', data),
+};
+
 // ── Shipments ─────────────────────────────────────────────────────────
 export const shipmentApi = {
   list:          (params?: Record<string, unknown>) => api.get('/api/v1/shipments', { params }),
@@ -239,14 +244,35 @@ export const certificationApi = {
 
 // ── Org / Team ──────────────────────────────────────────────────────────
 export const orgApi = {
-  get:              ()                                          => api.get('/api/v1/org'),
-  update:           (data: Record<string, unknown>)            => api.put('/api/v1/org', data),
-  members:          ()                                         => api.get('/api/v1/org/members'),
-  updateMember:     (id: number, role: string)                 => api.put(`/api/v1/org/members/${id}`, { role }),
-  removeMember:     (id: number)                               => api.delete(`/api/v1/org/members/${id}`),
-  invitations:      ()                                         => api.get('/api/v1/org/invitations'),
-  invite:           (email: string, role: string)              => api.post('/api/v1/org/invitations', { email, role }),
-  cancelInvitation: (id: number)                               => api.delete(`/api/v1/org/invitations/${id}`),
+  get:               ()                                         => api.get('/api/v1/org'),
+  update:            (data: Record<string, unknown>)            => api.put('/api/v1/org', data),
+  members:           ()                                         => api.get('/api/v1/org/members'),
+  updateMember:      (id: number, role: string)                 => api.put(`/api/v1/org/members/${id}`, { role }),
+  removeMember:      (id: number)                               => api.delete(`/api/v1/org/members/${id}`),
+  invitations:       ()                                         => api.get('/api/v1/org/invitations'),
+  invite:            (email: string, role: string)              => api.post('/api/v1/org/invitations', { email, role }),
+  acceptInvitation:  (token: string)                            => api.post('/api/v1/org/invitations/accept', { token }),
+  cancelInvitation:  (id: number)                               => api.delete(`/api/v1/org/invitations/${id}`),
+  switchOrg:         (orgId: number)                            => api.put('/api/v1/org/switch', { org_id: orgId }),
+  myOrganizations:   ()                                         => api.get('/api/v1/user/organizations'),
+};
+
+// ── Admin: org management + Stripe toggle ─────────────────────────────
+export const adminOrgApi = {
+  listOrgs:    (params?: Record<string, unknown>)  => api.get('/api/v1/admin/orgs', { params }),
+  getOrg:      (id: number)                        => api.get(`/api/v1/admin/orgs/${id}`),
+  /** The pivotal toggle: flip an org between Shipmater's Stripe and their own. */
+  updateStripe: (id: number, data: {
+    stripe_mode: 'platform' | 'connect';
+    stripe_connect_id?: string | null;
+    commission_rate?: number | null;
+  })                                               => api.put(`/api/v1/admin/orgs/${id}/stripe`, data),
+
+  // Platform tenant management
+  listTenants:   (params?: Record<string, unknown>) => api.get('/api/v1/admin/platform-tenants', { params }),
+  createTenant:  (data: Record<string, unknown>)    => api.post('/api/v1/admin/platform-tenants', data),
+  updateTenant:  (id: number, data: Record<string, unknown>) => api.put(`/api/v1/admin/platform-tenants/${id}`, data),
+  convertLead:   (leadId: number, data: Record<string, unknown>) => api.post(`/api/v1/admin/leads/${leadId}/convert`, data),
 };
 
 // ── Profile (shipper + carrier) ────────────────────────────────────────

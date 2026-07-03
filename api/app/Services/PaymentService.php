@@ -48,43 +48,68 @@ class PaymentService
      * Create a PaymentIntent in manual-capture mode.
      * Funds are authorized (reserved) but not captured yet.
      * Capture happens at delivery.
+     *
+     * Stripe mode is determined by the shipper's org (admin-configurable):
+     *   'platform' (default) — payment to Shipmater's Stripe. Maximises GMV/ARR.
+     *   'connect'  (enterprise) — payment to the org's own Stripe Connect account;
+     *              Shipmater collects commission via application_fee_amount.
      */
     public function createFreightIntent(Shipment $shipment, User $shipper): array
     {
-        $customerId   = $this->getOrCreateCustomer($shipper);
-        $amountCents  = (int) round((float) $shipment->agreed_cost * 100);
-        $feeCents     = (int) round($amountCents * $this->feePercent / 100);
+        $customerId  = $this->getOrCreateCustomer($shipper);
+        $amountCents = (int) round((float) $shipment->agreed_cost * 100);
 
-        $intent = $this->stripe->paymentIntents->create([
+        // Resolve the effective commission rate from the org, falling back to platform default.
+        $org      = $shipper->currentOrg;
+        $feeRate  = $org ? $org->commissionRate() : ($this->feePercent / 100);
+        $feeCents = (int) round($amountCents * $feeRate);
+
+        $baseParams = [
             'amount'               => $amountCents,
             'currency'             => 'usd',
             'customer'             => $customerId,
-            'capture_method'       => 'manual',   // authorize only — capture on delivery
+            'capture_method'       => 'manual',
             'automatic_payment_methods' => [
-                'enabled'          => true,
-                'allow_redirects'  => 'never',
+                'enabled'         => true,
+                'allow_redirects' => 'never',
             ],
-            'description'          => "Freight shipment #{$shipment->id}: {$shipment->item_description}",
-            'metadata'             => [
+            'description' => "Freight shipment #{$shipment->id}: {$shipment->item_description}",
+            'metadata'    => [
                 'type'        => 'freight_payment',
                 'shipment_id' => (string) $shipment->id,
                 'shipper_id'  => (string) $shipper->id,
                 'carrier_id'  => (string) $shipment->carrier_id,
                 'fee_cents'   => (string) $feeCents,
+                'stripe_mode' => $org?->stripe_mode ?? 'platform',
             ],
-        ]);
+        ];
+
+        // ── Connect mode (enterprise, admin-enabled per org) ─────────────────
+        // Payment lands in the tenant's Stripe; Shipmater takes application_fee_amount.
+        if ($org && $org->usesOwnStripe()) {
+            $baseParams['application_fee_amount'] = $feeCents;
+
+            $intent = $this->stripe->paymentIntents->create(
+                $baseParams,
+                ['stripe_account' => $org->stripe_connect_id]
+            );
+
+        // ── Platform mode (default — all revenue through Shipmater's Stripe) ─
+        } else {
+            $intent = $this->stripe->paymentIntents->create($baseParams);
+        }
 
         $shipment->update([
-            'payment_intent_id'   => $intent->id,
-            'payment_status'      => 'authorized',
-            'platform_fee_cents'  => $feeCents,
+            'payment_intent_id'  => $intent->id,
+            'payment_status'     => 'authorized',
+            'platform_fee_cents' => $feeCents,
         ]);
 
         return [
-            'client_secret'      => $intent->client_secret,
-            'payment_intent_id'  => $intent->id,
-            'amount_cents'       => $amountCents,
-            'fee_cents'          => $feeCents,
+            'client_secret'     => $intent->client_secret,
+            'payment_intent_id' => $intent->id,
+            'amount_cents'      => $amountCents,
+            'fee_cents'         => $feeCents,
         ];
     }
 

@@ -19,7 +19,11 @@ use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\ShipperProfileController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\CertificationController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\AdminOrgController;
 use App\Http\Controllers\Api\OrgController;
+use App\Http\Controllers\Api\PlatformLeadController;
 use App\Http\Controllers\Api\ServiceTypeController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
@@ -54,7 +58,13 @@ Route::get('/service-types/rules', [ServiceTypeController::class, 'rules']);
 // ── Certifications (public list) ───────────────────────────────────────
 Route::get('/certifications', [CertificationController::class, 'index']);
 
-// ── Auth (public) ──────────────────────────────────────────────────────
+// ── Platform / white-label leads (public) ──────────────────────────────
+Route::post('/platform-leads', [PlatformLeadController::class, 'store']);
+
+// ── Tenant resolve (public — used by Next.js middleware) ───────────────────
+Route::get('/tenant/resolve', [TenantController::class, 'resolve']);
+
+// ── Auth (public) ──────────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login',    [AuthController::class, 'login']);
 
@@ -123,14 +133,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/carrier/certifications', [CertificationController::class, 'sync']);
 
     // Org / Team management
-    Route::get('/org',                          [OrgController::class, 'show']);
-    Route::put('/org',                          [OrgController::class, 'update']);
-    Route::get('/org/members',                  [OrgController::class, 'members']);
-    Route::put('/org/members/{id}',             [OrgController::class, 'updateMember']);
-    Route::delete('/org/members/{id}',          [OrgController::class, 'removeMember']);
-    Route::get('/org/invitations',              [OrgController::class, 'invitations']);
-    Route::post('/org/invitations',             [OrgController::class, 'invite']);
-    Route::delete('/org/invitations/{id}',      [OrgController::class, 'cancelInvitation']);
+    Route::get('/org',                             [OrgController::class, 'show']);
+    Route::put('/org',                             [OrgController::class, 'update']);
+    Route::get('/org/members',                     [OrgController::class, 'members']);
+    Route::put('/org/members/{id}',                [OrgController::class, 'updateMember']);
+    Route::delete('/org/members/{id}',             [OrgController::class, 'removeMember']);
+    Route::get('/org/invitations',                 [OrgController::class, 'invitations']);
+    Route::post('/org/invitations',                [OrgController::class, 'invite']);
+    Route::post('/org/invitations/accept',         [OrgController::class, 'acceptInvitation']);
+    Route::delete('/org/invitations/{id}',         [OrgController::class, 'cancelInvitation']);
+    Route::put('/org/switch',                      [OrgController::class, 'switchOrg']);
+    Route::get('/user/organizations',              [OrgController::class, 'userOrgs']);
 
     // Shipper profile
     Route::get('/shipper/profile',   [ShipperProfileController::class, 'show']);
@@ -150,9 +163,30 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/preferred-carriers',                      [PreferredCarrierController::class, 'store']);
     Route::delete('/preferred-carriers/{preferredCarrier}', [PreferredCarrierController::class, 'destroy']);
 
+    // White-label tenant: self-service branding
+    Route::get('/tenant/branding', [TenantController::class, 'show']);
+    Route::put('/tenant/branding', [TenantController::class, 'update']);
+
+    // Admin: platform metrics + management
+    Route::get('/admin/metrics',   [AdminController::class, 'metrics']);
+    Route::get('/admin/shipments', [AdminController::class, 'shipments']);
+    Route::get('/admin/users',     [AdminController::class, 'users']);
+    Route::get('/admin/disputes',  [AdminController::class, 'disputes']);
+
     // Admin: carrier approval queue (pending_review only)
     Route::get('/admin/carriers/pending-review',    [CarrierController::class, 'pendingReview']);
     Route::post('/admin/carriers/{id}/review',      [CarrierController::class, 'reviewCarrier']);
+
+    // Admin: organization management + Stripe toggle
+    Route::get('/admin/orgs',                       [AdminOrgController::class, 'index']);
+    Route::get('/admin/orgs/{id}',                  [AdminOrgController::class, 'show']);
+    Route::put('/admin/orgs/{id}/stripe',           [AdminOrgController::class, 'updateStripe']);
+
+    // Admin: white-label tenant provisioning
+    Route::get('/admin/platform-tenants',           [AdminOrgController::class, 'tenants']);
+    Route::post('/admin/platform-tenants',          [AdminOrgController::class, 'createTenant']);
+    Route::put('/admin/platform-tenants/{id}',      [AdminOrgController::class, 'updateTenant']);
+    Route::post('/admin/leads/{id}/convert',        [AdminOrgController::class, 'convertLead']);
 
     // Blog admin
     Route::get('/admin/blog',         [BlogController::class, 'adminIndex']);

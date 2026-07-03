@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { Bell } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import type { UserRole } from '@/types/user';
 
 const ROLE_TITLE: Record<UserRole, string> = {
@@ -13,19 +13,45 @@ const ROLE_TITLE: Record<UserRole, string> = {
 interface TopbarProps {
   role: UserRole;
   userName: string;
+  onLogout: () => void;
 }
 
-export function Topbar({ role, userName }: TopbarProps) {
+export function Topbar({ role, userName, onLogout }: TopbarProps) {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-[var(--color-cream-dark)] bg-[var(--color-white)] px-6">
-      <p className="text-sm font-medium text-[var(--color-text-muted)]">{ROLE_TITLE[role]}</p>
-      <div className="flex items-center gap-4">
-        <button className="relative text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors">
-          <Bell size={16} />
+    <header
+      className="flex h-14 items-center justify-between px-6"
+      style={{
+        background: 'var(--card)',
+        borderBottom: '1px solid var(--border)',
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      <p className="text-sm font-medium" style={{ color: 'var(--navy)' }}>
+        {ROLE_TITLE[role]}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          className="relative transition-colors"
+          style={{ color: 'var(--text-faint)' }}
+          aria-label="Notifications"
+        >
+          <Bell size={17} />
         </button>
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-slate)] text-xs font-medium text-white">
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
+          style={{ background: 'var(--navy)', color: 'var(--on-dark)' }}
+        >
           {userName.charAt(0).toUpperCase()}
         </div>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--border)]"
+          style={{ color: 'var(--text-faint)' }}
+          aria-label="Log out"
+        >
+          <LogOut size={14} />
+          <span className="hidden sm:inline">Log out</span>
+        </button>
       </div>
     </header>
   );

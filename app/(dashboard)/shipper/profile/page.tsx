@@ -488,7 +488,7 @@ function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryC
         </label>
         <div>
           <Label>Expiry date</Label>
-          <input type="date" value={expiry} onChange={e => onExpiryChange(e.target.value)}
+          <input type="date" value={expiry ?? ''} onChange={e => onExpiryChange(e.target.value)}
             className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none" />
         </div>
       </div>
@@ -499,12 +499,12 @@ function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryC
 function ComplianceTab({ initialData }: { initialData: ShipperProfile }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    coi_url:           initialData.coi_url,
-    coi_expiry:        initialData.coi_expiry,
-    hipaa_baa_url:     initialData.hipaa_baa_url,
-    hipaa_baa_expiry:  initialData.hipaa_baa_expiry,
-    hazmat_reg_url:    initialData.hazmat_reg_url,
-    hazmat_reg_expiry: initialData.hazmat_reg_expiry,
+    coi_url:           initialData.coi_url           ?? '',
+    coi_expiry:        initialData.coi_expiry        ?? '',
+    hipaa_baa_url:     initialData.hipaa_baa_url     ?? '',
+    hipaa_baa_expiry:  initialData.hipaa_baa_expiry  ?? '',
+    hazmat_reg_url:    initialData.hazmat_reg_url    ?? '',
+    hazmat_reg_expiry: initialData.hazmat_reg_expiry ?? '',
   });
   const [saved, setSaved] = useState(false);
 

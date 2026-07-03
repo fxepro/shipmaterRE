@@ -1,90 +1,242 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap');
+/* Roboto is self-hosted via next/font (see app/layout.tsx) and exposed as
+   --font-roboto. IBM Plex Sans (marketing pages, inline) stays on the CDN. */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ============================================================================
+   SHIPMATER — DASHBOARD DESIGN SYSTEM
+   Primary-blue sidebar · navy actions · airy surface neutrals · Roboto type.
+   Marketing pages style themselves inline with IBM Plex Sans and do NOT
+   depend on these tokens.
+   ============================================================================ */
 :root {
-  /* Primary palette */
-  --color-slate:       #0F1923;
-  --color-slate-80:    #1E2D3D;
-  --color-slate-60:    #2E4257;
+  /* ── Brand ──────────────────────────────────────────────────────────────── */
+  --primary:        #0096C7;   /* primary blue — sidebar, accents            */
+  --primary-hover:  #0086B3;
+  --primary-soft:   #E0F4FA;   /* tinted icon / badge backgrounds            */
+  --navy:           #0A2E40;   /* actions, active nav, headings, links       */
+  --navy-hover:     #08222F;
+  --info:           #039BE5;   /* info + hover highlight                      */
 
-  --color-sage:        #5C7A6B;
-  --color-sage-light:  #8FAF9F;
-  --color-sage-pale:   #D4E5DD;
+  /* ── Surfaces ───────────────────────────────────────────────────────────── */
+  --bg:             #F0F4F7;   /* app background                             */
+  --card:           #FFFFFF;
+  --surface:        #F7FAFB;   /* subtle alternate fill                      */
+  --border:         #E2ECF0;
+  --border-strong:  #CFDDE5;
 
-  /* Teal replaces gold as action accent */
-  --color-teal:        #2A8C8A;
-  --color-teal-light:  #4DB5B2;
-  --color-teal-pale:   #D0EEEC;
+  /* ── Text ───────────────────────────────────────────────────────────────── */
+  --text:           #0F2433;
+  --text-muted:     #5A7184;
+  --text-faint:     #93A7B5;
+  --on-dark:        #FFFFFF;
+  --on-dark-muted:  rgba(255, 255, 255, 0.72);
 
-  --color-cream:       #F5F2EC;
-  --color-cream-dark:  #EAE6DE;
-  --color-white:       #FDFCFA;
+  /* ── Semantic ───────────────────────────────────────────────────────────── */
+  --success:        #1B9C6B;   --success-bg: #E4F6EE;
+  --warning:        #C98A00;   --warning-bg: #FBF1D8;
+  --danger:         #D64545;   --danger-bg:  #FBEAEA;
+  --info-bg:        #E3F4FC;
 
-  /* Semantic */
-  --color-text:        #0F1923;
-  --color-text-muted:  #4A5568;
-  --color-text-faint:  #8A9BB0;
-  --color-success:     #2E7D5B;
-  --color-danger:      #C0392B;
-  --color-warning:     #A06B00;
-
-  /* Typography — all Sora, no serif */
-  --font-display: 'Sora', system-ui, sans-serif;
-  --font-body:    'Sora', system-ui, sans-serif;
+  /* ── Type & shape ───────────────────────────────────────────────────────── */
+  --font-sans:      var(--font-roboto), system-ui, -apple-system, sans-serif;
+  --radius-sm:      6px;
+  --radius:         10px;
+  --radius-lg:      14px;
+  --shadow-card:    0 1px 2px rgba(10, 46, 64, 0.04), 0 1px 3px rgba(10, 46, 64, 0.06);
+  --shadow-pop:     0 12px 32px rgba(10, 46, 64, 0.12);
 }
 
-* {
-  box-sizing: border-box;
-  /* Hard floor — nothing renders below 12px anywhere */
-  min-font-size: 12px;
-}
-
-/* Enforce 12px minimum for all text elements */
-:root {
-  font-size: 16px;
-}
-
+* { box-sizing: border-box; }
+html { font-size: 16px; }
 
 body {
-  font-family: var(--font-body);
-  background-color: var(--color-cream);
-  color: var(--color-text);
-  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
 }
 
-h1, h2, h3 {
-  font-family: var(--font-display);
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-sans);
+  color: var(--text);
 }
 
-/* Skeleton shimmer */
+/* ── Animations ───────────────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  100% { background-position:  400px 0; }
 }
-
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-cream-dark) 25%,
-    #f0ece4 50%,
-    var(--color-cream-dark) 75%
-  );
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
   background-size: 400px 100%;
   animation: shimmer 1.4s ease infinite;
 }
 
-/* GPS marker pulse */
 @keyframes pulse-ring {
   0%   { transform: scale(1);   opacity: 0.6; }
-  100% { transform: scale(2.5); opacity: 0; }
+  100% { transform: scale(2.5); opacity: 0;   }
+}
+.gps-pulse { animation: pulse-ring 1.8s ease-out infinite; }
+
+/* ── MapLibre base ────────────────────────────────────────────────────────── */
+.maplibregl-map { font-family: var(--font-sans) !important; }
+
+/* ============================================================================
+   COMPONENT LAYER
+   Reusable building blocks. Pages reference these by class name and own NO
+   colors, radii, shadows, or fonts of their own. To restyle a primitive across
+   the whole app, edit it HERE — never in a page.
+   See docs/design-system.md.
+   ============================================================================ */
+@layer components {
+
+  /* ── Page scaffolding ─────────────────────────────────────────────────── */
+  .page-header   { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .page-title    { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+  .page-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-top: 2px; }
+  .overline {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-faint);
+  }
+
+  /* ── Card ─────────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border);
+  }
+  .card-title { font-size: 0.9375rem; font-weight: 500; color: var(--text); }
+  .card-body  { padding: 20px; }
+
+  /* ── Buttons ──────────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500;
+    line-height: 1; white-space: nowrap; cursor: pointer;
+    padding: 9px 16px; border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+  }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--navy); }
+  .btn-navy    { background: var(--navy); color: #fff; }
+  .btn-navy:hover:not(:disabled)    { background: var(--navy-hover); }
+  .btn-outline { background: var(--card); color: var(--navy); border-color: var(--border-strong); }
+  .btn-outline:hover:not(:disabled) { background: var(--surface); }
+  .btn-ghost   { background: transparent; color: var(--text-muted); }
+  .btn-ghost:hover:not(:disabled)   { background: var(--surface); color: var(--text); }
+  .btn-sm { padding: 6px 12px; font-size: 0.8125rem; }
+  .btn-block { width: 100%; }
+
+  /* ── Inline link ──────────────────────────────────────────────────────── */
+  .link { color: var(--primary); font-weight: 500; cursor: pointer; }
+  .link:hover { text-decoration: underline; }
+
+  /* ── Stat tile ────────────────────────────────────────────────────────── */
+  .stat {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-card); overflow: hidden;
+  }
+  .stat-accent { height: 3px; background: var(--primary); }
+  .stat-body   { padding: 20px; }
+  .stat-label  {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-faint); margin-bottom: 8px;
+  }
+  .stat-value  { font-size: 1.875rem; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .stat-sub    { margin-top: 4px; font-size: 0.875rem; color: var(--text-muted); }
+
+  /* ── Badge / status pill ──────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 999px;
+  }
+  .badge-primary { background: var(--primary-soft); color: var(--primary); }
+  .badge-info    { background: var(--info-bg);     color: var(--info); }
+  .badge-success { background: var(--success-bg);  color: var(--success); }
+  .badge-warning { background: var(--warning-bg);  color: var(--warning); }
+  .badge-danger  { background: var(--danger-bg);   color: var(--danger); }
+  .badge-muted   { background: var(--surface);     color: var(--text-muted); }
+
+  /* ── Form controls ────────────────────────────────────────────────────── */
+  .field-label {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); margin-bottom: 6px;
+  }
+  .input, .select, .textarea {
+    width: 100%; font-family: var(--font-sans); font-size: 14px; color: var(--text);
+    background: var(--card); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); padding: 9px 12px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus, .select:focus, .textarea:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 150, 199, 0.12);
+  }
+  .input::placeholder, .textarea::placeholder { color: var(--text-faint); }
+
+  /* ── Empty state ──────────────────────────────────────────────────────── */
+  .empty {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; padding: 56px 24px;
+  }
+  .empty-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 64px; height: 64px; border-radius: 999px;
+    background: var(--surface); margin-bottom: 18px;
+  }
+
+  /* ── Data table ───────────────────────────────────────────────────────── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table thead th {
+    text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--navy); background: var(--primary-soft);
+    padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .data-table tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover { background: var(--surface); }
+
+  /* ── Icon chip (tinted square behind an icon) ─────────────────────────── */
+  .icon-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--primary-soft); color: var(--primary); flex-shrink: 0;
+  }
 }
 
-.gps-pulse {
-  animation: pulse-ring 1.8s ease-out infinite;
-}
-
-/* MapLibre GL base styles */
-.maplibregl-map {
-  font-family: var(--font-body) !important;
+/* ============================================================================
+   LEGACY BRIDGE — TEMPORARY.
+   Remaps the retired --color-* / --font-* token names onto the new palette so
+   pages not yet migrated keep rendering during the dashboard redesign.
+   DELETE this entire block once every page + component is off the old tokens
+   (final step of the redesign). Nothing new should reference these names.
+   ============================================================================ */
+:root {
+  --color-slate:       var(--navy);
+  --color-slate-80:    #14384B;
+  --color-slate-60:    #1E4356;
+  --color-sage:        #4E7A8C;
+  --color-sage-light:  #8FB4C4;
+  --color-sage-pale:   var(--primary-soft);
+  --color-teal:        var(--primary);
+  --color-teal-light:  var(--info);
+  --color-teal-pale:   var(--primary-soft);
+  --color-teal-dark:   var(--navy);      /* was never defined → broke button hovers (went white) */
+  --color-cream:       var(--bg);
+  --color-cream-dark:  var(--border);
+  --color-white:       var(--card);
+  --color-text:        var(--text);
+  --color-text-muted:  var(--text-muted);
+  --color-text-faint:  var(--text-faint);
+  --color-success:     var(--success);
+  --color-danger:      var(--danger);
+  --color-warning:     var(--warning);
+  --font-display:      var(--font-sans);
+  --font-body:         var(--font-sans);
 }

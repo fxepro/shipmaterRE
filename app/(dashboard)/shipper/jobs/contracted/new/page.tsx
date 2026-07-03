@@ -658,7 +658,7 @@ function StopCard({ stop, onUpdate, onRemove, index, defaultDelivery }: {
             <div>
 
               {/* Table header */}
-              <div className="flex items-center gap-0 bg-[var(--color-cream)] border-b border-[var(--color-cream-dark)] px-4 py-3 rounded-t-lg">
+              <div className="flex items-center gap-0 bg-[var(--color-teal-pale)] border-b border-[var(--color-cream-dark)] px-4 py-3 rounded-t-lg">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <span className="flex-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-text-faint)]">Item</span>
                   <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-[0.07em] text-[var(--color-text-faint)]">Qty</span>
@@ -1394,7 +1394,7 @@ export default function NewContractedJobPage() {
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--color-cream-dark)] bg-[var(--color-cream)]">
+                    <tr className="border-b border-[var(--color-cream-dark)] bg-[var(--color-teal-pale)]">
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Carrier</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Rate</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">Equipment</th>

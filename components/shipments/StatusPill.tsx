@@ -1,14 +1,16 @@
-﻿import type { ShipmentStatus } from '@/types/shipment';
+import type { ShipmentStatus } from '@/types/shipment';
 
+// Brand-blue states use badge variants; genuinely distinct status hues
+// (amber/purple) stay as semantic Tailwind colors — they're not brand tokens.
 const STATUS_STYLES: Record<ShipmentStatus, string> = {
-  pending:    'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)]',
+  pending:    'badge-muted',
   bidding:    'bg-amber-50 text-amber-700',
   offered:    'bg-purple-50 text-purple-700',
-  assigned:   'bg-[var(--color-sage-pale)] text-[var(--color-sage)]',
-  in_transit: 'bg-[var(--color-teal-pale)] text-[var(--color-teal)]',
-  delivered:  'bg-emerald-50 text-emerald-700',
-  disputed:   'bg-red-50 text-red-700',
-  cancelled:  'bg-gray-100 text-gray-500',
+  assigned:   'badge-primary',
+  in_transit: 'badge-info',
+  delivered:  'badge-success',
+  disputed:   'badge-danger',
+  cancelled:  'badge-muted',
 };
 
 const STATUS_LABELS: Record<ShipmentStatus, string> = {
@@ -24,7 +26,7 @@ const STATUS_LABELS: Record<ShipmentStatus, string> = {
 
 export function StatusPill({ status }: { status: ShipmentStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'}`}>
+    <span className={`badge ${STATUS_STYLES[status] ?? 'badge-muted'}`}>
       {STATUS_LABELS[status] ?? status}
     </span>
   );

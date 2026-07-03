@@ -21,13 +21,14 @@ class UserResource extends JsonResource
 
             // Org context
             'org' => $org ? [
-                'id'     => $org->id,
-                'name'   => $org->name,
-                'slug'   => $org->slug,
-                'type'   => $org->type,
-                'status' => $org->status,
-                'plan'   => $org->plan,
-                'logo_url' => $org->logo_url,
+                'id'                => $org->id,
+                'name'              => $org->name,
+                'slug'              => $org->slug,
+                'type'              => $org->type,
+                'status'            => $org->status,
+                'plan'              => $org->plan,
+                'logo_url'          => $org->logo_url,
+                'is_platform_tenant'=> (bool) $org->is_platform_tenant,
             ] : null,
             'org_role' => $this->orgRole(),
 

@@ -34,12 +34,12 @@ export default function ShipperDashboard() {
     {
       label: 'Pending',
       value: shipments.filter((s) => s.status === 'pending').length,
-      accentColor: 'var(--color-sage)',
+      accentColor: 'var(--info)',
     },
     {
       label: 'Delivered',
       value: shipments.filter((s) => s.status === 'delivered').length,
-      accentColor: 'var(--color-success)',
+      accentColor: 'var(--success)',
     },
     {
       label: 'Total Spent',
@@ -47,7 +47,7 @@ export default function ShipperDashboard() {
         .reduce((acc, s) => acc + (s.agreed_cost ?? 0), 0)
         .toLocaleString('en-US', { minimumFractionDigits: 0 }),
       currency: true,
-      accentColor: 'var(--color-slate-60)',
+      accentColor: 'var(--navy)',
     },
   ];
 
@@ -55,14 +55,9 @@ export default function ShipperDashboard() {
     <>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
-            Dashboard
-          </h1>
-          <Link
-            href="/shipper/shipments/new"
-            className="flex items-center gap-2 rounded-lg bg-[var(--color-teal)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-teal-light)] transition-colors"
-          >
+        <div className="page-header">
+          <h1 className="page-title">Dashboard</h1>
+          <Link href="/shipper/shipments/new" className="btn btn-primary">
             <Plus size={15} /> New Shipment
           </Link>
         </div>
@@ -76,12 +71,10 @@ export default function ShipperDashboard() {
         </div>
 
         {/* Recent shipments table */}
-        <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-cream-dark)]">
-            <p className="font-medium text-[var(--color-text)]">Recent Shipments</p>
-            <Link href="/shipper/shipments" className="text-sm font-medium text-[var(--color-teal)] hover:underline">
-              View all
-            </Link>
+        <div className="card">
+          <div className="card-head">
+            <p className="card-title">Recent Shipments</p>
+            <Link href="/shipper/shipments" className="link text-sm">View all</Link>
           </div>
           {isLoading ? (
             <div className="skeleton h-48 m-4 rounded-lg" />
@@ -103,11 +96,13 @@ export default function ShipperDashboard() {
         </div>
 
         {/* Bottom row: activity */}
-        <div className="bg-[var(--color-white)] rounded-xl border border-[var(--color-cream-dark)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-5">
-          <p className="mb-4 font-medium text-[var(--color-text)]">Activity</p>
+        <div className="card card-body">
+          <p className="card-title mb-4">Activity</p>
           <ActivityFeed items={[]} />
           {shipments.length === 0 && (
-            <p className="text-sm text-[var(--color-text-faint)]">Activity will appear here as shipments progress.</p>
+            <p className="text-sm" style={{ color: 'var(--text-faint)' }}>
+              Activity will appear here as shipments progress.
+            </p>
           )}
         </div>
       </div>

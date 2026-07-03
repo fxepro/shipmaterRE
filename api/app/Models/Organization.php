@@ -15,11 +15,19 @@ class Organization extends Model
         'phone', 'email', 'website',
         'street', 'city', 'state', 'zip', 'country',
         'logo_url', 'settings',
+        // Stripe billing mode (admin-only toggle)
+        'stripe_mode', 'stripe_connect_id', 'commission_rate',
+        // Compliance / tenant flags
+        'fmcsa_broker_mc', 'is_platform_tenant',
     ];
 
     protected function casts(): array
     {
-        return ['settings' => 'json'];
+        return [
+            'settings'          => 'json',
+            'commission_rate'   => 'float',
+            'is_platform_tenant'=> 'boolean',
+        ];
     }
 
     // ── Relationships ─────────────────────────────────────────────────────────
@@ -67,9 +75,37 @@ class Organization extends Model
         return $this->hasMany(Shipment::class, 'org_id');
     }
 
+    public function platformTenant(): HasOne
+    {
+        return $this->hasOne(PlatformTenant::class, 'org_id');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    public function isCarrier(): bool { return $this->type === 'carrier'; }
-    public function isShipper(): bool { return $this->type === 'shipper'; }
-    public function isActive():  bool { return $this->status === 'active'; }
+    public function isCarrier(): bool        { return $this->type === 'carrier'; }
+    public function isShipper(): bool        { return $this->type === 'shipper'; }
+    public function isActive():  bool        { return $this->status === 'active'; }
+    public function isPlatformTenant(): bool { return (bool) $this->is_platform_tenant; }
+
+    /**
+     * Effective commission rate for this org.
+     * Falls back to the platform-wide default (PLATFORM_FEE_PERCENT env ÷ 100).
+     */
+    public function commissionRate(): float
+    {
+        if ($this->commission_rate !== null) {
+            return (float) $this->commission_rate;
+        }
+
+        return (float) env('PLATFORM_FEE_PERCENT', 15) / 100;
+    }
+
+    /**
+     * Whether payments for this org flow through Shipmater's Stripe (default)
+     * or the org's own Stripe Connect account (admin-enabled for enterprise).
+     */
+    public function usesOwnStripe(): bool
+    {
+        return $this->stripe_mode === 'connect' && !empty($this->stripe_connect_id);
+    }
 }

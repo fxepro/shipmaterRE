@@ -19,6 +19,7 @@ const NAV: { label: string; href: string; menu?: string }[] = [
   { label: 'Use Cases',    href: '/use-cases',    menu: 'use-cases'    },
   { label: 'Shippers',     href: '/shippers',     menu: 'shippers'     },
   { label: 'Carriers',     href: '/carriers',     menu: 'carriers'     },
+  { label: 'Platform',     href: '/platform'                          },
 ];
 
 export function Header() {

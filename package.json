@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "dev:api": "composer serve --working-dir=api",
+    "dev:api": "php api/artisan serve --host=127.0.0.1 --port=8888",
     "dev:all": "npx concurrently -k -n web,api -c \"#38bdf8,#34d399\" \"npm run dev\" \"npm run dev:api\"",
     "build": "next build",
     "start": "next start -p 3000",

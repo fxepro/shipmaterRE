@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Organization;
 use App\Models\OrgInvitation;
 use App\Models\OrgMember;
 use Illuminate\Http\JsonResponse;
@@ -189,5 +190,93 @@ class OrgController extends Controller
                      ->delete();
 
         return response()->json(['message' => 'Invitation cancelled.']);
+    }
+
+    // POST /api/v1/org/invitations/accept
+    // Authenticated — user must be logged in (or register) before accepting.
+    // The invitation token proves intent; email must match.
+    public function acceptInvitation(Request $request): JsonResponse
+    {
+        $user      = $request->user();
+        $validated = $request->validate(['token' => ['required', 'string', 'size:64']]);
+
+        $invitation = OrgInvitation::where('token', $validated['token'])
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now())
+            ->firstOrFail();
+
+        abort_unless(
+            strtolower($invitation->email) === strtolower($user->email),
+            403,
+            'This invitation was sent to a different email address.'
+        );
+
+        // Upsert membership — idempotent if already a member.
+        OrgMember::firstOrCreate(
+            ['org_id' => $invitation->org_id, 'user_id' => $user->id],
+            ['role' => $invitation->role, 'status' => 'active', 'joined_at' => now()]
+        );
+
+        $invitation->update(['accepted_at' => now()]);
+
+        // Switch the user's active org to the one they just joined.
+        $user->update(['current_org_id' => $invitation->org_id]);
+
+        return response()->json([
+            'message' => 'Invitation accepted.',
+            'org_id'  => $invitation->org_id,
+        ]);
+    }
+
+    // PUT /api/v1/org/switch
+    // Allows a user who belongs to multiple orgs to change their active org.
+    public function switchOrg(Request $request): JsonResponse
+    {
+        $user      = $request->user();
+        $validated = $request->validate(['org_id' => ['required', 'integer']]);
+
+        // Verify the user is an active member of the target org.
+        $member = OrgMember::where('user_id', $user->id)
+            ->where('org_id', $validated['org_id'])
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $user->update(['current_org_id' => $member->org_id]);
+
+        $org = Organization::find($member->org_id);
+
+        return response()->json([
+            'message' => 'Active org switched.',
+            'org'     => [
+                'id'   => $org->id,
+                'name' => $org->name,
+                'slug' => $org->slug,
+                'type' => $org->type,
+            ],
+        ]);
+    }
+
+    // GET /api/v1/user/organizations
+    // Lists all orgs the authenticated user belongs to (for an org-switcher UI).
+    public function userOrgs(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $orgs = OrgMember::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->with('org')
+            ->get()
+            ->map(fn($m) => [
+                'id'         => $m->org->id,
+                'name'       => $m->org->name,
+                'slug'       => $m->org->slug,
+                'type'       => $m->org->type,
+                'plan'       => $m->org->plan,
+                'logo_url'   => $m->org->logo_url,
+                'org_role'   => $m->role,
+                'is_current' => $m->org_id === $user->current_org_id,
+            ]);
+
+        return response()->json(['data' => $orgs]);
     }
 }

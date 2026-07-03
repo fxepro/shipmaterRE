@@ -3,29 +3,33 @@ import { getDemoUser, clearDemoUser } from './demo';
 import type { User } from '@/types/user';
 
 export async function getUser(): Promise<User | null> {
+  // Real token takes priority — if a Sanctum token is stored, use it.
+  // Demo mode is only a fallback when there is no real session.
+  const token = getStoredToken();
+
+  if (token) {
+    try {
+      const res = await authApi.me();
+      const user = res.data.data as User;
+      console.log('[auth] me() OK – user:', user?.email, 'role:', user?.role);
+      return user;
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status !== 401) {
+        console.error('[auth] me() FAILED – status:', status, e);
+      }
+      clearStoredToken();
+      // Fall through to demo mode check
+    }
+  }
+
   const demoUser = getDemoUser();
   if (demoUser) {
     console.log('[auth] demo mode – user:', demoUser.email);
     return demoUser;
   }
 
-  const token = getStoredToken();
-  console.log('[auth] getUser – token in storage:', token ? `${token.slice(0, 30)}…` : 'NONE');
-  if (!token) return null;
-
-  try {
-    const res = await authApi.me();
-    const user = res.data.data as User;
-    console.log('[auth] me() OK – user:', user?.email, 'role:', user?.role);
-    return user;
-  } catch (e: unknown) {
-    const status = (e as { response?: { status?: number } })?.response?.status;
-    if (status !== 401) {
-      console.error('[auth] me() FAILED – status:', status, e);
-    }
-    clearStoredToken();
-    return null;
-  }
+  return null;
 }
 
 export async function login(email: string, password: string): Promise<User> {
