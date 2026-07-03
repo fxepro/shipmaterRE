@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  Palette, Globe, FileText, Settings2, Mail,
+  Palette, Globe, Settings2, Mail,
   Save, ExternalLink, Info, Image as ImageIcon,
 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ import {
 interface TenantBranding {
   id: number;
   brand_name: string | null;
-  legal_name: string | null;
+  dba_name: string | null;
   primary_color: string | null;
   secondary_color: string | null;
   logo_url_dark: string | null;
@@ -22,20 +22,10 @@ interface TenantBranding {
   hide_powered_by: boolean;
   subdomain: string | null;
   custom_domain: string | null;
-  address: string | null;
-  support_email: string | null;
-  dot_number: string | null;
-  fmcsa_broker_mc: string | null;
-  broker_bond: string | null;
-  terms_url: string | null;
-  privacy_url: string | null;
-  document_footer: string | null;
-  signature_authority: string | null;
   billing_email: string | null;
   feature_flags: Record<string, boolean>;
   status: string;
   app_url: string;
-  // Email
   mail_from_name: string | null;
   mail_from_address: string | null;
   mail_driver: string;
@@ -52,15 +42,11 @@ interface TenantBranding {
 type FormState = Omit<TenantBranding, 'id' | 'status' | 'app_url'>;
 
 const EMPTY: FormState = {
-  brand_name: '', legal_name: '',
+  brand_name: '', dba_name: '',
   primary_color: '#0096C7', secondary_color: '#0A2E40',
   logo_url_dark: '', favicon_url: '',
   hide_powered_by: false,
   subdomain: '', custom_domain: '',
-  address: '', support_email: '',
-  dot_number: '', fmcsa_broker_mc: '', broker_bond: '',
-  terms_url: '', privacy_url: '',
-  document_footer: '', signature_authority: '',
   billing_email: '',
   feature_flags: {},
   mail_from_name: '', mail_from_address: '',
@@ -74,7 +60,6 @@ const EMPTY: FormState = {
 
 const LABEL = 'block text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-faint)] mb-1.5';
 const INPUT = 'w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-cream)] px-3.5 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:border-[var(--color-teal)] focus:bg-[var(--color-white)] focus:outline-none transition-colors';
-const TEXTAREA = INPUT + ' resize-none';
 const CARD = 'rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] shadow-[0_1px_4px_rgba(0,0,0,0.06)]';
 const SECTION = 'p-6 space-y-5';
 
@@ -119,14 +104,13 @@ function Toggle({ checked, onChange, label, sub }: { checked: boolean; onChange:
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-type Tab = 'brand' | 'domain' | 'legal' | 'email' | 'settings';
+type Tab = 'brand' | 'domain' | 'email' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'brand',    label: 'Brand',    icon: Palette    },
-  { id: 'domain',   label: 'Domain',   icon: Globe      },
-  { id: 'legal',    label: 'Legal',    icon: FileText   },
-  { id: 'email',    label: 'Email',    icon: Mail       },
-  { id: 'settings', label: 'Settings', icon: Settings2  },
+  { id: 'brand',    label: 'Brand',    icon: Palette   },
+  { id: 'domain',   label: 'Domain',   icon: Globe     },
+  { id: 'email',    label: 'Email',    icon: Mail      },
+  { id: 'settings', label: 'Settings', icon: Settings2 },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -146,37 +130,28 @@ export default function BrandingPage() {
   useEffect(() => {
     if (!tenant) return;
     setForm({
-      brand_name:          tenant.brand_name          ?? '',
-      legal_name:          tenant.legal_name          ?? '',
-      primary_color:       tenant.primary_color       ?? '#0096C7',
-      secondary_color:     tenant.secondary_color     ?? '#0A2E40',
-      logo_url_dark:       tenant.logo_url_dark       ?? '',
-      favicon_url:         tenant.favicon_url         ?? '',
-      hide_powered_by:     tenant.hide_powered_by     ?? false,
-      subdomain:           tenant.subdomain           ?? '',
-      custom_domain:       tenant.custom_domain       ?? '',
-      address:             tenant.address             ?? '',
-      support_email:       tenant.support_email       ?? '',
-      dot_number:          tenant.dot_number          ?? '',
-      fmcsa_broker_mc:     tenant.fmcsa_broker_mc     ?? '',
-      broker_bond:         tenant.broker_bond         ?? '',
-      terms_url:           tenant.terms_url           ?? '',
-      privacy_url:         tenant.privacy_url         ?? '',
-      document_footer:     tenant.document_footer     ?? '',
-      signature_authority: tenant.signature_authority ?? '',
-      billing_email:       tenant.billing_email       ?? '',
-      feature_flags:       tenant.feature_flags       ?? {},
-      mail_from_name:      tenant.mail_from_name      ?? '',
-      mail_from_address:   tenant.mail_from_address   ?? '',
-      mail_driver:         tenant.mail_driver         ?? 'default',
-      mail_host:           tenant.mail_host           ?? '',
-      mail_port:           tenant.mail_port           ?? null,
-      mail_username:       tenant.mail_username       ?? '',
-      mail_password:       '',   // never pre-fill masked value
-      mail_encryption:     tenant.mail_encryption     ?? 'tls',
-      mail_api_key:        '',   // never pre-fill masked value
-      mail_domain:         tenant.mail_domain         ?? '',
-      mail_region:         tenant.mail_region         ?? '',
+      brand_name:      tenant.brand_name      ?? '',
+      dba_name:        tenant.dba_name        ?? '',
+      primary_color:   tenant.primary_color   ?? '#0096C7',
+      secondary_color: tenant.secondary_color ?? '#0A2E40',
+      logo_url_dark:   tenant.logo_url_dark   ?? '',
+      favicon_url:     tenant.favicon_url     ?? '',
+      hide_powered_by: tenant.hide_powered_by ?? false,
+      subdomain:       tenant.subdomain       ?? '',
+      custom_domain:   tenant.custom_domain   ?? '',
+      billing_email:   tenant.billing_email   ?? '',
+      feature_flags:   tenant.feature_flags   ?? {},
+      mail_from_name:  tenant.mail_from_name  ?? '',
+      mail_from_address: tenant.mail_from_address ?? '',
+      mail_driver:     tenant.mail_driver     ?? 'default',
+      mail_host:       tenant.mail_host       ?? '',
+      mail_port:       tenant.mail_port       ?? null,
+      mail_username:   tenant.mail_username   ?? '',
+      mail_password:   '',   // never pre-fill masked value
+      mail_encryption: tenant.mail_encryption ?? 'tls',
+      mail_api_key:    '',   // never pre-fill masked value
+      mail_domain:     tenant.mail_domain     ?? '',
+      mail_region:     tenant.mail_region     ?? '',
     });
   }, [tenant]);
 
@@ -261,22 +236,30 @@ export default function BrandingPage() {
           </div>
 
           <div className={SECTION}>
-            <div>
-              <label className={LABEL}>Brand name</label>
-              <input className={INPUT} value={form.brand_name} onChange={e => set('brand_name', e.target.value)}
-                placeholder="e.g. FreightPro" />
-              <p className="mt-1 text-xs text-[var(--color-text-faint)]">Replaces "Shipmater" everywhere in the UI.</p>
+            <div className="grid grid-cols-2 gap-5">
+              <div>
+                <label className={LABEL}>Brand name</label>
+                <input className={INPUT} value={form.brand_name ?? ''} onChange={e => set('brand_name', e.target.value)}
+                  placeholder="e.g. FreightPro" />
+                <p className="mt-1 text-xs text-[var(--color-text-faint)]">Replaces "Shipmater" in the UI.</p>
+              </div>
+              <div>
+                <label className={LABEL}>DBA / Trading as <span className="normal-case font-normal">(for documents)</span></label>
+                <input className={INPUT} value={form.dba_name ?? ''} onChange={e => set('dba_name', e.target.value)}
+                  placeholder="e.g. FreightPro Logistics" />
+                <p className="mt-1 text-xs text-[var(--color-text-faint)]">Printed on rate confirmations, BOL, invoices.</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className={LABEL}>Primary colour</label>
-                <ColorSwatch value={form.primary_color} onChange={v => set('primary_color', v)} />
+                <ColorSwatch value={form.primary_color ?? ''} onChange={v => set('primary_color', v)} />
                 <p className="mt-1.5 text-xs text-[var(--color-text-faint)]">Sidebar, buttons, links</p>
               </div>
               <div>
                 <label className={LABEL}>Secondary colour</label>
-                <ColorSwatch value={form.secondary_color} onChange={v => set('secondary_color', v)} />
+                <ColorSwatch value={form.secondary_color ?? ''} onChange={v => set('secondary_color', v)} />
                 <p className="mt-1.5 text-xs text-[var(--color-text-faint)]">Active nav, accents</p>
               </div>
             </div>
@@ -285,7 +268,7 @@ export default function BrandingPage() {
               <label className={LABEL}>Logo URL <span className="normal-case font-normal">(for dark/navy background)</span></label>
               <div className="flex items-center gap-3">
                 <ImageIcon size={16} className="shrink-0 text-[var(--color-text-faint)]" />
-                <input className={INPUT} value={form.logo_url_dark} onChange={e => set('logo_url_dark', e.target.value)}
+                <input className={INPUT} value={form.logo_url_dark ?? ''} onChange={e => set('logo_url_dark', e.target.value)}
                   placeholder="https://cdn.yourcompany.com/logo-white.svg" />
               </div>
             </div>
@@ -298,7 +281,7 @@ export default function BrandingPage() {
                   <img src={form.favicon_url} alt="fav" className="h-7 w-7 rounded border border-[var(--color-cream-dark)] object-contain"
                     onError={e => (e.currentTarget.style.display = 'none')} />
                 )}
-                <input className={INPUT} value={form.favicon_url} onChange={e => set('favicon_url', e.target.value)}
+                <input className={INPUT} value={form.favicon_url ?? ''} onChange={e => set('favicon_url', e.target.value)}
                   placeholder="https://cdn.yourcompany.com/favicon.ico" />
               </div>
             </div>
@@ -326,7 +309,7 @@ export default function BrandingPage() {
               <div className="flex items-center overflow-hidden rounded-xl border border-[var(--color-cream-dark)] focus-within:border-[var(--color-teal)] bg-[var(--color-cream)]">
                 <input
                   className="flex-1 bg-transparent px-3.5 py-2.5 text-sm focus:outline-none"
-                  value={form.subdomain}
+                  value={form.subdomain ?? ''}
                   onChange={e => set('subdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="freightpro"
                 />
@@ -343,7 +326,7 @@ export default function BrandingPage() {
 
             <div>
               <label className={LABEL}>Custom domain <span className="normal-case font-normal">(optional)</span></label>
-              <input className={INPUT} value={form.custom_domain} onChange={e => set('custom_domain', e.target.value)}
+              <input className={INPUT} value={form.custom_domain ?? ''} onChange={e => set('custom_domain', e.target.value)}
                 placeholder="freight.yourcompany.com" />
 
               {form.custom_domain && (
@@ -388,79 +371,6 @@ export default function BrandingPage() {
         </div>
       )}
 
-      {/* ── Legal tab ─────────────────────────────────────────────────────── */}
-      {tab === 'legal' && (
-        <div className={CARD}>
-          <div className={SECTION}>
-            <p className="text-xs text-[var(--color-text-faint)] rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-              These fields appear on generated documents (Rate Agreements, BOL, invoices). Ensure they match your legal entity exactly.
-            </p>
-
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <label className={LABEL}>Legal entity name</label>
-                <input className={INPUT} value={form.legal_name} onChange={e => set('legal_name', e.target.value)}
-                  placeholder="FreightPro LLC" />
-              </div>
-              <div>
-                <label className={LABEL}>Support email</label>
-                <input className={INPUT} type="email" value={form.support_email} onChange={e => set('support_email', e.target.value)}
-                  placeholder="support@yourcompany.com" />
-              </div>
-            </div>
-
-            <div>
-              <label className={LABEL}>Business address</label>
-              <textarea className={TEXTAREA} rows={3} value={form.address} onChange={e => set('address', e.target.value)}
-                placeholder={"123 Main St\nSuite 400\nChicago, IL 60601"} />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className={LABEL}>FMCSA Broker MC#</label>
-                <input className={INPUT} value={form.fmcsa_broker_mc} onChange={e => set('fmcsa_broker_mc', e.target.value)}
-                  placeholder="MC-123456" />
-              </div>
-              <div>
-                <label className={LABEL}>DOT #</label>
-                <input className={INPUT} value={form.dot_number} onChange={e => set('dot_number', e.target.value)}
-                  placeholder="DOT-1234567" />
-              </div>
-              <div>
-                <label className={LABEL}>Broker bond #</label>
-                <input className={INPUT} value={form.broker_bond} onChange={e => set('broker_bond', e.target.value)}
-                  placeholder="BMC-84 / surety #" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-5">
-              <div>
-                <label className={LABEL}>Terms & Conditions URL</label>
-                <input className={INPUT} type="url" value={form.terms_url} onChange={e => set('terms_url', e.target.value)}
-                  placeholder="https://yourcompany.com/terms" />
-              </div>
-              <div>
-                <label className={LABEL}>Privacy Policy URL</label>
-                <input className={INPUT} type="url" value={form.privacy_url} onChange={e => set('privacy_url', e.target.value)}
-                  placeholder="https://yourcompany.com/privacy" />
-              </div>
-            </div>
-
-            <div>
-              <label className={LABEL}>Document footer <span className="normal-case font-normal">(printed on every PDF)</span></label>
-              <textarea className={TEXTAREA} rows={3} value={form.document_footer} onChange={e => set('document_footer', e.target.value)}
-                placeholder="FreightPro LLC is a licensed freight broker (MC-123456). All shipments are subject to our Carrier Agreement and Rate Confirmation." />
-            </div>
-
-            <div>
-              <label className={LABEL}>Signature authority line</label>
-              <input className={INPUT} value={form.signature_authority} onChange={e => set('signature_authority', e.target.value)}
-                placeholder="Authorised by Operations, FreightPro LLC" />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Email tab ─────────────────────────────────────────────────────── */}
       {tab === 'email' && (
         <div className={CARD}>
@@ -469,7 +379,6 @@ export default function BrandingPage() {
               Set a custom sending identity so outbound emails (shipment confirmations, invitations, alerts) appear to come from your brand, not Shipmater.
             </p>
 
-            {/* Always shown — sender identity */}
             <div className="grid grid-cols-2 gap-5">
               <div>
                 <label className={LABEL}>From name</label>
@@ -483,7 +392,6 @@ export default function BrandingPage() {
               </div>
             </div>
 
-            {/* Driver selector */}
             <div>
               <label className={LABEL}>Sending driver</label>
               <select
@@ -500,7 +408,6 @@ export default function BrandingPage() {
               </select>
             </div>
 
-            {/* SMTP fields */}
             {form.mail_driver === 'smtp' && (
               <div className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-4">
                 <p className={LABEL + ' mb-0'}>SMTP credentials</p>
@@ -539,7 +446,6 @@ export default function BrandingPage() {
               </div>
             )}
 
-            {/* API key drivers */}
             {['postmark', 'sendgrid'].includes(form.mail_driver) && (
               <div className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-4">
                 <p className={LABEL + ' mb-0'}>{form.mail_driver === 'postmark' ? 'Postmark' : 'SendGrid'} API key</p>
@@ -553,7 +459,6 @@ export default function BrandingPage() {
               </div>
             )}
 
-            {/* Mailgun */}
             {form.mail_driver === 'mailgun' && (
               <div className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-4">
                 <p className={LABEL + ' mb-0'}>Mailgun credentials</p>
@@ -572,7 +477,6 @@ export default function BrandingPage() {
               </div>
             )}
 
-            {/* SES */}
             {form.mail_driver === 'ses' && (
               <div className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-4">
                 <p className={LABEL + ' mb-0'}>Amazon SES credentials</p>
@@ -614,16 +518,16 @@ export default function BrandingPage() {
           <div className={SECTION}>
             <div>
               <label className={LABEL}>Billing email</label>
-              <input className={INPUT} type="email" value={form.billing_email} onChange={e => set('billing_email', e.target.value)}
+              <input className={INPUT} type="email" value={form.billing_email ?? ''} onChange={e => set('billing_email', e.target.value)}
                 placeholder="billing@yourcompany.com" />
             </div>
 
             <div className="border-t border-[var(--color-cream-dark)] pt-5 space-y-4">
               <p className={LABEL}>Feature flags</p>
               {[
-                { key: 'api_access',    label: 'API access',     sub: 'Allow direct API integration' },
-                { key: 'custom_domain', label: 'Custom domain',  sub: 'Enable custom domain routing' },
-                { key: 'sso',           label: 'SSO',            sub: 'SAML / OIDC single sign-on' },
+                { key: 'api_access',    label: 'API access',    sub: 'Allow direct API integration' },
+                { key: 'custom_domain', label: 'Custom domain', sub: 'Enable custom domain routing' },
+                { key: 'sso',           label: 'SSO',           sub: 'SAML / OIDC single sign-on'   },
               ].map(({ key, label, sub }) => (
                 <Toggle
                   key={key}

@@ -15,24 +15,13 @@ class PlatformTenant extends Model
         'custom_domain',
         // Branding
         'brand_name',
-        'legal_name',
+        'dba_name',          // "Trading as / DBA" — for doc headers only; legal name lives in org profile
         'primary_color',
         'secondary_color',
         'logo_url_dark',
         'favicon_url',
         'hide_powered_by',
-        // Contact / legal
-        'address',
-        'support_email',
-        'dot_number',
-        'fmcsa_broker_mc',
-        'broker_bond',
-        'terms_url',
-        'privacy_url',
-        // Documents
-        'document_footer',
-        'signature_authority',
-        // Email
+        // Email sending
         'mail_from_name',
         'mail_from_address',
         'mail_driver',
