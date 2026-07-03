@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import { Roboto } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { getTenantConfig } from '@/lib/tenant';
 
-// Self-hosted, preloaded, crisp. Only Roboto's REAL weights — it has no 600,
-// so requesting 600 would force a blurry faux-bold. Use 400/500/700.
 const roboto = Roboto({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
@@ -12,10 +11,15 @@ const roboto = Roboto({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: { default: 'Shipmater', template: '%s · Shipmater' },
-  description: 'Freight tracking made simple.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getTenantConfig();
+  const name   = tenant?.brand_name ?? 'Shipmater';
+  return {
+    title:       { default: name, template: `%s · ${name}` },
+    description: `${name} — freight management platform`,
+    icons:       { icon: tenant?.favicon_url ?? '/favicon.ico' },
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -6,31 +6,11 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { BottomTabBar } from '@/components/layout/BottomTabBar';
 import { getUser, logout } from '@/lib/auth';
-import { api } from '@/lib/api';
+import { getTenantConfigClient, applyTenantBranding, resetTenantBranding } from '@/lib/tenant';
 import type { User } from '@/types/user';
 
-interface TenantBranding {
-  brand_name: string | null;
-  primary_color: string | null;
-  secondary_color: string | null;
-  logo_url_dark: string | null;
-  favicon_url: string | null;
-  hide_powered_by: boolean;
-}
-
-function applyBranding(b: TenantBranding) {
-  const root = document.documentElement;
-  if (b.primary_color)   root.style.setProperty('--primary', b.primary_color);
-  if (b.secondary_color) root.style.setProperty('--navy',    b.secondary_color);
-  if (b.favicon_url) {
-    const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
-    if (link) link.href = b.favicon_url;
-  }
-}
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [user, setUser]       = useState<User | null>(null);
-  const [branding, setBranding] = useState<TenantBranding | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -38,21 +18,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!u) { router.replace('/login'); return; }
       setUser(u);
 
-      // If the org is a white-label tenant, fetch and apply its branding
-      if (u.org?.is_platform_tenant) {
-        api.get('/api/v1/tenant/branding').then((res) => {
-          const b: TenantBranding | null = res.data?.data ?? null;
-          if (b) { applyBranding(b); setBranding(b); }
-        }).catch(() => { /* ignore — branding is non-critical */ });
-      }
+      // Apply branding from the sm_tenant cookie (set by middleware for custom/subdomain hosts).
+      // Falls back to no branding on the main Shipmater domain.
+      const tenant = getTenantConfigClient();
+      if (tenant) applyTenantBranding(tenant);
     });
   }, [router]);
 
   async function handleLogout() {
-    // Reset any applied branding back to defaults
-    const root = document.documentElement;
-    root.style.removeProperty('--primary');
-    root.style.removeProperty('--navy');
+    resetTenantBranding();
     await logout();
     router.replace('/login');
   }
@@ -68,8 +42,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const brandName = branding?.brand_name ?? undefined;
-  const logoUrl   = branding?.logo_url_dark ?? undefined;
+  const tenant     = getTenantConfigClient();
+  const brandName  = tenant?.brand_name  ?? undefined;
+  const logoUrl    = tenant?.logo_url_dark ?? undefined;
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
