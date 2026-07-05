@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { login, getRolePath } from '@/lib/auth';
+import { getTenantConfigClient, type TenantConfig } from '@/lib/tenant';
 
 const B = {
   teal:     '#90E0EF',
@@ -32,7 +33,14 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
+  const [tenant, setTenant] = useState<TenantConfig | null>(null);
+
+  useEffect(() => { setTenant(getTenantConfigClient()); }, []);
+
+  const accentColor = tenant?.primary_color  ?? B.tealDark;
+  const navyColor   = tenant?.secondary_color ?? B.darkSec;
+  const brandName   = tenant?.brand_name      ?? 'Shipmater';
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -61,7 +69,7 @@ export default function LoginPage() {
       fontFamily: IBM,
       WebkitFontSmoothing: 'antialiased',
       minHeight: '100vh',
-      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${B.darkSec} 100%)`,
+      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${navyColor} 100%)`,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -69,9 +77,16 @@ export default function LoginPage() {
       padding: '40px 16px',
     }}>
 
-      {/* Wordmark */}
-      <Link href="/" style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', marginBottom: 36 }}>
-        Shipmater
+      {/* Wordmark / Logo */}
+      <Link href="/" style={{ textDecoration: 'none', marginBottom: 36 }}>
+        {tenant?.logo_url_dark ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={tenant.logo_url_dark} alt={brandName} style={{ maxHeight: 40, maxWidth: 200, objectFit: 'contain' }} />
+        ) : (
+          <span style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+            {brandName}
+          </span>
+        )}
       </Link>
 
       {/* Card */}
@@ -87,7 +102,7 @@ export default function LoginPage() {
           Sign in
         </h1>
         <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
-          Welcome back to Shipmater
+          Welcome back to {brandName}
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -171,7 +186,7 @@ export default function LoginPage() {
               fontSize: 15,
               fontWeight: 600,
               color: B.white,
-              background: isSubmitting ? B.gray50 : B.tealDark,
+              background: isSubmitting ? B.gray50 : accentColor,
               border: 'none',
               borderRadius: 6,
               padding: '12px',
@@ -188,11 +203,18 @@ export default function LoginPage() {
       {/* Register link */}
       <p style={{ fontFamily: IBM, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
         Don&apos;t have an account?{' '}
-        <Link href="/register" style={{ color: B.teal, fontWeight: 500, textDecoration: 'none' }}
+        <Link href="/register" style={{ color: tenant ? B.teal : B.teal, fontWeight: 500, textDecoration: 'none' }}
           className="hover:underline">
           Create one
         </Link>
       </p>
+
+      {/* "Powered by" — hidden if tenant opts out */}
+      {tenant && !tenant.hide_powered_by && (
+        <p style={{ fontFamily: IBM, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
+          Powered by Shipmater
+        </p>
+      )}
 
     </div>
   );

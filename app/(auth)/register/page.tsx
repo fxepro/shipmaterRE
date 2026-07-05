@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Package, Truck } from 'lucide-react';
 import { authApi, setStoredToken } from '@/lib/api';
 import { getRolePath } from '@/lib/auth';
+import { getTenantConfigClient, type TenantConfig } from '@/lib/tenant';
 
 const B = {
   teal:     '#90E0EF',
@@ -69,7 +70,14 @@ const inputStyle = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
+  const [tenant, setTenant] = useState<TenantConfig | null>(null);
+
+  useEffect(() => { setTenant(getTenantConfigClient()); }, []);
+
+  const accentColor = tenant?.primary_color   ?? B.tealDark;
+  const navyColor   = tenant?.secondary_color ?? B.darkSec;
+  const brandName   = tenant?.brand_name      ?? 'Shipmater';
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -96,7 +104,7 @@ export default function RegisterPage() {
       fontFamily: IBM,
       WebkitFontSmoothing: 'antialiased',
       minHeight: '100vh',
-      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${B.darkSec} 100%)`,
+      background: `linear-gradient(145deg, ${B.darkCard} 0%, ${navyColor} 100%)`,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -104,9 +112,16 @@ export default function RegisterPage() {
       padding: '40px 16px',
     }}>
 
-      {/* Wordmark */}
-      <Link href="/" style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', marginBottom: 36 }}>
-        Shipmater
+      {/* Wordmark / Logo */}
+      <Link href="/" style={{ textDecoration: 'none', marginBottom: 36 }}>
+        {tenant?.logo_url_dark ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={tenant.logo_url_dark} alt={brandName} style={{ maxHeight: 40, maxWidth: 200, objectFit: 'contain' }} />
+        ) : (
+          <span style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+            {brandName}
+          </span>
+        )}
       </Link>
 
       {/* Card */}
@@ -122,7 +137,7 @@ export default function RegisterPage() {
           Create an account
         </h1>
         <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
-          Join Shipmater — free to get started
+          Join {brandName} — free to get started
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -147,7 +162,7 @@ export default function RegisterPage() {
                       gap: 8,
                       padding: '14px 16px',
                       borderRadius: 8,
-                      border: `2px solid ${active ? B.tealDark : B.gray10}`,
+                      border: `2px solid ${active ? accentColor : B.gray10}`,
                       background: active ? B.tealBg : B.gray10,
                       cursor: 'pointer',
                       textAlign: 'left',
@@ -160,8 +175,8 @@ export default function RegisterPage() {
                         width: 16,
                         height: 16,
                         borderRadius: '50%',
-                        border: `2px solid ${active ? B.tealDark : B.gray50}`,
-                        background: active ? B.tealDark : 'transparent',
+                        border: `2px solid ${active ? accentColor : B.gray50}`,
+                        background: active ? accentColor : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -169,13 +184,13 @@ export default function RegisterPage() {
                       }}>
                         {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: B.white }} />}
                       </div>
-                      <Icon size={16} color={active ? B.tealDark : B.gray50} />
+                      <Icon size={16} color={active ? accentColor : B.gray50} />
                     </div>
                     <div>
-                      <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: 14, color: active ? B.tealDark : B.gray100, marginBottom: 2 }}>
+                      <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: 14, color: active ? accentColor : B.gray100, marginBottom: 2 }}>
                         {label}
                       </p>
-                      <p style={{ fontFamily: IBM, fontSize: 12, color: active ? B.tealDark : B.gray50, lineHeight: 1.5, opacity: active ? 0.85 : 1 }}>
+                      <p style={{ fontFamily: IBM, fontSize: 12, color: active ? accentColor : B.gray50, lineHeight: 1.5, opacity: active ? 0.85 : 1 }}>
                         {description}
                       </p>
                     </div>
@@ -277,7 +292,7 @@ export default function RegisterPage() {
               fontSize: 15,
               fontWeight: 600,
               color: B.white,
-              background: isSubmitting ? B.gray50 : B.tealDark,
+              background: isSubmitting ? B.gray50 : accentColor,
               border: 'none',
               borderRadius: 6,
               padding: '12px',
@@ -298,6 +313,13 @@ export default function RegisterPage() {
           Sign in
         </Link>
       </p>
+
+      {/* "Powered by" — hidden if tenant opts out */}
+      {tenant && !tenant.hide_powered_by && (
+        <p style={{ fontFamily: IBM, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
+          Powered by Shipmater
+        </p>
+      )}
 
     </div>
   );
