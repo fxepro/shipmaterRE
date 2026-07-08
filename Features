@@ -133,9 +133,14 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ FMCSA Drug & Alcohol Clearinghouse
 - ✅ Carrier document uploads (COI, operating authority, etc.)
 - ✅ Stripe Identity session (basic)
-- 🔲 **Age & Identity Verification (KYC)** — full driver identity verification
-  - Government ID + selfie match, age gate for regulated freight
-  - Reference: 7193580298
+- ✅ **Age & Identity Verification (KYC)** — full driver identity verification
+  - Stripe Identity hosted session: government ID (DL/passport) + selfie match + liveness check
+  - Webhook: `identity.verification_session.verified` → sets `identity_verified = true`
+  - Age gate: saving DOB auto-computes `age_verified` (≥ 18); stored in `carrier_profiles`
+  - `POST /api/v1/stripe/identity/session` — creates session, returns redirect URL
+  - `GET /api/v1/carrier/kyc-status` — returns identity + age status + check detail
+  - Frontend: KYC status card in carrier Personal tab showing verified/pending/failed/review states
+    with Verify Identity button (opens Stripe hosted flow), Retry on failure, handles redirect back
 
 ---
 

@@ -232,6 +232,39 @@ class CarrierController extends Controller
 
     // ── GET /api/v1/carrier/profile ──────────────────────────────────────────
 
+    public function kycStatus(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isCarrier(), 403);
+
+        $profile = $request->user()->carrierProfile;
+        if (!$profile) {
+            return response()->json(['data' => [
+                'identity_verified'  => false,
+                'age_verified'       => false,
+                'identity_check'     => null,
+            ]]);
+        }
+
+        $identityCheck = $profile->verifications()
+            ->where('check_type', 'identity')
+            ->latest()
+            ->first();
+
+        return response()->json(['data' => [
+            'identity_verified'    => (bool) $profile->identity_verified,
+            'identity_verified_at' => $profile->identity_verified_at?->toISOString(),
+            'age_verified'         => (bool) $profile->age_verified,
+            'age_verified_at'      => $profile->age_verified_at?->toISOString(),
+            'date_of_birth'        => $profile->date_of_birth?->toDateString(),
+            'identity_check'       => $identityCheck ? [
+                'status'      => $identityCheck->status,
+                'external_id' => $identityCheck->external_id,
+                'last_error'  => $identityCheck->result_data['last_error'] ?? null,
+                'verified_at' => $identityCheck->result_data['verified_at'] ?? null,
+            ] : null,
+        ]]);
+    }
+
     public function show(Request $request): JsonResponse
     {
         abort_unless($request->user()->isCarrier(), 403);
@@ -316,6 +349,14 @@ class CarrierController extends Controller
             if (isset($profileData[$field]) && $profileData[$field] !== null) {
                 $profileData[$field] = preg_replace('/\D/', '', $profileData[$field]) ?: null;
             }
+        }
+
+        // Auto-compute age verification when DOB is saved
+        if (isset($profileData['date_of_birth']) && $profileData['date_of_birth']) {
+            $dob = \Carbon\Carbon::parse($profileData['date_of_birth']);
+            $isAdult = $dob->age >= 18;
+            $profileData['age_verified']    = $isAdult;
+            $profileData['age_verified_at'] = $isAdult ? now() : null;
         }
 
         // Update profile table fields

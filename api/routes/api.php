@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Carrier: profile, documents, vehicles (always accessible)
+    Route::get('/carrier/kyc-status',          [CarrierController::class, 'kycStatus']);
     Route::get('/carrier/profile',             [CarrierController::class, 'show']);
     Route::put('/carrier/profile',             [CarrierController::class, 'update']);
 

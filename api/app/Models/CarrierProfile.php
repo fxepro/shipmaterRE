@@ -62,6 +62,8 @@ class CarrierProfile extends Model
         'background_check_status',
         'identity_verified',
         'identity_verified_at',
+        'age_verified',
+        'age_verified_at',
         'checkr_candidate_id',
         'checkr_report_id',
 
@@ -97,6 +99,8 @@ class CarrierProfile extends Model
             'mc_verified'               => 'boolean',
             'identity_verified'         => 'boolean',
             'identity_verified_at'      => 'datetime',
+            'age_verified'              => 'boolean',
+            'age_verified_at'           => 'datetime',
             'insurance_verified'        => 'boolean',
             'auto_coverage_amount'      => 'decimal:2',
             'auto_effective_date'       => 'date',

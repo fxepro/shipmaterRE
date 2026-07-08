@@ -234,6 +234,12 @@ export const freightJobApi = {
                      api.post(`/api/v1/jobs/${jobId}/stops/${stopId}/pod`),
 };
 
+// ── KYC / Identity ─────────────────────────────────────────────────────
+export const kycApi = {
+  status:               () => api.get('/api/v1/carrier/kyc-status'),
+  startIdentitySession: () => api.post('/api/v1/stripe/identity/session'),
+};
+
 // ── Blog ───────────────────────────────────────────────────────────────
 export const blogApi = {
   list:    (params?: Record<string, unknown>)                        => api.get('/api/v1/blog', { params }),
