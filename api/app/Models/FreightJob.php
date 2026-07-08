@@ -19,6 +19,8 @@ class FreightJob extends Model
         'quote_requirements',
         'payment_amount_cents', 'payment_status', 'posted_at',
         'bol_pdf_key', 'bol_pdf_url', 'bol_generated_at',
+        'invoice_number', 'invoice_date', 'invoice_due_date',
+        'invoice_pdf_key', 'invoice_pdf_url', 'invoice_generated_at',
     ];
 
     protected function casts(): array
@@ -30,6 +32,9 @@ class FreightJob extends Model
             'route_optimized_at'    => 'datetime',
             'posted_at'             => 'datetime',
             'bol_generated_at'      => 'datetime',
+            'invoice_date'          => 'date',
+            'invoice_due_date'      => 'date',
+            'invoice_generated_at'  => 'datetime',
             'route_distance_miles'  => 'float',
         ];
     }

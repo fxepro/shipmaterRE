@@ -77,6 +77,86 @@ class DocumentService
         return $this->render('documents.carrier_agreement', $data, $broker, $filename, $download);
     }
 
+    // ── Invoice ───────────────────────────────────────────────────────────────
+
+    /**
+     * Shipper-facing Invoice / Settlement Statement for a completed FreightJob.
+     * Generates once and stores; subsequent calls stream the stored copy unless $forceRegen.
+     */
+    public function invoice(FreightJob $job, bool $download = false, bool $forceRegen = false): Response
+    {
+        $job->load([
+            'shipper.org.platformTenant',
+            'shipper.shipperProfile',
+            'carrier.carrierProfile',
+            'stops',
+        ]);
+
+        $broker  = $this->brokerIdentity($job->shipper);
+        $carrier = $job->carrier ? $this->carrierIdentity($job->carrier) : null;
+
+        // Generate / reuse invoice number
+        if (!$job->invoice_number) {
+            $num = str_pad($job->id, 6, '0', STR_PAD_LEFT);
+            $job->invoice_number = 'INV-' . now()->format('Y') . '-' . $num;
+        }
+
+        // Build line items from cost_breakdown
+        $bd    = is_array($job->cost_breakdown) ? $job->cost_breakdown : [];
+        $lines = [];
+
+        if (!empty($bd['base_amount']))   $lines[] = ['label' => 'Freight charge',   'amount' => (float) $bd['base_amount']];
+        if (!empty($bd['fuel_amount']))   $lines[] = ['label' => 'Fuel surcharge',    'amount' => (float) $bd['fuel_amount']];
+        if (!empty($bd['platform_fee']))  $lines[] = ['label' => 'Platform fee',      'amount' => (float) $bd['platform_fee']];
+
+        // Fallback: if no breakdown, just show total
+        if (empty($lines) && $job->payment_amount_cents) {
+            $lines[] = ['label' => 'Freight services', 'amount' => $job->payment_amount_cents / 100];
+        }
+
+        $totalDollars = collect($lines)->sum('amount');
+
+        // Payment terms: default net-30 from job posted_at
+        $invoiceDate  = $job->invoice_date  ?? ($job->posted_at?->toDateString() ?? now()->toDateString());
+        $dueDate      = $job->invoice_due_date ?? now()->parse($invoiceDate)->addDays(30)->toDateString();
+
+        $data = [
+            'broker'       => $broker,
+            'carrier'      => $carrier,
+            'job'          => $job,
+            'lines'        => $lines,
+            'total'        => $totalDollars,
+            'invoice_date' => $invoiceDate,
+            'due_date'     => $dueDate,
+            'generated'    => now()->format('M j, Y g:i A'),
+        ];
+
+        $filename  = $job->invoice_number . '.pdf';
+        $pdfOutput = $this->generatePdfOutput('documents.invoice', $data);
+
+        // Store first time (or force regen)
+        if ($forceRegen || !$job->invoice_pdf_key) {
+            $key = "invoices/{$job->id}/" . Str::uuid() . '.pdf';
+            Storage::disk('documents')->put($key, $pdfOutput, 'public');
+            $url = Storage::disk('documents')->url($key);
+
+            $job->update([
+                'invoice_number'       => $job->invoice_number,
+                'invoice_date'         => $invoiceDate,
+                'invoice_due_date'     => $dueDate,
+                'invoice_pdf_key'      => $key,
+                'invoice_pdf_url'      => $url,
+                'invoice_generated_at' => now(),
+            ]);
+        }
+
+        $disposition = $download ? 'attachment' : 'inline';
+        return response($pdfOutput, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+        ]);
+    }
+
     // ── BOL ───────────────────────────────────────────────────────────────────
 
     /**

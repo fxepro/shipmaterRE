@@ -227,7 +227,7 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
           )}
         </div>
 
-        {/* Rate Confirmation + BOL — posted/in-progress/completed */}
+        {/* Documents — posted/in-progress/completed */}
         {['posted', 'in_progress', 'completed'].includes(job.status) && (
           <div className="flex items-center gap-2 flex-wrap">
             <a
@@ -236,7 +236,7 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
             >
-              <Receipt size={13} /> Rate Confirmation
+              <Receipt size={13} /> Rate Conf.
             </a>
             <a
               href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/bol`}
@@ -244,8 +244,19 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
             >
-              <FileText size={13} /> Bill of Lading
+              <FileText size={13} /> BOL
             </a>
+            {/* Invoice — shipper only, posted/in_progress/completed */}
+            {role === 'shipper' && (
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/invoice`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+              >
+                <DollarSign size={13} /> Invoice
+              </a>
+            )}
           </div>
         )}
 
@@ -561,6 +572,28 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
                 <p className="text-base font-bold text-[var(--color-slate)] tabular-nums">
                   {fmtAmt(job.cost_breakdown.total)}
                 </p>
+              </div>
+
+              {/* Payment status + invoice link */}
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-cream-dark)]">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  job.payment_status === 'paid'       ? 'bg-emerald-50 text-emerald-700' :
+                  job.payment_status === 'processing' ? 'bg-amber-50 text-amber-700' :
+                                                        'bg-red-50 text-red-600'
+                }`}>
+                  {job.payment_status === 'paid' ? '✓ Paid' :
+                   job.payment_status === 'processing' ? 'Processing' : 'Unpaid'}
+                </span>
+                {role === 'shipper' && (
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/invoice`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs font-semibold text-[var(--color-teal)] hover:underline"
+                  >
+                    <DollarSign size={11} /> View Invoice
+                  </a>
+                )}
               </div>
             </SectionCard>
           )}

@@ -218,6 +218,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shipper/freight-jobs/{job}/post',                  [FreightJobController::class, 'post']);
     Route::get('/jobs/{job}/rate-confirmation',                      [FreightJobController::class, 'rateConfirmation']);
     Route::get('/jobs/{job}/bol',                                    [FreightJobController::class, 'bol']);
+    Route::get('/jobs/{job}/invoice',                                [FreightJobController::class, 'invoice']);
 
     // Evidence (photos) per stop — shipper or assigned carrier
     Route::get('/jobs/{job}/stops/{stop}/evidence',                  [EvidenceController::class, 'index']);

@@ -104,7 +104,15 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
   - `GET/POST /api/v1/jobs/{job}/stops/{stop}/pod` — view/generate POD PDF
   - Stored persistently on `documents` disk; key + URL saved to `job_stops`
   - Frontend: camera button + photo gallery on each stop card; Generate POD / View POD button
-- 🔲 **Invoice / Settlement Statement** — shipper-facing payment doc
+- ✅ **Invoice / Settlement Statement** — shipper-facing payment doc
+  - Auto-numbered (`INV-YYYY-XXXXXX`), tenant-branded PDF
+  - Line items from `cost_breakdown` (freight, fuel surcharge, platform fee)
+  - Bill-to shipper org details, bill-from broker/platform details
+  - Payment status badge (Paid / Processing / Unpaid)
+  - Remittance instructions if unpaid; net-30 default payment terms
+  - `GET /api/v1/jobs/{job}/invoice`
+  - Stored on `documents` disk; key + URL saved to `freight_jobs`
+  - Frontend: Invoice button in doc header row + View Invoice link in billing panel
 
 ---
 
