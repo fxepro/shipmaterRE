@@ -179,7 +179,8 @@ class CarrierController extends Controller
             ->get()
             ->map(function ($u) {
                 $profile = $u->carrierProfile;
-                $bgCheck = $profile?->verifications?->firstWhere('check_type', 'background');
+                $bgCheck  = $profile?->verifications?->firstWhere('check_type', 'background');
+                $idCheck  = $profile?->verifications?->firstWhere('check_type', 'identity');
                 return [
                     'id'                      => $u->id,
                     'name'                    => $u->name,
@@ -189,6 +190,11 @@ class CarrierController extends Controller
                     'background_check_result' => $bgCheck?->result_data,
                     'background_checked_at'   => $bgCheck?->updated_at?->toISOString(),
                     'dot_verified'            => (bool) ($profile?->dot_verified ?? false),
+                    'mc_verified'             => (bool) ($profile?->mc_verified  ?? false),
+                    'identity_verified'       => (bool) ($profile?->identity_verified ?? false),
+                    'identity_verified_at'    => $profile?->identity_verified_at?->toISOString(),
+                    'age_verified'            => (bool) ($profile?->age_verified ?? false),
+                    'identity_check_status'   => $idCheck?->status,
                     'onboarding_fee_paid'     => (bool) ($profile?->onboarding_fee_paid ?? false),
                     'member_since'            => $u->created_at->format('M Y'),
                 ];
@@ -214,6 +220,14 @@ class CarrierController extends Controller
 
         if (!$profile) {
             return response()->json(['error' => 'Carrier profile not found.'], 404);
+        }
+
+        // Identity verification is required before approval
+        if ($validated['action'] === 'approve' && !$profile->identity_verified) {
+            return response()->json([
+                'error' => 'Identity verification must be completed before this carrier can be approved.',
+                'code'  => 'identity_not_verified',
+            ], 422);
         }
 
         $status = $validated['action'] === 'approve' ? 'approved' : 'rejected';

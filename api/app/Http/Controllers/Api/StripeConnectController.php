@@ -266,17 +266,33 @@ class StripeConnectController extends Controller
 
             // ── Stripe Identity: verification completed ─────────────────────
             'identity.verification_session.verified' => (function () use ($event) {
-                $session = $event->data->object;
+                $session   = $event->data->object;
                 $profileId = $session->metadata['carrier_profile_id'] ?? null;
                 if (!$profileId) return;
 
                 $profile = CarrierProfile::find($profileId);
                 if (!$profile) return;
 
-                $profile->update([
+                // Extract verified DOB from document scan — more authoritative than self-reported
+                $verifiedDob  = $session->verified_outputs?->dob ?? null;
+                $dobString    = $verifiedDob
+                    ? sprintf('%04d-%02d-%02d', $verifiedDob->year, $verifiedDob->month, $verifiedDob->day)
+                    : null;
+                $isAdult      = $dobString ? \Carbon\Carbon::parse($dobString)->age >= 18 : null;
+
+                $updates = [
                     'identity_verified'    => true,
                     'identity_verified_at' => now(),
-                ]);
+                ];
+
+                // Only overwrite DOB + age_verified if Stripe gave us a verified date
+                if ($dobString) {
+                    $updates['date_of_birth']  = $dobString;
+                    $updates['age_verified']   = (bool) $isAdult;
+                    $updates['age_verified_at']= $isAdult ? now() : null;
+                }
+
+                $profile->update($updates);
 
                 \App\Models\CarrierVerification::updateOrCreate(
                     ['carrier_profile_id' => $profile->id, 'check_type' => 'identity'],
@@ -286,6 +302,7 @@ class StripeConnectController extends Controller
                         'result_data' => [
                             'session_id'  => $session->id,
                             'verified_at' => now()->toISOString(),
+                            'verified_dob'=> $dobString,
                             'last_error'  => null,
                         ],
                         'expires_at'  => now()->addYears(2),
