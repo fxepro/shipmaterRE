@@ -17,7 +17,7 @@ class FreightJob extends Model
         'route_distance_miles', 'route_duration_minutes',
         'route_optimized_at', 'route_snapshot', 'cost_breakdown',
         'quote_requirements',
-        'payment_amount_cents', 'payment_status', 'posted_at',
+        'payment_amount_cents', 'payment_status', 'currency', 'posted_at',
         'bol_pdf_key', 'bol_pdf_url', 'bol_generated_at',
         'invoice_number', 'invoice_date', 'invoice_due_date',
         'invoice_pdf_key', 'invoice_pdf_url', 'invoice_generated_at',
@@ -45,6 +45,7 @@ class FreightJob extends Model
     public function stops(): HasMany       { return $this->hasMany(JobStop::class)->orderBy('optimized_sequence')->orderBy('sequence'); }
     public function evidence(): HasMany    { return $this->hasMany(JobEvidence::class); }
     public function offers(): HasMany      { return $this->hasMany(FreightJobOffer::class)->latest(); }
+    public function ratings(): HasMany     { return $this->hasMany(Rating::class); }
 
     public function pickupStops(): HasMany
     {

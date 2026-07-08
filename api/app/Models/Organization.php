@@ -13,7 +13,7 @@ class Organization extends Model
     protected $fillable = [
         'name', 'slug', 'type', 'plan', 'status', 'owner_id',
         'phone', 'email', 'website',
-        'street', 'city', 'state', 'zip', 'country',
+        'street', 'city', 'state', 'zip', 'country', 'currency',
         'tax_id', 'tax_id_type',
         'logo_url', 'settings',
         // Stripe billing mode (admin-only toggle)

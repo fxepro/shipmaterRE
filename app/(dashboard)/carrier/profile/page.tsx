@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, verificationApi } from '@/lib/api';
+import { api, verificationApi, ratingApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
@@ -52,7 +52,7 @@ interface Vehicle {
   is_primary: boolean;
 }
 
-type Tab = 'personal' | 'services' | 'certifications' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles';
+type Tab = 'personal' | 'services' | 'certifications' | 'dot' | 'financial' | 'background' | 'medical' | 'insurance' | 'vehicles' | 'reviews';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -172,6 +172,121 @@ function SaveBar({ saved, onSave, isPending }: { saved: boolean; onSave: () => v
 
 // ── Financial Tab — see components/tabs/FinancialTab.tsx ─────────────────────
 
+// ── Reviews Tab ───────────────────────────────────────────────────────────────
+
+function StarDisplay({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          size={13}
+          className={n <= Math.round(value) ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-cream-dark)]'}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ReviewsTab({ orgId, rating, totalRatings }: { orgId: number; rating: number | null; totalRatings: number }) {
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['org-ratings', orgId, page],
+    queryFn:  () => ratingApi.orgRatings(orgId, page).then((r) => r.data),
+    enabled:  !!orgId,
+  });
+
+  const reviews: any[] = data?.data ?? [];
+  const lastPage: number = data?.meta?.last_page ?? 1;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div>
+        <p className="text-sm font-semibold text-[var(--color-text)] mb-1">Your Reviews</p>
+        {rating != null && totalRatings > 0 ? (
+          <div className="flex items-center gap-3">
+            <span className="text-3xl font-bold text-[var(--color-slate)]">{Number(rating).toFixed(1)}</span>
+            <div>
+              <StarDisplay value={rating} />
+              <p className="text-xs text-[var(--color-text-faint)] mt-0.5">{totalRatings} review{totalRatings !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--color-text-faint)]">No reviews yet.</p>
+        )}
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 rounded-xl bg-[var(--color-cream)] animate-pulse" />
+          ))}
+        </div>
+      ) : reviews.length === 0 ? (
+        <div className="text-center py-10 rounded-xl border-2 border-dashed border-[var(--color-cream-dark)]">
+          <Star size={28} className="mx-auto text-[var(--color-text-faint)] mb-2" />
+          <p className="text-sm text-[var(--color-text-muted)]">No public reviews yet</p>
+          <p className="text-xs text-[var(--color-text-faint)] mt-1">Reviews appear here once shippers submit them after completed jobs.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((r: any) => (
+            <div key={r.id} className="rounded-xl border border-[var(--color-cream-dark)] p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    {typeof r.rater_org === 'string' ? r.rater_org : (r.rater_org?.name ?? 'Shipper')}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-faint)] capitalize">{r.rater_type}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <StarDisplay value={r.overall} />
+                  <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                    {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4 text-xs text-[var(--color-text-muted)]">
+                <span>Communication: <strong className="text-[var(--color-text)]">{r.communication}/5</strong></span>
+                <span>Reliability: <strong className="text-[var(--color-text)]">{r.reliability}/5</strong></span>
+              </div>
+              {r.comment && (
+                <p className="text-sm text-[var(--color-text)] border-t border-[var(--color-cream-dark)] pt-2 mt-1">
+                  {r.comment}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {/* Pagination */}
+          {lastPage > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 rounded-lg border border-[var(--color-cream-dark)] text-sm disabled:opacity-40 hover:border-[var(--color-teal)] transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-[var(--color-text-muted)]">{page} / {lastPage}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                disabled={page === lastPage}
+                className="px-3 py-1.5 rounded-lg border border-[var(--color-cream-dark)] text-sm disabled:opacity-40 hover:border-[var(--color-teal)] transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CarrierProfilePage() {
@@ -208,7 +323,7 @@ export default function CarrierProfilePage() {
     const tabParam       = searchParams.get('tab') as Tab | null;
 
     // Deep-link: ?tab=financial (or any valid tab)
-    const validTabs: Tab[] = ['personal', 'services', 'certifications', 'insurance', 'medical', 'financial', 'background', 'vehicles', 'dot'];
+    const validTabs: Tab[] = ['personal', 'services', 'certifications', 'insurance', 'medical', 'financial', 'background', 'vehicles', 'dot', 'reviews'];
     if (tabParam && validTabs.includes(tabParam)) {
       setActiveTab(tabParam);
       router.replace('/carrier/profile');
@@ -463,6 +578,7 @@ export default function CarrierProfilePage() {
     { id: 'background',      label: 'Background' },
     { id: 'vehicles',        label: 'Vehicles' },
     { id: 'dot',             label: 'Commercial' },
+    { id: 'reviews',         label: 'Reviews' },
   ];
 
   const initials = (() => {
@@ -1604,6 +1720,11 @@ export default function CarrierProfilePage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ── REVIEWS ──────────────────────────────────────────────────── */}
+        {activeTab === 'reviews' && (
+          <ReviewsTab orgId={profile.org_id} rating={profile.rating} totalRatings={profile.total_ratings} />
         )}
 
       </div>

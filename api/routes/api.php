@@ -25,7 +25,9 @@ use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\AdminOrgController;
 use App\Http\Controllers\Api\OrgController;
 use App\Http\Controllers\Api\PlatformLeadController;
+use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ServiceTypeController;
+use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +66,12 @@ Route::post('/platform-leads', [PlatformLeadController::class, 'store']);
 
 // ── Tenant resolve (public — used by Next.js middleware) ───────────────────
 Route::get('/tenant/resolve', [TenantController::class, 'resolve']);
+
+// ── Org ratings (public — shown on carrier/shipper public profiles) ─────────
+Route::get('/orgs/{org}/ratings', [RatingController::class, 'profileRatings']);
+
+// ── Ratings: org profile (public) ──────────────────────────────────────────
+Route::get('/orgs/{org}/ratings', [RatingController::class, 'profileRatings']);
 
 // ── Auth (public) ──────────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -190,6 +198,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/admin/platform-tenants/{id}',      [AdminOrgController::class, 'updateTenant']);
     Route::post('/admin/leads/{id}/convert',        [AdminOrgController::class, 'convertLead']);
 
+    // Admin: financial reporting
+    Route::get('/admin/financials',        [AdminController::class, 'financials']);
+    Route::get('/admin/financials/export', [AdminController::class, 'financialsExport']);
+
+    // Ratings & reviews
+    Route::post('/jobs/{job}/ratings', [RatingController::class, 'store']);
+    Route::get('/jobs/{job}/ratings',  [RatingController::class, 'jobRatings']);
+
     // Blog admin
     Route::get('/admin/blog',         [BlogController::class, 'adminIndex']);
     Route::post('/admin/blog',        [BlogController::class, 'store']);
@@ -260,4 +276,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shipper/plaid/exchange',     [PlaidController::class, 'exchange']);
     Route::get('/shipper/plaid/status',        [PlaidController::class, 'status']);
     Route::delete('/shipper/plaid/disconnect', [PlaidController::class, 'disconnect']);
+
+    // ── Ratings ────────────────────────────────────────────────────────────
+    Route::post('/jobs/{job}/ratings', [RatingController::class, 'store']);
+    Route::get('/jobs/{job}/ratings',  [RatingController::class, 'jobRatings']);
 });

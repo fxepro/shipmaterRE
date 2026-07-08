@@ -24,9 +24,10 @@ interface ShipperProfile {
   street: string; city: string; state: string; zip: string; country: string;
   // business
   company: string; dba: string; business_type: string; ein: string;
+  tax_id: string; tax_id_type: string;
   state_of_incorporation: string; year_established: string; employee_count: string;
   industry: string; website: string; business_phone: string; business_email: string;
-  sam_gov_number: string;
+  sam_gov_number: string; currency: string;
   // registered address
   biz_street: string; biz_city: string; biz_state: string; biz_zip: string; biz_country: string;
   // operating address
@@ -305,6 +306,9 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     dba:                    initialData.dba,
     business_type:          initialData.business_type,
     ein:                    initialData.ein,
+    tax_id:                 initialData.tax_id        ?? '',
+    tax_id_type:            initialData.tax_id_type   ?? 'EIN',
+    currency:               initialData.currency      ?? 'USD',
     state_of_incorporation: initialData.state_of_incorporation,
     year_established:       initialData.year_established,
     employee_count:         initialData.employee_count,
@@ -364,7 +368,37 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             'Food & Beverage', 'Construction', 'Retail / E-Commerce',
             'Manufacturing', 'Technology', 'Government', 'Other',
           ]} />
-          <Field label="EIN / Tax ID"           value={form.ein}                    onChange={v => set('ein')(v)}                    icon={Hash} placeholder="XX-XXXXXXX" />
+          {/* Tax ID — type selector + number */}
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">
+              Tax ID Type
+            </label>
+            <select
+              value={form.tax_id_type}
+              onChange={e => setForm(f => ({ ...f, tax_id_type: e.target.value }))}
+              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
+            >
+              {[['EIN','EIN (USA)'],['BN','BN (Canada)'],['VAT','VAT Number (EU)'],['ABN','ABN (Australia)'],['GSTIN','GSTIN (India)'],['RFC','RFC (Mexico)'],['other','Other']].map(([v,l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <Field label={form.tax_id_type || 'Tax ID'} value={form.tax_id || form.ein} onChange={v => setForm(f => ({ ...f, tax_id: v, ein: v }))} icon={Hash} placeholder={form.tax_id_type === 'EIN' ? 'XX-XXXXXXX' : form.tax_id_type === 'VAT' ? 'DE123456789' : 'Tax ID number'} />
+          {/* Currency */}
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">
+              Operating Currency
+            </label>
+            <select
+              value={form.currency}
+              onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
+            >
+              {[['USD','USD — US Dollar'],['CAD','CAD — Canadian Dollar'],['MXN','MXN — Mexican Peso'],['EUR','EUR — Euro'],['GBP','GBP — British Pound'],['AUD','AUD — Australian Dollar'],['BRL','BRL — Brazilian Real'],['INR','INR — Indian Rupee'],['JPY','JPY — Japanese Yen'],['CNY','CNY — Chinese Yuan'],['SGD','SGD — Singapore Dollar'],['AED','AED — UAE Dirham'],['ZAR','ZAR — South African Rand']].map(([v,l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
           <Field label="State of incorporation" value={form.state_of_incorporation} onChange={v => set('state_of_incorporation')(v)} placeholder="CO" />
           <Field label="Year established"       value={form.year_established}       onChange={v => set('year_established')(v)}       placeholder="2018" />
           <Select label="Number of employees" value={form.employee_count} onChange={v => set('employee_count')(v)} options={[

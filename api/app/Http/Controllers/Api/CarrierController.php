@@ -128,8 +128,10 @@ class CarrierController extends Controller
             'stripe_account_status'   => $profile?->stripe_account_status ?? 'not_connected',
 
             // Stats
-            'rating'                  => (float) ($profile?->rating ?? 0),
+            'rating'                  => $profile?->rating ? (float) $profile->rating : null,
+            'total_ratings'           => $profile?->total_ratings ?? 0,
             'total_deliveries'        => $profile?->total_deliveries ?? 0,
+            'org_id'                  => $profile?->org_id,
             'member_since'            => $user->created_at->format('M Y'),
 
             // Service types

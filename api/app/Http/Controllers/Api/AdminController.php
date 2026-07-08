@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ShipmentResource;
+use App\Models\FreightJob;
+use App\Models\Organization;
 use App\Models\Shipment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
@@ -114,6 +117,117 @@ class AdminController extends Controller
         ]);
 
         return response()->json(['data' => $users]);
+    }
+
+    // GET /api/v1/admin/financials
+    public function financials(Request $request): JsonResponse
+    {
+        if ($err = $this->requireAdmin($request)) return $err;
+
+        $from    = $request->input('from') ? \Carbon\Carbon::parse($request->input('from'))->startOfDay() : now()->subDays(29)->startOfDay();
+        $to      = $request->input('to')   ? \Carbon\Carbon::parse($request->input('to'))->endOfDay()     : now()->endOfDay();
+        $status  = $request->input('status', 'all');   // all | completed | pending | unpaid
+        $orgId   = $request->input('org_id');
+
+        $query = FreightJob::with(['shipper', 'carrier'])
+            ->whereBetween('created_at', [$from, $to])
+            ->orderByDesc('created_at');
+
+        if ($status !== 'all') {
+            $query->where('payment_status', $status);
+        }
+        if ($orgId) {
+            $query->where('org_id', $orgId);
+        }
+
+        $jobs = $query->limit(500)->get();
+
+        // Aggregate totals
+        $totalRevenue   = $jobs->sum(fn ($j) => ($j->cost_breakdown['shipper_total']   ?? 0));
+        $platformFees   = $jobs->sum(fn ($j) => ($j->cost_breakdown['platform_fee']    ?? 0));
+        $carrierPayouts = $jobs->sum(fn ($j) => ($j->cost_breakdown['carrier_payout']  ?? 0));
+        $pending        = $jobs->where('payment_status', 'pending')->sum(fn ($j) => ($j->cost_breakdown['shipper_total'] ?? 0));
+
+        $rows = $jobs->map(fn (FreightJob $j) => [
+            'id'               => $j->id,
+            'title'            => $j->title,
+            'reference'        => $j->reference_number,
+            'invoice_number'   => $j->invoice_number,
+            'status'           => $j->status,
+            'payment_status'   => $j->payment_status,
+            'shipper'          => $j->shipper?->name,
+            'carrier'          => $j->carrier?->name,
+            'shipper_total'    => $j->cost_breakdown['shipper_total']  ?? null,
+            'platform_fee'     => $j->cost_breakdown['platform_fee']   ?? null,
+            'carrier_payout'   => $j->cost_breakdown['carrier_payout'] ?? null,
+            'invoice_date'     => $j->invoice_date?->toDateString(),
+            'invoice_due_date' => $j->invoice_due_date?->toDateString(),
+            'created_at'       => $j->created_at?->toISOString(),
+        ]);
+
+        return response()->json([
+            'data' => [
+                'summary' => [
+                    'total_revenue'   => round($totalRevenue,   2),
+                    'platform_fees'   => round($platformFees,   2),
+                    'carrier_payouts' => round($carrierPayouts, 2),
+                    'pending'         => round($pending,        2),
+                    'job_count'       => $jobs->count(),
+                ],
+                'rows' => $rows,
+            ],
+        ]);
+    }
+
+    // GET /api/v1/admin/financials/export — streams a CSV download
+    public function financialsExport(Request $request): Response
+    {
+        if ($request->user()?->role !== 'admin') {
+            abort(403);
+        }
+
+        $from   = $request->input('from') ? \Carbon\Carbon::parse($request->input('from'))->startOfDay() : now()->subDays(29)->startOfDay();
+        $to     = $request->input('to')   ? \Carbon\Carbon::parse($request->input('to'))->endOfDay()     : now()->endOfDay();
+        $status = $request->input('status', 'all');
+
+        $query = FreightJob::with(['shipper', 'carrier'])
+            ->whereBetween('created_at', [$from, $to])
+            ->orderByDesc('created_at');
+
+        if ($status !== 'all') {
+            $query->where('payment_status', $status);
+        }
+
+        $jobs = $query->limit(5000)->get();
+
+        $csv = implode(',', ['Job ID','Title','Reference','Invoice #','Status','Payment Status','Shipper','Carrier','Shipper Total','Platform Fee','Carrier Payout','Invoice Date','Invoice Due','Created At']) . "\n";
+
+        foreach ($jobs as $j) {
+            $cbd = $j->cost_breakdown ?? [];
+            $csv .= implode(',', [
+                $j->id,
+                '"' . str_replace('"', '""', $j->title ?? '') . '"',
+                $j->reference_number ?? '',
+                $j->invoice_number   ?? '',
+                $j->status           ?? '',
+                $j->payment_status   ?? '',
+                '"' . str_replace('"', '""', $j->shipper?->name ?? '') . '"',
+                '"' . str_replace('"', '""', $j->carrier?->name ?? '') . '"',
+                $cbd['shipper_total']  ?? '',
+                $cbd['platform_fee']   ?? '',
+                $cbd['carrier_payout'] ?? '',
+                $j->invoice_date?->toDateString() ?? '',
+                $j->invoice_due_date?->toDateString() ?? '',
+                $j->created_at?->toDateString() ?? '',
+            ]) . "\n";
+        }
+
+        $filename = 'shipmater-financials-' . now()->format('Y-m-d') . '.csv';
+
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 
     // GET /api/v1/admin/disputes

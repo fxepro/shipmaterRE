@@ -99,6 +99,7 @@ class CarrierProfile extends Model
         // Stats
         'rating',
         'total_deliveries',
+        'total_ratings',
     ];
 
     protected function casts(): array

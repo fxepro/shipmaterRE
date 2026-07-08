@@ -34,6 +34,8 @@ class ShipperProfile extends Model
         'plaid_access_token', 'plaid_item_id', 'plaid_account_id',
         'bank_last4', 'bank_name', 'bank_institution_name',
         'plaid_connected_at', 'stripe_bank_source_id',
+        // Stats
+        'rating', 'total_ratings',
     ];
 
     protected function casts(): array
@@ -43,7 +45,8 @@ class ShipperProfile extends Model
             'notif_sms'            => 'array',
             'preferred_categories' => 'array',
             'notif_recipients'     => 'array',
-            'ops_same_as_biz'      => 'boolean',
+            'rating'               => 'decimal:2',
+        'ops_same_as_biz'      => 'boolean',
             'coi_expiry'           => 'date',
             'hipaa_baa_expiry'     => 'date',
             'hazmat_reg_expiry'    => 'date',

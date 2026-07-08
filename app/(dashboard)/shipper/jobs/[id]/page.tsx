@@ -3,7 +3,7 @@
 import { use } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
-import { freightJobApi } from '@/lib/api';
+import { freightJobApi, authApi } from '@/lib/api';
 import { JobView } from '@/components/jobs/JobView';
 
 export default function ShipperJobPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +17,13 @@ export default function ShipperJobPage({ params }: { params: Promise<{ id: strin
     enabled:  !!jobId,
   });
 
+  const { data: meRes } = useQuery({
+    queryKey: ['me'],
+    queryFn:  () => authApi.me(),
+  });
+
   const job = res?.data?.data;
+  const currentUserId = meRes?.data?.data?.id as number | undefined;
 
   if (isLoading) {
     return (
@@ -45,6 +51,7 @@ export default function ShipperJobPage({ params }: { params: Promise<{ id: strin
       role="shipper"
       backHref={isContracted ? '/shipper/jobs/contracted' : '/shipper/jobs'}
       backLabel={isContracted ? 'Contracted Jobs' : 'My Jobs'}
+      currentUserId={currentUserId}
       onStopUpdated={() => qc.invalidateQueries({ queryKey: ['shipper-job', jobId] })}
       onJobUpdated={()  => qc.invalidateQueries({ queryKey: ['shipper-job', jobId] })}
     />

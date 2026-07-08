@@ -19,7 +19,7 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ ACH bank connection (Plaid)
 - ✅ Transaction history
 - ✅ Organisation / team management (invite, roles, switch org)
-- 🔲 Shipper ratings & reviews
+- ✅ Shipper ratings & reviews (see Ratings & Reviews section)
 
 ### Carrier
 - ✅ Dashboard (active jobs, earnings, pending offers)
@@ -36,7 +36,7 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ Stripe Connect onboarding (payout setup)
 - ✅ Earnings & payout request
 - ✅ Real-time GPS stop progression (en route → arrived → complete)
-- 🔲 Carrier ratings & reviews
+- ✅ Carrier ratings & reviews (see Ratings & Reviews section)
 
 ### Admin (Shipmater platform)
 - ✅ Metrics dashboard (revenue, jobs, users, disputes)
@@ -48,7 +48,7 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ White-label tenant provisioning (create, update)
 - ✅ Platform leads (convert to tenant)
 - ✅ Blog management (create, edit, delete)
-- 🔲 Financial reporting / settlement exports
+- ✅ Financial reporting / settlement exports (see Admin section)
 
 ---
 
@@ -70,7 +70,7 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ Dynamic browser title + favicon (`generateMetadata()`)
 - ✅ Branded login & register pages (logo, colours, brand name, powered-by badge)
 - ✅ Sidebar + dashboard branding from cookie
-- 🔲 Per-tenant email sending at runtime (fields & config stored; mail driver switching not wired)
+- ✅ Per-tenant email sending at runtime (see White-Label cont. section)
 - 🔲 Stripe Connect — tenant as merchant of record (fees invisible to tenant's users)
 - 🔲 SSO (SAML / OIDC) — flag exists, not implemented
 
@@ -167,6 +167,39 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 
 ---
 
+- ✅ **Ratings & Reviews** — bidirectional post-job ratings
+  - Schema: `ratings` table (`freight_job_id`, `rater_id`, `ratee_id`, `rater_type`, `overall`, `communication`, `reliability`, `comment`, unique per job+rater)
+  - `carrier_profiles.total_ratings` + `shipper_profiles.rating` / `total_ratings` updated on each submission
+  - `POST /api/v1/jobs/{job}/ratings` — one per completed job per party
+  - `GET /api/v1/jobs/{job}/ratings` — both directions for a job
+  - `GET /api/v1/orgs/{org}/ratings` — public paginated reviews for any org
+  - `StarRating` reusable component (interactive + readonly with half-star display)
+  - `RatingForm` component: 3-axis star input (Overall, Communication, Reliability/Ease of access), comment, shown on completed jobs in `JobView`
+  - `ReviewsList` component: paginated review cards with sub-score display, summary bar
+  - Carrier profile: "Reviews" tab with inline `ReviewsTab` using `ratingApi.orgRatings`
+  - Recalculation: after each new rating, carrier/shipper profile avg rating auto-updated via DB aggregate
+
+---
+
+## Admin
+
+- ✅ **Financial Reporting** — settlement & revenue dashboard
+  - `GET /api/v1/admin/financials` — filterable by date range, payment status, org
+  - `GET /api/v1/admin/financials/export` — CSV download (streams up to 5,000 rows)
+  - Summary cards: Total Revenue, Platform Fees, Carrier Payouts, Pending/Outstanding
+  - Inline running totals in table footer
+  - `/admin/financials` page with date range picker, status filter, search, Export CSV button
+  - Added "Financials" to admin sidebar nav
+
+---
+
+## Compliance & Identity (cont.)
+
+- ✅ Clearinghouse/FMCSA skip for non-US carriers — `operating_country !== 'US'` returns `not_applicable` instead of attempting FMCSA queries
+- ✅ FMCSA DOT verify skip for non-US carriers — same gate
+
+---
+
 ## Payments
 
 - ✅ Stripe card payments (shipper → platform)
@@ -174,8 +207,29 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 - ✅ Stripe Connect carrier payouts
 - ✅ Admin Stripe mode toggle (single account vs. Connect per org)
 - ✅ Platform fee (commission rate per org)
+- ✅ **Currency field** — `currency` (ISO 4217) added to `organizations`, `freight_jobs`, `shipments`; org profile has currency selector (USD/CAD/MXN/EUR/GBP/AUD/BRL/INR/JPY/CNY/SGD/AED/ZAR)
+- 🔲 Stripe Connect — tenant as merchant of record (requires multi-Stripe account architecture)
+- 🔲 Quick Pay / factoring integration (requires external factoring API)
+
+---
+
+## White-Label (cont.)
+
+- ✅ **Per-tenant email at runtime** — `TenantMailerService` (Laravel)
+  - Reads tenant `mail_driver`/`mail_host`/`mail_api_key`/etc. from `platform_tenants`
+  - Dynamically registers a named mailer per tenant via `config(['mail.mailers.tenant_N' => ...])` → `Mail::mailer('tenant_N')`
+  - Supports: SMTP, Postmark, SendGrid, Mailgun, AWS SES
+  - `mailerFor($tenant)` for direct use; `mailerFromRequest($request)` for Host-header resolution
+  - Registered as singleton in `AppServiceProvider`
 - 🔲 Stripe Connect — tenant as merchant of record
-- 🔲 Quick Pay / factoring integration
+- 🔲 SSO (SAML / OIDC)
+
+---
+
+## Business Profile (cont.)
+
+- ✅ Tax ID type selector (EIN/BN/VAT/ABN/GSTIN/RFC/other) on shipper Business tab
+- ✅ Currency selector on shipper Business tab
 
 ---
 
@@ -183,5 +237,6 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 
 - ✅ Blog (public list + post, admin CRUD)
 - ✅ Platform lead capture form (`/platform`)
-- 🔲 Public pricing page
-- 🔲 Carrier onboarding landing page
+- ✅ **Public pricing page** — `/pricing` with 3 tiers (Free/Pro/Enterprise), feature comparison table, FAQ
+- ✅ **Carrier onboarding landing page** — `/carriers` with how-it-works, requirements, earnings, FAQ
+- 🔲 GPS-only device integration (requires hardware/IoT API design)

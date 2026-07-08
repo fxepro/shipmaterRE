@@ -15,6 +15,7 @@ import { freightJobApi } from '@/lib/api';
 import { RouteMap } from '@/components/RouteMap';
 import type { RouteMapStop } from '@/components/RouteMap';
 import { OfferPanel } from '@/components/jobs/OfferPanel';
+import { RatingForm } from '@/components/jobs/RatingForm';
 
 // ── Status configs ─────────────────────────────────────────────────────────────
 
@@ -88,12 +89,13 @@ function SectionCard({ icon: Icon, title, children }: {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export interface JobViewProps {
-  job:            any;
-  role:           'shipper' | 'carrier';
-  backHref:       string;
-  backLabel:      string;
-  onStopUpdated?: () => void;
-  onJobUpdated?:  () => void;   // called after an offer is accepted/declined so parent refetches
+  job:             any;
+  role:            'shipper' | 'carrier';
+  backHref:        string;
+  backLabel:       string;
+  currentUserId?:  number;
+  onStopUpdated?:  () => void;
+  onJobUpdated?:   () => void;   // called after an offer is accepted/declined so parent refetches
 }
 
 function fmt(n: number | string | null | undefined) {
@@ -101,7 +103,7 @@ function fmt(n: number | string | null | undefined) {
   return '$' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUpdated }: JobViewProps) {
+export function JobView({ job, role, backHref, backLabel, currentUserId, onStopUpdated, onJobUpdated }: JobViewProps) {
   const [pendingStop,   setPendingStop]   = useState<number | null>(null);
   const [showOfferPanel, setShowOfferPanel] = useState(false);
   const qc = useQueryClient();
@@ -703,6 +705,11 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
                 </div>
               )}
             </SectionCard>
+          )}
+
+          {/* Rating form — completed jobs only */}
+          {job.status === 'completed' && currentUserId && (
+            <RatingForm job={job} currentUserId={currentUserId} role={role} />
           )}
 
         </div>

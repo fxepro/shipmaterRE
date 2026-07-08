@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Package, DollarSign, User,
   Truck, BarChart2, Users, AlertTriangle, Route, MapPin, Building2, FileText,
   Briefcase, PlusCircle, Radio, ClipboardList, BookOpen, Warehouse, Palette,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/user';
@@ -123,8 +124,9 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
     {
       section: 'Platform',
       items: [
-        { label: 'Organizations', href: '/admin/orgs',    icon: Building2 },
-        { label: 'Blog',          href: '/admin/blog',    icon: BookOpen  },
+        { label: 'Organizations', href: '/admin/orgs',        icon: Building2  },
+        { label: 'Financials',    href: '/admin/financials',   icon: TrendingUp },
+        { label: 'Blog',          href: '/admin/blog',         icon: BookOpen   },
       ],
     },
     {

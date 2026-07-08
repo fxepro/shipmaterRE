@@ -303,6 +303,13 @@ export const profileApi = {
   updateCarrier: (data: Record<string, unknown>) => api.put('/api/v1/carrier/profile', data),
 };
 
+// ── Ratings ────────────────────────────────────────────────────────────────
+export const ratingApi = {
+  create:      (jobId: number, data: object) => api.post(`/api/v1/jobs/${jobId}/ratings`, data),
+  jobRatings:  (jobId: number) => api.get(`/api/v1/jobs/${jobId}/ratings`),
+  orgRatings:  (orgId: number, page = 1) => api.get(`/api/v1/orgs/${orgId}/ratings?page=${page}`),
+};
+
 // ── Carrier Verification (FMCSA + Stripe Identity + Checkr) ─────────────
 export const verificationApi = {
   verifyDot:             (dotNumber: string) =>
@@ -315,4 +322,20 @@ export const verificationApi = {
   onboardingFee:           () => api.post('/api/v1/stripe/onboarding-fee'),
   clearinghouseInitiate:   () => api.post('/api/v1/carrier/clearinghouse'),
   clearinghouseStatus:     () => api.get('/api/v1/carrier/clearinghouse/status'),
+};
+
+// ── Ratings & reviews ─────────────────────────────────────────────────
+export const ratingApi = {
+  create:     (jobId: number, data: object)   => api.post(`/api/v1/jobs/${jobId}/ratings`, data),
+  jobRatings: (jobId: number)                 => api.get(`/api/v1/jobs/${jobId}/ratings`),
+  orgRatings: (orgId: number, page = 1)       => api.get(`/api/v1/orgs/${orgId}/ratings?page=${page}`),
+};
+
+// ── Admin: financial reporting ─────────────────────────────────────────
+export const adminFinancialsApi = {
+  get:    (params: Record<string, string>) => api.get('/api/v1/admin/financials', { params }),
+  export: (params: Record<string, string>) => {
+    const qs = new URLSearchParams(params).toString();
+    window.location.href = `/api/v1/admin/financials/export?${qs}`;
+  },
 };

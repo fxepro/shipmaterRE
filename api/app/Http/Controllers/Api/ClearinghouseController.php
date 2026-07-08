@@ -30,6 +30,14 @@ class ClearinghouseController extends Controller
             return response()->json(['error' => 'Carrier profile not found.'], 404);
         }
 
+        // Clearinghouse is a US-only FMCSA program
+        if (($profile->operating_country ?? 'US') !== 'US') {
+            return response()->json([
+                'status'  => 'not_applicable',
+                'message' => 'FMCSA Drug & Alcohol Clearinghouse only applies to US-based carriers.',
+            ]);
+        }
+
         // Need CDL number + state to query
         if (!$profile->cdl_number || !$profile->cdl_issuing_state) {
             return response()->json([

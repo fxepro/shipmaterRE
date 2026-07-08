@@ -25,6 +25,14 @@ class CarrierVerificationController extends Controller
     {
         abort_unless($request->user()->isCarrier(), 403);
 
+        $profile = $request->user()->carrierProfile;
+        if ($profile && ($profile->operating_country ?? 'US') !== 'US') {
+            return response()->json([
+                'status'  => 'not_applicable',
+                'message' => 'FMCSA DOT verification only applies to US-based carriers. For other countries, submit your operating authority documents for manual review.',
+            ]);
+        }
+
         $validated = $request->validate([
             'dot_number' => ['required', 'string', 'max:20'],
         ]);
