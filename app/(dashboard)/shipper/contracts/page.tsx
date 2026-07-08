@@ -560,9 +560,14 @@ function ContractDrawer({
 
         {/* Actions */}
         <div className="px-6 py-5 space-y-2 mt-auto">
-          <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] transition-colors shadow-sm">
-            <Pencil size={13} /> Edit contract
-          </button>
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/contracts/${contract.id}/agreement`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] transition-colors shadow-sm"
+          >
+            <FileText size={13} /> View Agreement PDF
+          </a>
           <button
             onClick={() => { onArchive(contract.id); }}
             disabled={archiving}

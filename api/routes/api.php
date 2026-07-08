@@ -195,10 +195,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/admin/blog/{id}', [BlogController::class, 'destroy']);
 
     // Contracts
-    Route::get('/contracts',              [ContractController::class, 'index']);
-    Route::post('/contracts',             [ContractController::class, 'store']);
-    Route::put('/contracts/{contract}',   [ContractController::class, 'update']);
-    Route::delete('/contracts/{contract}',[ContractController::class, 'destroy']);
+    Route::get('/contracts',                         [ContractController::class, 'index']);
+    Route::post('/contracts',                        [ContractController::class, 'store']);
+    Route::put('/contracts/{contract}',              [ContractController::class, 'update']);
+    Route::delete('/contracts/{contract}',           [ContractController::class, 'destroy']);
+    Route::get('/contracts/{contract}/agreement',    [ContractController::class, 'agreement']);
 
     // ── Locations address book ────────────────────────────────────────────────
     Route::get('/locations',              [LocationController::class, 'index']);
@@ -212,8 +213,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shipper/freight-jobs/{job}',                        [FreightJobController::class, 'show']);
     Route::post('/shipper/freight-jobs/{job}/optimise',              [FreightJobController::class, 'optimise']);
     Route::patch('/shipper/freight-jobs/{job}/billing',              [FreightJobController::class, 'saveBilling']);
-    Route::patch('/shipper/freight-jobs/{job}/terms',               [FreightJobController::class, 'saveTerms']);
+    Route::patch('/shipper/freight-jobs/{job}/terms',                [FreightJobController::class, 'saveTerms']);
     Route::post('/shipper/freight-jobs/{job}/post',                  [FreightJobController::class, 'post']);
+    Route::get('/jobs/{job}/rate-confirmation',                      [FreightJobController::class, 'rateConfirmation']);
 
     Route::get('/carrier/freight-jobs',                              [FreightJobController::class, 'carrierIndex']);
     Route::get('/carrier/freight-jobs/{job}',                        [FreightJobController::class, 'carrierShow']);

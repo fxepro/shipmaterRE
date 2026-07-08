@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
+use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ContractController extends Controller
 {
@@ -115,5 +117,14 @@ class ContractController extends Controller
         abort_if($contract->shipper_id !== $request->user()->id, 403);
         $contract->delete();
         return response()->json(['message' => 'Contract archived']);
+    }
+
+    // ── Documents ─────────────────────────────────────────────────────────────
+
+    /** GET /api/v1/contracts/{contract}/agreement */
+    public function agreement(Request $request, Contract $contract): Response
+    {
+        abort_if($contract->shipper_id !== $request->user()->id, 403);
+        return app(DocumentService::class)->carrierAgreement($contract, (bool) $request->boolean('download'));
     }
 }

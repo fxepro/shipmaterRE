@@ -8,9 +8,11 @@ use App\Models\FreightJob;
 use App\Models\JobStop;
 use App\Models\JobStopItem;
 use App\Models\Location;
+use App\Services\DocumentService;
 use App\Services\RouteOptimizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class FreightJobController extends Controller
@@ -356,6 +358,17 @@ class FreightJobController extends Controller
 
         return response()->json(['data' => $stop]);
     }
+
+    // ── Documents ─────────────────────────────────────────────────────────────
+
+    /** GET /api/v1/jobs/{job}/rate-confirmation */
+    public function rateConfirmation(Request $request, FreightJob $job): Response
+    {
+        $this->authorise($request, $job);
+        return app(DocumentService::class)->rateConfirmation($job, (bool) $request->boolean('download'));
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function authorise(Request $request, FreightJob $job): void
     {

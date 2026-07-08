@@ -226,6 +226,18 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
           )}
         </div>
 
+        {/* Rate Confirmation PDF — posted/in-progress/completed, both parties */}
+        {['posted', 'in_progress', 'completed'].includes(job.status) && (
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/rate-confirmation`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+          >
+            <Receipt size={13} /> Rate Confirmation
+          </a>
+        )}
+
         {/* Edit button — draft + shipper only */}
         {role === 'shipper' && job.status === 'draft' && (
           <Link
