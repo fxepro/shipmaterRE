@@ -16,6 +16,10 @@ class JobStop extends Model
         'scheduled_date', 'window_start', 'window_end', 'estimated_arrival_at',
         'weight_lbs', 'special_instructions',
         'status', 'en_route_at', 'arrived_at', 'completed_at', 'carrier_notes',
+        // POD
+        'signature_key', 'signature_url', 'signature_name', 'signature_at', 'signature_ip',
+        'pod_pdf_key', 'pod_pdf_url', 'pod_generated_at',
+        'photos_required',
     ];
 
     protected function casts(): array
@@ -26,6 +30,9 @@ class JobStop extends Model
             'en_route_at'         => 'datetime',
             'arrived_at'          => 'datetime',
             'completed_at'        => 'datetime',
+            'signature_at'        => 'datetime',
+            'pod_generated_at'    => 'datetime',
+            'photos_required'     => 'boolean',
             'lat'                 => 'float',
             'lng'                 => 'float',
         ];

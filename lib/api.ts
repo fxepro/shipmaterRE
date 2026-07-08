@@ -218,6 +218,20 @@ export const freightJobApi = {
   // Carrier: all my offers across all jobs
   carrierMyOffers: (params?: Record<string, unknown>) =>
                    api.get('/api/v1/carrier/my-offers', { params }),
+
+  // Evidence (photos) per stop
+  listEvidence:    (jobId: number, stopId: number) =>
+                     api.get(`/api/v1/jobs/${jobId}/stops/${stopId}/evidence`),
+  uploadEvidence:  (jobId: number, stopId: number, formData: FormData) =>
+                     api.post(`/api/v1/jobs/${jobId}/stops/${stopId}/evidence`, formData, {
+                       headers: { 'Content-Type': 'multipart/form-data' },
+                     }),
+  deleteEvidence:  (jobId: number, evidenceId: number) =>
+                     api.delete(`/api/v1/jobs/${jobId}/evidence/${evidenceId}`),
+  saveSignature:   (jobId: number, stopId: number, data: { signature_data: string; signature_name: string }) =>
+                     api.post(`/api/v1/jobs/${jobId}/stops/${stopId}/signature`, data),
+  generatePod:     (jobId: number, stopId: number) =>
+                     api.post(`/api/v1/jobs/${jobId}/stops/${stopId}/pod`),
 };
 
 // ── Blog ───────────────────────────────────────────────────────────────

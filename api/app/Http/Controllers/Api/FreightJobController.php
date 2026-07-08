@@ -368,6 +368,12 @@ class FreightJobController extends Controller
         return app(DocumentService::class)->rateConfirmation($job, (bool) $request->boolean('download'));
     }
 
+    public function bol(Request $request, FreightJob $job): Response
+    {
+        $this->authorise($request, $job);
+        return app(DocumentService::class)->bol($job, (bool) $request->boolean('download'));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function authorise(Request $request, FreightJob $job): void

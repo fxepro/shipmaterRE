@@ -60,6 +60,25 @@ return [
             'report' => false,
         ],
 
+        // ── Documents (evidence photos + generated PDFs) ──────────────────
+        // In production set DOCUMENT_DISK=r2 (or s3). Locally uses public disk
+        // so files are accessible at /storage/* for dev testing.
+        'documents' => [
+            'driver'     => env('DOCUMENT_DRIVER', 'local'),
+            'root'       => storage_path('app/public/documents'),
+            'url'        => rtrim(env('APP_URL', 'http://localhost'), '/') . '/storage/documents',
+            'visibility' => env('DOCUMENT_VISIBILITY', 'public'),
+            'throw'      => false,
+            'report'     => false,
+            // S3/R2 fields (ignored when driver=local)
+            'key'                     => env('DOCUMENT_S3_KEY',    env('CLOUDFLARE_R2_ACCESS_KEY_ID')),
+            'secret'                  => env('DOCUMENT_S3_SECRET', env('CLOUDFLARE_R2_SECRET_ACCESS_KEY')),
+            'region'                  => env('DOCUMENT_S3_REGION', 'auto'),
+            'bucket'                  => env('DOCUMENT_S3_BUCKET', env('CLOUDFLARE_R2_BUCKET')),
+            'endpoint'                => env('DOCUMENT_S3_ENDPOINT', env('CLOUDFLARE_R2_ENDPOINT')),
+            'use_path_style_endpoint' => true,
+        ],
+
         // ── Cloudflare R2 ──────────────────────────────────────────────────
         // R2 is S3-compatible — same driver, different endpoint.
         // Files are private by default; served via signed URLs (1-hour expiry).

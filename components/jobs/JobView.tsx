@@ -8,6 +8,7 @@ import {
   ArrowRight, ChevronRight, Loader2, MapPin, Navigation2, Pencil,
   DollarSign, X, Star, BadgeCheck, MessageSquare, Globe, Tag,
 } from 'lucide-react';
+import { StopEvidence } from '@/components/jobs/StopEvidence';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { freightJobApi } from '@/lib/api';
@@ -226,16 +227,26 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
           )}
         </div>
 
-        {/* Rate Confirmation PDF — posted/in-progress/completed, both parties */}
+        {/* Rate Confirmation + BOL — posted/in-progress/completed */}
         {['posted', 'in_progress', 'completed'].includes(job.status) && (
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/rate-confirmation`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
-          >
-            <Receipt size={13} /> Rate Confirmation
-          </a>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/rate-confirmation`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+            >
+              <Receipt size={13} /> Rate Confirmation
+            </a>
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/bol`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+            >
+              <FileText size={13} /> Bill of Lading
+            </a>
+          </div>
         )}
 
         {/* Edit button — draft + shipper only */}
@@ -409,6 +420,24 @@ export function JobView({ job, role, backHref, backLabel, onStopUpdated, onJobUp
                         </span>
                       )}
                     </div>
+
+                    {/* Evidence: photos + signature + POD */}
+                    <StopEvidence
+                      job={{ id: job.id, status: job.status }}
+                      stop={{
+                        id:              stop.id,
+                        stop_type:       stop.stop_type,
+                        status:          stop.status,
+                        photos_required: stop.photos_required ?? false,
+                        signature_url:   stop.signature_url ?? null,
+                        signature_name:  stop.signature_name ?? null,
+                        signature_at:    stop.signature_at ?? null,
+                        pod_pdf_url:     stop.pod_pdf_url ?? null,
+                      }}
+                      role={role}
+                      apiBase={process.env.NEXT_PUBLIC_API_URL ?? ''}
+                      onStopChanged={onStopUpdated}
+                    />
                   </div>
                 );
               })}

@@ -90,8 +90,20 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
   - Standing rate agreement, all rate fields, 7 standard legal clauses, signature block
   - `GET /api/v1/contracts/{contract}/agreement`
   - Frontend button in ContractDrawer
-- 🔲 **Bill of Lading (BOL)** — travels with freight, per FreightJob at dispatch
-- 🔲 **Proof of Delivery (POD)** — post-completion signed document
+- ✅ **Bill of Lading (BOL)** — travels with freight, per FreightJob at dispatch
+  - Tenant-branded, stops table, commodity/weight, shipper + carrier details
+  - `GET /api/v1/jobs/{job}/bol`
+  - Stored to `documents` disk (S3/R2 in prod, public disk in dev); key + URL saved to `freight_jobs`
+  - Frontend button in job header (posted / in_progress / completed)
+- ✅ **Proof of Delivery (POD)** — two types: Proof of Pickup + Proof of Delivery, per stop
+  - Photo evidence: carrier uploads photos at each stop (JPEG/PNG/HEIC/WebP, up to 50MB)
+  - Signature capture: digital signature pad (HTML canvas, touch/mouse), saves base64 PNG to storage
+  - PDF embeds all stop photos + drawn signature; tenant-branded
+  - `GET/POST /api/v1/jobs/{job}/stops/{stop}/evidence` — upload/list photos
+  - `POST /api/v1/jobs/{job}/stops/{stop}/signature` — capture signature
+  - `GET/POST /api/v1/jobs/{job}/stops/{stop}/pod` — view/generate POD PDF
+  - Stored persistently on `documents` disk; key + URL saved to `job_stops`
+  - Frontend: camera button + photo gallery on each stop card; Generate POD / View POD button
 - 🔲 **Invoice / Settlement Statement** — shipper-facing payment doc
 
 ---

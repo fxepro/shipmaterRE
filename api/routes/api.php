@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\ShipperProfileController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\CertificationController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\EvidenceController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\AdminOrgController;
 use App\Http\Controllers\Api\OrgController;
@@ -216,6 +217,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/shipper/freight-jobs/{job}/terms',                [FreightJobController::class, 'saveTerms']);
     Route::post('/shipper/freight-jobs/{job}/post',                  [FreightJobController::class, 'post']);
     Route::get('/jobs/{job}/rate-confirmation',                      [FreightJobController::class, 'rateConfirmation']);
+    Route::get('/jobs/{job}/bol',                                    [FreightJobController::class, 'bol']);
+
+    // Evidence (photos) per stop — shipper or assigned carrier
+    Route::get('/jobs/{job}/stops/{stop}/evidence',                  [EvidenceController::class, 'index']);
+    Route::post('/jobs/{job}/stops/{stop}/evidence',                 [EvidenceController::class, 'store']);
+    Route::post('/jobs/{job}/stops/{stop}/signature',                [EvidenceController::class, 'signature']);
+    Route::delete('/jobs/{job}/evidence/{evidence}',                 [EvidenceController::class, 'destroy']);
+
+    // POD — view (inline) or download
+    Route::get('/jobs/{job}/stops/{stop}/pod',                       [EvidenceController::class, 'downloadPod']);
+    Route::post('/jobs/{job}/stops/{stop}/pod',                      [EvidenceController::class, 'generatePod']);
 
     Route::get('/carrier/freight-jobs',                              [FreightJobController::class, 'carrierIndex']);
     Route::get('/carrier/freight-jobs/{job}',                        [FreightJobController::class, 'carrierShow']);

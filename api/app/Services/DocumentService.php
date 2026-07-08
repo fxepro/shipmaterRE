@@ -4,11 +4,15 @@ namespace App\Services;
 
 use App\Models\Contract;
 use App\Models\FreightJob;
+use App\Models\JobEvidence;
+use App\Models\JobStop;
 use App\Models\Organization;
 use App\Models\PlatformTenant;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class DocumentService
 {
@@ -71,6 +75,119 @@ class DocumentService
 
         $filename = 'carrier-agreement-' . $contract->id . '.pdf';
         return $this->render('documents.carrier_agreement', $data, $broker, $filename, $download);
+    }
+
+    // ── BOL ───────────────────────────────────────────────────────────────────
+
+    /**
+     * Bill of Lading — generated at dispatch (when job is posted).
+     * Stored to the documents disk; subsequent calls return the stored URL.
+     * Pass $forceRegen=true to regenerate even if a stored version exists.
+     */
+    public function bol(FreightJob $job, bool $download = false, bool $forceRegen = false): Response
+    {
+        $job->load([
+            'shipper.org.platformTenant',
+            'shipper.shipperProfile',
+            'carrier.carrierProfile',
+            'stops.location',
+            'stops.pickupItems',
+            'stops.deliveryItems',
+        ]);
+
+        $broker  = $this->brokerIdentity($job->shipper);
+        $carrier = $job->carrier ? $this->carrierIdentity($job->carrier) : null;
+
+        $data = [
+            'broker'    => $broker,
+            'carrier'   => $carrier,
+            'job'       => $job,
+            'stops'     => $job->stops,
+            'generated' => now()->format('M j, Y g:i A'),
+        ];
+
+        $filename = 'BOL-' . ($job->reference_number ?? $job->id) . '.pdf';
+        $pdfOutput = $this->generatePdfOutput('documents.bol', $data);
+
+        // Store and update the job row if not yet stored (or forced)
+        if ($forceRegen || !$job->bol_pdf_key) {
+            $key = "bol/{$job->id}/" . Str::uuid() . '.pdf';
+            Storage::disk('documents')->put($key, $pdfOutput, 'public');
+            $url = Storage::disk('documents')->url($key);
+            $job->update([
+                'bol_pdf_key'       => $key,
+                'bol_pdf_url'       => $url,
+                'bol_generated_at'  => now(),
+            ]);
+        }
+
+        $disposition = $download ? 'attachment' : 'inline';
+        return response($pdfOutput, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+        ]);
+    }
+
+    // ── POD ───────────────────────────────────────────────────────────────────
+
+    /**
+     * Proof of Delivery (or Proof of Pickup) for a single stop.
+     * Embeds all photos taken at that stop + the drawn signature.
+     * Stored to the documents disk.
+     */
+    public function podResponse(FreightJob $job, JobStop $stop, bool $download = false): Response
+    {
+        $job->load(['shipper.org.platformTenant', 'shipper.shipperProfile', 'carrier.carrierProfile']);
+        $stop->load(['evidence' => fn($q) => $q->orderBy('taken_at')]);
+
+        $broker  = $this->brokerIdentity($job->shipper);
+        $carrier = $job->carrier ? $this->carrierIdentity($job->carrier) : null;
+
+        $photos    = $stop->evidence->filter(fn($e) => str_starts_with($e->mime_type ?? '', 'image/'));
+        $signature = $stop->evidence->first(fn($e) => $e->evidence_type === 'signature');
+
+        $data = [
+            'broker'       => $broker,
+            'carrier'      => $carrier,
+            'job'          => $job,
+            'stop'         => $stop,
+            'photos'       => $photos->map(fn($e) => $this->evidenceToBase64($e)),
+            'signature_b64'=> $stop->signature_key ? $this->fileToBase64('documents', $stop->signature_key) : null,
+            'is_pickup'    => $stop->stop_type === 'pickup',
+            'generated'    => now()->format('M j, Y g:i A'),
+        ];
+
+        $typeLabel = $stop->stop_type === 'pickup' ? 'Pickup-POD' : 'Delivery-POD';
+        $filename  = "{$typeLabel}-{$job->id}-stop{$stop->id}.pdf";
+        $pdfOutput = $this->generatePdfOutput('documents.pod', $data);
+
+        // Store once
+        if (!$stop->pod_pdf_key) {
+            $key = "pod/{$job->id}/{$stop->id}/" . Str::uuid() . '.pdf';
+            Storage::disk('documents')->put($key, $pdfOutput, 'public');
+            $url = Storage::disk('documents')->url($key);
+            $stop->update([
+                'pod_pdf_key'      => $key,
+                'pod_pdf_url'      => $url,
+                'pod_generated_at' => now(),
+            ]);
+        }
+
+        $disposition = $download ? 'attachment' : 'inline';
+        return response($pdfOutput, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Generate POD and return its stored URL (used by EvidenceController).
+     */
+    public function pod(FreightJob $job, JobStop $stop, bool $storeResult = true): string
+    {
+        $this->podResponse($job, $stop);   // side-effect: stores PDF if not stored
+        $stop->refresh();
+        return $stop->pod_pdf_url ?? '';
     }
 
     // ── Identity helpers ──────────────────────────────────────────────────────
@@ -145,15 +262,44 @@ class DocumentService
 
     private function render(string $view, array $data, array $broker, string $filename, bool $download): Response
     {
-        $pdf = Pdf::loadView($view, $data)
-            ->setPaper('letter', 'portrait')
-            ->setWarnings(false);
-
+        $pdfOutput = $this->generatePdfOutput($view, $data);
         $disposition = $download ? 'attachment' : 'inline';
-
-        return response($pdf->output(), 200, [
+        return response($pdfOutput, 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
         ]);
+    }
+
+    private function generatePdfOutput(string $view, array $data): string
+    {
+        return Pdf::loadView($view, $data)
+            ->setPaper('letter', 'portrait')
+            ->setWarnings(false)
+            ->output();
+    }
+
+    // ── Image helpers for PDF embedding ──────────────────────────────────────
+
+    /**
+     * Convert a stored evidence file to a base64 data URI for embedding in PDF.
+     */
+    private function evidenceToBase64(JobEvidence $e): ?string
+    {
+        return $this->fileToBase64('documents', $e->file_key, $e->mime_type ?? 'image/jpeg');
+    }
+
+    /**
+     * Read a file from a storage disk and return a base64 data URI.
+     */
+    private function fileToBase64(string $disk, string $key, string $mime = 'image/png'): ?string
+    {
+        try {
+            $contents = Storage::disk($disk)->get($key);
+            if (!$contents) return null;
+            $b64 = base64_encode($contents);
+            return "data:{$mime};base64,{$b64}";
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
