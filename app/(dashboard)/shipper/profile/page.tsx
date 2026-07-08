@@ -13,6 +13,7 @@ import {
   Users, Package, Crown, UserMinus, Send,
 } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
+import AddressFields from '@/components/shared/AddressFields';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -27,10 +28,10 @@ interface ShipperProfile {
   industry: string; website: string; business_phone: string; business_email: string;
   sam_gov_number: string;
   // registered address
-  biz_street: string; biz_city: string; biz_state: string; biz_zip: string;
+  biz_street: string; biz_city: string; biz_state: string; biz_zip: string; biz_country: string;
   // operating address
   ops_same_as_biz: boolean;
-  ops_street: string; ops_city: string; ops_state: string; ops_zip: string;
+  ops_street: string; ops_city: string; ops_state: string; ops_zip: string; ops_country: string;
   // verification
   verification_status: string; email_verified: boolean; phone_verified: boolean; ein_verified: boolean;
   // shipping defaults
@@ -260,13 +261,15 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
             <p className="text-xs text-[var(--color-text-faint)]">Pre-filled as pickup on new shipments</p>
           </div>
         </div>
-        <Field label="Street address" value={form.street}  onChange={set('street')}  placeholder="123 Warehouse Blvd" />
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="City"  value={form.city}  onChange={set('city')}  placeholder="Denver" />
-          <Field label="State" value={form.state} onChange={set('state')} placeholder="CO" />
-          <Field label="ZIP"   value={form.zip}   onChange={set('zip')}   placeholder="80216" />
-        </div>
-        <Field label="Country" value={form.country} onChange={set('country')} icon={Globe} placeholder="United States" />
+        <AddressFields
+          value={{ address: form.street, city: form.city, state: form.state, zip: form.zip, country: form.country || 'US' }}
+          onChange={v => setForm(f => ({
+            ...f,
+            street: v.address ?? v.street ?? '',
+            city: v.city, state: v.state, zip: v.zip, country: v.country,
+          }))}
+          showStreet
+        />
       </div>
 
       {/* Shipping defaults */}
@@ -314,11 +317,13 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     biz_city:               initialData.biz_city,
     biz_state:              initialData.biz_state,
     biz_zip:                initialData.biz_zip,
+    biz_country:            initialData.biz_country  ?? 'US',
     ops_same_as_biz:        initialData.ops_same_as_biz,
     ops_street:             initialData.ops_street,
     ops_city:               initialData.ops_city,
     ops_state:              initialData.ops_state,
     ops_zip:                initialData.ops_zip,
+    ops_country:            initialData.ops_country  ?? 'US',
   });
   const [saved, setSaved] = useState(false);
   const set = (k: keyof typeof form) => (v: string | boolean) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
@@ -381,12 +386,15 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             <p className="text-xs text-[var(--color-text-faint)]">Legal registration address for billing and compliance</p>
           </div>
         </div>
-        <Field label="Street" value={form.biz_street} onChange={v => set('biz_street')(v)} placeholder="123 Commerce St" />
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="City"  value={form.biz_city}  onChange={v => set('biz_city')(v)}  placeholder="Denver" />
-          <Field label="State" value={form.biz_state} onChange={v => set('biz_state')(v)} placeholder="CO" />
-          <Field label="ZIP"   value={form.biz_zip}   onChange={v => set('biz_zip')(v)}   placeholder="80216" />
-        </div>
+        <AddressFields
+          value={{ address: form.biz_street, city: form.biz_city, state: form.biz_state, zip: form.biz_zip, country: form.biz_country }}
+          onChange={v => setForm(f => ({
+            ...f,
+            biz_street: v.address ?? v.street ?? '',
+            biz_city: v.city, biz_state: v.state, biz_zip: v.zip, biz_country: v.country,
+          }))}
+          showStreet
+        />
       </div>
 
       {/* Operating address */}
@@ -404,14 +412,15 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           </label>
         </div>
         {!form.ops_same_as_biz && (
-          <>
-            <Field label="Street" value={form.ops_street} onChange={v => set('ops_street')(v)} placeholder="456 Operations Blvd" />
-            <div className="grid grid-cols-3 gap-4">
-              <Field label="City"  value={form.ops_city}  onChange={v => set('ops_city')(v)}  placeholder="Denver" />
-              <Field label="State" value={form.ops_state} onChange={v => set('ops_state')(v)} placeholder="CO" />
-              <Field label="ZIP"   value={form.ops_zip}   onChange={v => set('ops_zip')(v)}   placeholder="80216" />
-            </div>
-          </>
+          <AddressFields
+            value={{ address: form.ops_street, city: form.ops_city, state: form.ops_state, zip: form.ops_zip, country: form.ops_country }}
+            onChange={v => setForm(f => ({
+              ...f,
+              ops_street: v.address ?? v.street ?? '',
+              ops_city: v.city, ops_state: v.state, ops_zip: v.zip, ops_country: v.country,
+            }))}
+            showStreet
+          />
         )}
       </div>
 

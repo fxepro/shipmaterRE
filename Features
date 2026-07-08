@@ -146,6 +146,25 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
     with Verify Identity button (opens Stripe hosted flow), Retry on failure, handles redirect back
   - Marketing: `/carrier-trust` — 5-layer verification page (Stripe Identity, FMCSA, Checkr, Clearinghouse, Human review)
 
+- ✅ **International Address & Identity Support** — all address/ID fields internationalised for USMCA + 50+ countries
+  - New migration: `country` (ISO-2) added to `job_stops`, `carrier_profiles`; `state` widened to varchar(10) everywhere
+  - `carrier_profiles`: `operating_country`, `phone_e164`, `national_id_type`, `national_id_number`,
+    `dl_country`, `operating_authority_number`, `operating_authority_type`
+  - `organizations`: `tax_id`, `tax_id_type` (EIN/BN/VAT/ABN/etc.)
+  - `lib/countries.ts`: curated list of 55+ countries with dial codes, state/postal labels, subdivision lists (US/CA/MX),
+    national ID type options per country, tax ID label per country
+  - `CountrySelect` reusable component with flag emoji + ISO code
+  - `AddressFields` reusable component: country-aware — shows state dropdown for US/CA/MX, free text for others;
+    dynamic labels (State/Province/County/Region/Oblast); dynamic postal label (ZIP/Postal Code/Postcode/CEP/etc.)
+  - Carrier Personal tab: `operating_country` selector drives all conditional logic;
+    US → SSN last 4; CA → SIN + provincial ID; others → national_id_type dropdown + number field;
+    full international address entry; E.164 phone field for non-US
+  - Carrier DOT/Commercial tab: operating context banner (reads `operating_country` from profile);
+    US → CDL Class A/B/C + USDOT + MC#; CA → Class 1–5 + NSC#; MX → Licencia Federal + Permiso SCT;
+    EU/other → Category C/CE + Community Licence / TIR; all endorsements renamed to "Dangerous Goods" for international use
+  - Shipper profile: all three address blocks (ship-from, registered, operating) use `AddressFields`; `biz_country`/`ops_country` added
+  - Locations address book: `AddressFields` component, non-US flag shown in table, `state` no longer force-uppercased to 2 chars
+
 ---
 
 ## Payments

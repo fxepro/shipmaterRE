@@ -11,7 +11,7 @@ class JobStop extends Model
     protected $fillable = [
         'freight_job_id', 'location_id', 'name', 'stop_type', 'sequence', 'optimized_sequence',
         'contact_name', 'contact_phone',
-        'address', 'city', 'state', 'zip',
+        'address', 'city', 'state', 'zip', 'country', 'postal_code',
         'lat', 'lng',
         'scheduled_date', 'window_start', 'window_end', 'estimated_arrival_at',
         'weight_lbs', 'special_instructions',

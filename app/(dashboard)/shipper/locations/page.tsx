@@ -9,6 +9,8 @@ import {
   MapPin, Trash2, CheckCircle2, ArrowUpDown,
 } from 'lucide-react';
 import { locationApi } from '@/lib/api';
+import AddressFields, { type AddressValue } from '@/components/shared/AddressFields';
+import { getCountry } from '@/lib/countries';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,7 @@ interface Location {
   city:             string;
   state:            string;
   zip:              string;
+  country:          string;
   lat:              number | null;
   lng:              number | null;
   operating_hours:  Record<string, string> | null;
@@ -84,6 +87,7 @@ function LocationPanel({
     city:          init?.city          ?? '',
     state:         init?.state         ?? '',
     zip:           init?.zip           ?? '',
+    country:       init?.country       ?? 'US',
     notes:         init?.notes         ?? '',
     is_default:    init?.is_default    ?? false,
     hours: DAYS.reduce((acc, d) => ({
@@ -106,7 +110,7 @@ function LocationPanel({
         contact_name:  form.contact_name  || null,
         contact_phone: form.contact_phone || null,
         contact_email: form.contact_email || null,
-        address: form.address, city: form.city, state: form.state, zip: form.zip,
+        address: form.address, city: form.city, state: form.state, zip: form.zip, country: form.country,
         notes: form.notes || null, is_default: form.is_default,
         operating_hours: Object.keys(hours).length ? hours : null,
       };
@@ -122,7 +126,7 @@ function LocationPanel({
     onSuccess:  () => { qc.invalidateQueries({ queryKey: ['locations'] }); onClose(); },
   });
 
-  const valid = form.name && form.address && form.city && form.state && form.zip;
+  const valid = form.name && form.address && form.city;
 
   const inputCls = 'w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20';
   const labelCls = 'block mb-1.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]';
@@ -176,22 +180,19 @@ function LocationPanel({
             className={inputCls} />
 
           <SH t="Address" />
-          <input value={form.address} onChange={e => set('address')(e.target.value)}
-            placeholder="Street address" className={inputCls} />
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-1">
-              <label className={labelCls}>City</label>
-              <input value={form.city} onChange={e => set('city')(e.target.value)} placeholder="Chicago" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>State</label>
-              <input value={form.state} onChange={e => set('state')(e.target.value.toUpperCase().slice(0,2))} placeholder="IL" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>ZIP</label>
-              <input value={form.zip} onChange={e => set('zip')(e.target.value)} placeholder="60601" className={inputCls} />
-            </div>
-          </div>
+          <AddressFields
+            value={{ address: form.address, city: form.city, state: form.state, zip: form.zip, country: form.country }}
+            onChange={v => setForm(f => ({
+              ...f,
+              address: v.address ?? v.street ?? '',
+              city: v.city,
+              state: v.state,
+              zip: v.zip,
+              country: v.country,
+            }))}
+            showStreet
+            required
+          />
 
           <SH t="Contact" />
           <div className="grid grid-cols-2 gap-3">
@@ -564,7 +565,14 @@ export default function LocationsPage() {
 
                     {/* Location */}
                     <td className="px-4 py-3.5">
-                      <p className="text-[var(--color-text)]">{loc.city}, {loc.state}</p>
+                      <p className="text-[var(--color-text)]">
+                        {loc.city}{loc.state ? `, ${loc.state}` : ''}
+                        {loc.country && loc.country !== 'US' && (
+                          <span className="ml-1 text-xs text-[var(--color-text-faint)]">
+                            {getCountry(loc.country).flag}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-[var(--color-text-faint)] truncate max-w-[150px]">{loc.address}</p>
                     </td>
 

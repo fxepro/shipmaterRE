@@ -14,6 +14,7 @@ class Organization extends Model
         'name', 'slug', 'type', 'plan', 'status', 'owner_id',
         'phone', 'email', 'website',
         'street', 'city', 'state', 'zip', 'country',
+        'tax_id', 'tax_id_type',
         'logo_url', 'settings',
         // Stripe billing mode (admin-only toggle)
         'stripe_mode', 'stripe_connect_id', 'commission_rate',
