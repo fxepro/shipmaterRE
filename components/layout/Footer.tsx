@@ -12,16 +12,27 @@ const COLS = [
   {
     heading: 'Product',
     links: [
-      ['Features',   '/features'],
-      ['Use Cases',  '/use-cases'],
-      ['Blog',       '/blog'],
+      ['How It Works', '/how-it-works'],
+      ['Use Cases',    '/use-cases'],
+      ['Pricing',      '/pricing'],
+      ['Platform',     '/platform'],
     ],
   },
   {
     heading: 'Solutions',
     links: [
-      ['For Shippers', '/shippers'],
-      ['For Carriers', '/carriers'],
+      ['For Shippers',  '/shippers'],
+      ['For Carriers',  '/carriers'],
+      ['Carrier Trust', '/carrier-trust'],
+    ],
+  },
+  {
+    heading: 'International',
+    links: [
+      ['Global Coverage',         '/global'],
+      ['USMCA (US · CA · MX)',    '/usmca'],
+      ['Country Coverage Table',  '/coverage'],
+      ['International Carriers',  '/international-carriers'],
     ],
   },
   {
@@ -29,14 +40,6 @@ const COLS = [
     links: [
       ['Sign in',  '/login'],
       ['Register', '/register'],
-    ],
-  },
-  {
-    heading: 'Trust & Safety',
-    links: [
-      ['Platform Compliance',   '/compliance'],
-      ['Carrier Requirements',  '/provider-compliance'],
-      ['Verification',          '/verification'],
     ],
   },
   {

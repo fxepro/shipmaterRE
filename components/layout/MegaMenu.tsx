@@ -7,6 +7,7 @@ import {
   Truck, Stethoscope, Car, Gem, UtensilsCrossed, HardHat,
   Package, Search, Route, FileText, Users,
   CreditCard, Building2, Briefcase, DollarSign, Star,
+  Globe, Flag, Table2, UserCircle2,
   ArrowRight, type LucideIcon,
 } from 'lucide-react';
 
@@ -128,14 +129,39 @@ export const MENUS: Record<string, MenuConfig> = {
       {
         heading: 'Platform Benefits',
         items: [
-          { icon: Zap,      title: 'Fast Escrow Payout',        desc: 'Funds release the moment delivery is confirmed — no chasing invoices.', href: '/carriers' },
-          { icon: FileText, title: 'Digital Compliance Profile', desc: 'DOT, MC, CDL and insurance stored and visible to every shipper.',      href: '/carriers' },
-          { icon: MapPin,   title: 'GPS Built In',              desc: 'No separate app — ping your location directly from the platform.',      href: '/carriers' },
-          { icon: BarChart2, title: 'Earnings Dashboard',       desc: 'Jobs, pending escrow and total earnings — all in one view.',            href: '/carriers' },
+          { icon: Zap,        title: 'Fast Escrow Payout',          desc: 'Funds release the moment delivery is confirmed — no chasing invoices.', href: '/carriers' },
+          { icon: FileText,   title: 'Digital Compliance Profile',  desc: 'DOT, MC, CDL and insurance stored and visible to every shipper.',      href: '/carriers' },
+          { icon: MapPin,     title: 'GPS Built In',                desc: 'No separate app — ping your location directly from the platform.',      href: '/carriers' },
+          { icon: ShieldCheck, title: 'Carrier Trust & Safety',     desc: '5-layer vetting: identity, DOT/MC, background, clearinghouse, human review.', href: '/carrier-trust' },
+          { icon: Globe,      title: 'Join From 100+ Countries',    desc: 'International carriers welcome — credentials adapt to your country.',  href: '/international-carriers' },
         ],
       },
     ],
     cta: { label: 'Join free — no subscription', href: '/register' },
+  },
+
+  'international': {
+    columns: [
+      {
+        heading: 'Global Coverage',
+        items: [
+          { icon: Globe,        title: 'Freight Without Borders',   desc: 'USMCA coverage day one — US, Canada, and Mexico on one platform.',    href: '/global' },
+          { icon: Flag,         title: 'USMCA Deep Dive',           desc: 'Separate compliance for US (FMCSA), Canada (NSC), and Mexico (SCT).', href: '/usmca' },
+          { icon: Table2,       title: 'Country Coverage Table',    desc: 'GPS, identity, background checks, and payouts — see what works where.', href: '/coverage' },
+          { icon: UserCircle2,  title: 'International Carriers',    desc: 'Register from anywhere. Credentials, payouts, and GPS in 100+ countries.', href: '/international-carriers' },
+        ],
+      },
+      {
+        heading: 'Why It Works Globally',
+        items: [
+          { icon: ShieldCheck,  title: 'Stripe Identity — 100+ Countries', desc: 'Government ID + selfie verification everywhere Stripe operates.',      href: '/coverage' },
+          { icon: BarChart2,    title: 'Background Checks — 223 Countries', desc: 'Checkr covers USMCA in full and provides adverse media globally.',    href: '/coverage' },
+          { icon: CreditCard,   title: 'Payouts in Local Currency',          desc: 'Stripe Connect supports 46+ countries with local bank deposits.',      href: '/coverage' },
+          { icon: MapPin,       title: 'GPS Across All USMCA',               desc: 'Phone GPS works in the US, Canada, and Mexico without extra hardware.', href: '/usmca' },
+        ],
+      },
+    ],
+    cta: { label: 'View full country coverage', href: '/coverage' },
   },
 };
 

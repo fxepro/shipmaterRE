@@ -15,11 +15,12 @@ const B = {
 const ROBOTO = "'Roboto', 'IBM Plex Sans', system-ui, sans-serif";
 
 const NAV: { label: string; href: string; menu?: string }[] = [
-  { label: 'How It Works', href: '/how-it-works', menu: 'how-it-works' },
-  { label: 'Use Cases',    href: '/use-cases',    menu: 'use-cases'    },
-  { label: 'Shippers',     href: '/shippers',     menu: 'shippers'     },
-  { label: 'Carriers',     href: '/carriers',     menu: 'carriers'     },
-  { label: 'Platform',     href: '/platform'                          },
+  { label: 'How It Works',  href: '/how-it-works',  menu: 'how-it-works'  },
+  { label: 'Use Cases',     href: '/use-cases',     menu: 'use-cases'     },
+  { label: 'Shippers',      href: '/shippers',      menu: 'shippers'      },
+  { label: 'Carriers',      href: '/carriers',      menu: 'carriers'      },
+  { label: 'International', href: '/global',        menu: 'international' },
+  { label: 'Pricing',       href: '/pricing'                              },
 ];
 
 export function Header() {
