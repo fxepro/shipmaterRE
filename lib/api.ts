@@ -324,13 +324,6 @@ export const verificationApi = {
   clearinghouseStatus:     () => api.get('/api/v1/carrier/clearinghouse/status'),
 };
 
-// ── Ratings & reviews ─────────────────────────────────────────────────
-export const ratingApi = {
-  create:     (jobId: number, data: object)   => api.post(`/api/v1/jobs/${jobId}/ratings`, data),
-  jobRatings: (jobId: number)                 => api.get(`/api/v1/jobs/${jobId}/ratings`),
-  orgRatings: (orgId: number, page = 1)       => api.get(`/api/v1/orgs/${orgId}/ratings?page=${page}`),
-};
-
 // ── Admin: financial reporting ─────────────────────────────────────────
 export const adminFinancialsApi = {
   get:    (params: Record<string, string>) => api.get('/api/v1/admin/financials', { params }),
