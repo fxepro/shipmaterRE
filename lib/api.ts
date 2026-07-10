@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 /**
- * Production browser: same-origin /api/* (proxied by next.config rewrites).
- * Local dev: http://127.0.0.1:8000 (or NEXT_PUBLIC_API_URL).
- * Avoids baking a Railway URL into the client JS bundle.
+ * Production browser: same-origin /api/* (proxied by app/api/[...path]).
+ * Local dev: http://127.0.0.1:8888 (matches `npm run dev:api`).
+ * Override with NEXT_PUBLIC_API_URL in .env.local.
  */
 function resolveApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -20,7 +20,7 @@ function resolveApiBaseUrl(): string {
   return (
     process.env.API_PROXY_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    'http://127.0.0.1:8000'
+    'http://127.0.0.1:8888'
   );
 }
 
@@ -79,6 +79,7 @@ export const authApi = {
   logout:   () => api.post('/api/v1/auth/logout'),
   register: (data: Record<string, unknown>) => api.post('/api/v1/auth/register', data),
   me:       () => api.get('/api/v1/user'),
+  verifyEmail: (token: string) => api.post('/api/v1/auth/email/verify', { token }),
 };
 
 // ── Marketing / white-label leads (public) ────────────────────────────
@@ -301,6 +302,20 @@ export const profileApi = {
   updateShipper: (data: Record<string, unknown>) => api.put('/api/v1/shipper/profile', data),
   getCarrier:    () => api.get('/api/v1/carrier/profile'),
   updateCarrier: (data: Record<string, unknown>) => api.put('/api/v1/carrier/profile', data),
+};
+
+export const shipperVerificationApi = {
+  resendEmail:     () => api.post('/api/v1/shipper/verify/email/resend'),
+  sendPhoneCode:   (phone?: string) => api.post('/api/v1/shipper/verify/phone/send', phone ? { phone } : {}),
+  confirmPhoneCode:(code: string) => api.post('/api/v1/shipper/verify/phone/confirm', { code }),
+  listDocuments:   () => api.get('/api/v1/shipper/documents'),
+  uploadDocument:  (form: FormData) => api.post('/api/v1/shipper/documents', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  submitBusiness:  () => api.post('/api/v1/shipper/verify/business/submit'),
+  adminPending:    () => api.get('/api/v1/admin/shippers/pending-review'),
+  adminReview:     (id: number, action: 'approve' | 'reject', notes?: string) =>
+    api.post(`/api/v1/admin/shippers/${id}/review`, { action, notes }),
 };
 
 // ── Ratings ────────────────────────────────────────────────────────────────

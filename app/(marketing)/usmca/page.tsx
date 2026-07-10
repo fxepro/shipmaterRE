@@ -1,254 +1,238 @@
+'use client';
+
 import Link from 'next/link';
 import {
-  CheckCircle2, ArrowRight, Truck, ShieldCheck, FileText,
-  CreditCard, MapPin, Globe, AlertCircle, Building2,
+  CheckCircle2, ArrowRight, ShieldCheck, FileText,
+  MapPin, Globe,
 } from 'lucide-react';
 
-const B = { navy:'#0A2E40', teal:'#0096C7', tealLt:'#90E0EF', cream:'#F0F4F7', white:'#FFFFFF', text:'#1A2B3C', muted:'#64748B', border:'#E2ECF0' };
-const FONT = "'Roboto','IBM Plex Sans',system-ui,sans-serif";
+const B = {
+  teal:     '#90E0EF',
+  tealMid:  '#48CAE4',
+  tealDark: '#0096C7',
+  tealDeep: '#0077B6',
+  tealNavy: '#023E8A',
+  darkSec:  '#0A2E40',
+  darkCard: '#0A1520',
+  gray70:   '#525252',
+  gray20:   '#E0E0E0',
+  gray10:   '#F4F4F4',
+  white:    '#FFFFFF',
+  green:    '#1B9C6B',
+};
+const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const T = {
+  hero: 'clamp(34px, 5vw, 52px)' as string | number,
+  h2:   'clamp(26px, 3.5vw, 34px)' as string | number,
+  h3:   20,
+  body: 16,
+};
 
 const COUNTRIES = [
   {
-    flag: '🇺🇸',
-    name: 'United States',
-    authority: 'FMCSA (DOT# + MC#)',
-    licence: 'CDL Class A/B/C',
-    bgCheck: 'Checkr — FMCSA SAFER + Criminal',
-    clearinghouse: 'FMCSA Drug & Alcohol Clearinghouse',
-    payout: 'Stripe Connect (USD)',
-    gps: 'Phone GPS + hardware',
-    color: '#1a56a4',
+    flag: '🇺🇸', name: 'United States', color: B.tealDeep,
+    fields: [
+      ['Operating Authority', 'FMCSA (DOT# + MC#)'],
+      ['Driving Licence',     'CDL Class A/B/C'],
+      ['Background Check',    'FMCSA SAFER + criminal screening'],
+      ['Clearinghouse',       'FMCSA Drug & Alcohol Clearinghouse'],
+      ['Payouts',            'Direct bank deposit (USD)'],
+      ['GPS Tracking',        'Phone GPS + hardware'],
+    ],
   },
   {
-    flag: '🇨🇦',
-    name: 'Canada',
-    authority: 'NSC (National Safety Code)',
-    licence: 'Class 1/2/3 provincial',
-    bgCheck: 'Checkr — Provincial criminal + CPIC lookup',
-    clearinghouse: 'Not applicable (no federal equivalent)',
-    payout: 'Stripe Connect (CAD)',
-    gps: 'Phone GPS + hardware',
-    color: '#c8102e',
+    flag: '🇨🇦', name: 'Canada', color: '#c8102e',
+    fields: [
+      ['Operating Authority', 'NSC (National Safety Code)'],
+      ['Driving Licence',     'Class 1/2/3 provincial'],
+      ['Background Check',    'Provincial criminal + national records'],
+      ['Clearinghouse',       'Not applicable (no federal equivalent)'],
+      ['Payouts',            'Direct bank deposit (CAD)'],
+      ['GPS Tracking',        'Phone GPS + hardware'],
+    ],
   },
   {
-    flag: '🇲🇽',
-    name: 'Mexico',
-    authority: 'Permiso SCT + SICT Licencia Federal',
-    licence: 'Licencia Federal (Tipo C/E)',
-    bgCheck: 'Checkr — Adverse media + manual RENAPO',
-    clearinghouse: 'Not applicable',
-    payout: 'Stripe Connect (MXN)',
-    gps: 'Phone GPS',
-    color: '#006847',
+    flag: '🇲🇽', name: 'Mexico', color: '#006847',
+    fields: [
+      ['Operating Authority', 'Permiso SCT + SICT Licencia Federal'],
+      ['Driving Licence',     'Licencia Federal (Tipo C/E)'],
+      ['Background Check',    'Adverse media + document verification'],
+      ['Clearinghouse',       'Not applicable'],
+      ['Payouts',            'Direct bank deposit (MXN)'],
+      ['GPS Tracking',        'Phone GPS'],
+    ],
   },
 ];
 
 const CROSSBORDER = [
-  {
-    step: '01',
-    title: 'Carrier registers with operating country',
-    desc: 'When a carrier selects their operating country, the platform shows the correct licence class options (CDL / Class 1 / Licencia Federal), authority number fields (DOT+MC / NSC / Permiso SCT), and country-appropriate ID verification.',
-  },
-  {
-    step: '02',
-    title: 'Identity verified via Stripe Identity',
-    desc: 'All three countries are covered by Stripe Identity\'s 100+ country government ID check — passport, driver\'s licence, national ID card — with selfie match and liveness detection.',
-  },
-  {
-    step: '03',
-    title: 'Background check routes by country',
-    desc: 'Checkr automatically routes checks using the carrier\'s operating country. US carriers get full FMCSA SAFER + criminal. Canadian carriers get provincial criminal records. Mexican carriers get adverse media and document verification.',
-  },
-  {
-    step: '04',
-    title: 'GPS tracking works across all three',
-    desc: 'Phone GPS via the carrier\'s mobile browser works in the US, Canada, and Mexico without configuration. For fleet operators, hardware trackers with cellular LTE connectivity cover all USMCA countries seamlessly.',
-  },
-  {
-    step: '05',
-    title: 'Payouts in local currency',
-    desc: 'Stripe Connect supports USD, CAD, and MXN payouts to local bank accounts. Shippers can pay in their preferred currency; the platform handles FX where applicable.',
-  },
-  {
-    step: '06',
-    title: 'Documents use correct terminology',
-    desc: 'BOL and POD documents auto-populate carrier authority fields with the appropriate format — MC# for US, NSC# for Canada, Permiso SCT for Mexico. Carrier credentials shown match the operating country.',
-  },
+  { step: '01', icon: Globe, title: 'Carrier registers with operating country', desc: 'When a carrier selects their operating country, the platform shows the correct licence class options (CDL / Class 1 / Licencia Federal), authority number fields (DOT+MC / NSC / Permiso SCT), and country-appropriate ID verification.', color: B.tealDeep },
+  { step: '02', icon: ShieldCheck, title: 'Identity verified', desc: 'All three countries are covered by government ID verification — passport, driver\'s licence, national ID card — with selfie match and liveness detection across 100+ countries.', color: B.tealMid },
+  { step: '03', icon: FileText, title: 'Background check routes by country', desc: 'Checks are automatically routed using the carrier\'s operating country. US carriers get full FMCSA SAFER + criminal. Canadian carriers get provincial criminal records. Mexican carriers get adverse media and document verification.', color: B.green },
+  { step: '04', icon: MapPin, title: 'GPS tracking works across all three', desc: 'Phone GPS via the carrier\'s mobile browser works in the US, Canada, and Mexico without configuration. For fleet operators, hardware trackers with cellular LTE connectivity cover all USMCA countries seamlessly.', color: B.tealDark },
+  { step: '05', icon: CheckCircle2, title: 'Payouts in local currency', desc: 'USD, CAD, and MXN payouts to local bank accounts. Shippers can pay in their preferred currency; the platform handles FX where applicable.', color: B.tealNavy },
+  { step: '06', icon: FileText, title: 'Documents use correct terminology', desc: 'BOL and POD documents auto-populate carrier authority fields with the appropriate format — MC# for US, NSC# for Canada, Permiso SCT for Mexico. Carrier credentials shown match the operating country.', color: B.tealDeep },
 ];
 
 const DOCS = [
-  { label: 'Rate Confirmation',     applies: ['US', 'CA', 'MX'] },
-  { label: 'Carrier Agreement',     applies: ['US', 'CA', 'MX'] },
-  { label: 'Bill of Lading (BOL)',  applies: ['US', 'CA', 'MX'] },
-  { label: 'Proof of Delivery',     applies: ['US', 'CA', 'MX'] },
-  { label: 'Invoice / Settlement',  applies: ['US', 'CA', 'MX'] },
-  { label: 'FMCSA authority on doc',applies: ['US'] },
-  { label: 'NSC number on doc',     applies: ['CA'] },
-  { label: 'Permiso SCT on doc',    applies: ['MX'] },
+  { label: 'Rate Confirmation',      applies: ['US', 'CA', 'MX'] },
+  { label: 'Carrier Agreement',      applies: ['US', 'CA', 'MX'] },
+  { label: 'Bill of Lading (BOL)',   applies: ['US', 'CA', 'MX'] },
+  { label: 'Proof of Delivery',      applies: ['US', 'CA', 'MX'] },
+  { label: 'Invoice / Settlement',   applies: ['US', 'CA', 'MX'] },
+  { label: 'FMCSA authority on doc', applies: ['US'] },
+  { label: 'NSC number on doc',      applies: ['CA'] },
+  { label: 'Permiso SCT on doc',     applies: ['MX'] },
 ];
 
 export default function UsmcaPage() {
   return (
-    <div style={{ fontFamily: FONT }}>
+    <div style={{ fontFamily: IBM, background: B.white, color: B.darkCard }}>
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section style={{
-        background: `linear-gradient(135deg, ${B.navy} 0%, #0D3B53 60%, #083344 100%)`,
-        padding: '88px 24px 72px',
-      }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: 'rgba(0,150,199,0.18)', border: '1px solid rgba(0,150,199,0.35)',
-            borderRadius: 20, padding: '6px 14px', marginBottom: 28,
-          }}>
-            <span style={{ fontSize: 18 }}>🇺🇸🇨🇦🇲🇽</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: B.tealLt, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+      {/* Hero */}
+      <section style={{ background: `linear-gradient(135deg, ${B.tealNavy} 0%, ${B.darkSec} 100%)`, padding: 'clamp(64px, 8vw, 112px) 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(144,224,239,0.12)', border: '1px solid rgba(144,224,239,0.3)', borderRadius: 99, padding: '6px 16px', marginBottom: 24 }}>
+            <span style={{ fontSize: 16 }}>🇺🇸🇨🇦🇲🇽</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: B.teal, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               USMCA — North America
             </span>
           </div>
-          <h1 style={{ fontSize: 'clamp(32px,5vw,56px)', fontWeight: 800, color: B.white, lineHeight: 1.1, marginBottom: 20 }}>
-            One Platform. Three Countries.<br />Full Compliance.
+          <h1 style={{ fontSize: T.hero, fontWeight: 700, color: B.white, lineHeight: 1.15, margin: '0 0 20px' }}>
+            One Platform. Three Countries.<br />
+            <span style={{ color: B.tealMid }}>Full Compliance.</span>
           </h1>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', lineHeight: 1.7, maxWidth: 580, margin: '0 auto 36px' }}>
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.72)', lineHeight: 1.7, maxWidth: 600, margin: '0 auto 36px' }}>
             Shipmater is built for the USMCA trade corridor from day one — separate regulatory compliance, GPS tracking, background checks, and payouts for US, Canadian, and Mexican carriers and shippers.
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/register" style={{
-              background: B.teal, color: B.white, fontWeight: 600, fontSize: 15,
-              padding: '12px 28px', borderRadius: 7, textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-            }}>
-              Get started <ArrowRight size={15} />
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/register"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: B.tealMid, color: B.tealNavy, fontWeight: 700, fontSize: 15, padding: '12px 28px', borderRadius: 10, textDecoration: 'none' }}>
+              Get started <ArrowRight size={16} />
             </Link>
-            <Link href="/coverage" style={{
-              background: 'rgba(255,255,255,0.1)', color: B.white, fontWeight: 600, fontSize: 15,
-              padding: '12px 28px', borderRadius: 7, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.25)',
-            }}>
+            <Link href="/coverage"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', color: B.white, fontWeight: 600, fontSize: 15, padding: '12px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.25)', textDecoration: 'none' }}>
               View all country coverage
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Country cards ────────────────────────────────────────────── */}
-      <section style={{ padding: '80px 24px', background: B.white }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: B.text, textAlign: 'center', marginBottom: 56 }}>
+      {/* Country cards */}
+      <section style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) 24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontSize: T.h2, fontWeight: 700, color: B.darkCard, margin: '0 0 12px' }}>
             Country-Specific Compliance
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
-            {COUNTRIES.map((c, i) => (
-              <div key={i} style={{ border: `1px solid ${B.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                <div style={{ background: c.color, padding: '24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 32 }}>{c.flag}</span>
-                  <h3 style={{ fontSize: 20, fontWeight: 700, color: B.white }}>{c.name}</h3>
-                </div>
-                <div style={{ padding: '20px 24px', background: B.white }}>
-                  {[
-                    ['Operating Authority', c.authority],
-                    ['Driving Licence',     c.licence],
-                    ['Background Check',    c.bgCheck],
-                    ['Clearinghouse',       c.clearinghouse],
-                    ['Payouts',            c.payout],
-                    ['GPS Tracking',        c.gps],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ borderBottom: `1px solid ${B.border}`, paddingBottom: 10, marginBottom: 10 }}>
-                      <p style={{ fontSize: 11, fontWeight: 600, color: B.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{k}</p>
-                      <p style={{ fontSize: 13, color: B.text, lineHeight: 1.5 }}>{v}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How cross-border works ───────────────────────────────────── */}
-      <section style={{ padding: '80px 24px', background: B.cream }}>
-        <div style={{ maxWidth: 880, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: B.text, textAlign: 'center', marginBottom: 12 }}>
-            How Cross-Border Onboarding Works
-          </h2>
-          <p style={{ fontSize: 16, color: B.muted, textAlign: 'center', marginBottom: 56, maxWidth: 520, margin: '0 auto 56px' }}>
-            Everything adapts automatically based on where the carrier operates.
+          <p style={{ fontSize: T.body, color: B.gray70, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+            Each country has its own authority, licence, and verification requirements — all handled automatically.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {CROSSBORDER.map((s, i) => (
-              <div key={i} style={{
-                background: B.white, border: `1px solid ${B.border}`, borderRadius: 12,
-                padding: '24px 28px', display: 'flex', gap: 20,
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 10, background: B.teal, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: 13, color: B.white,
-                }}>
-                  {s.step}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: B.text, marginBottom: 6 }}>{s.title}</h3>
-                  <p style={{ fontSize: 14, color: B.muted, lineHeight: 1.7 }}>{s.desc}</p>
-                </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+          {COUNTRIES.map((c, i) => (
+            <div key={i} style={{ border: `1px solid ${B.gray20}`, borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ background: c.color, padding: '24px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 32 }}>{c.flag}</span>
+                <h3 style={{ fontSize: T.h3, fontWeight: 700, color: B.white, margin: 0 }}>{c.name}</h3>
               </div>
-            ))}
+              <div style={{ padding: '20px 24px', background: B.white }}>
+                {c.fields.map(([k, v]) => (
+                  <div key={k} style={{ borderBottom: `1px solid ${B.gray20}`, paddingBottom: 12, marginBottom: 12 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: B.gray70, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>{k}</p>
+                    <p style={{ fontSize: 14, color: B.darkCard, lineHeight: 1.5, margin: 0 }}>{v}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How cross-border works */}
+      <section style={{ background: B.gray10, padding: 'clamp(48px, 6vw, 80px) 24px' }}>
+        <div style={{ maxWidth: 880, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <h2 style={{ fontSize: T.h2, fontWeight: 700, color: B.darkCard, margin: '0 0 12px' }}>
+              How Cross-Border Onboarding Works
+            </h2>
+            <p style={{ fontSize: T.body, color: B.gray70, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+              Everything adapts automatically based on where the carrier operates.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {CROSSBORDER.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.step} style={{
+                  background: B.white, border: `1px solid ${B.gray20}`, borderRadius: 16,
+                  padding: 'clamp(20px, 3vw, 28px)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: s.color + '18', border: `1.5px solid ${s.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon size={20} color={s.color} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: s.color, letterSpacing: '0.12em' }}>{s.step}</span>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: T.h3, fontWeight: 700, color: B.darkCard, margin: '0 0 8px' }}>{s.title}</h3>
+                    <p style={{ fontSize: 15, color: B.gray70, lineHeight: 1.75, margin: 0 }}>{s.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* ── Documents ────────────────────────────────────────────────── */}
-      <section style={{ padding: '80px 24px', background: B.white }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 700, color: B.text, textAlign: 'center', marginBottom: 12 }}>
+      {/* Documents table */}
+      <section style={{ maxWidth: 800, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) 24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <h2 style={{ fontSize: T.h2, fontWeight: 700, color: B.darkCard, margin: '0 0 12px' }}>
             Documents for Every Country
           </h2>
-          <p style={{ fontSize: 15, color: B.muted, textAlign: 'center', marginBottom: 40, maxWidth: 480, margin: '0 auto 40px' }}>
+          <p style={{ fontSize: T.body, color: B.gray70, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
             All PDF documents are tenant-branded and auto-populate the correct authority numbers based on the carrier's operating country.
           </p>
-          <div style={{ border: `1px solid ${B.border}`, borderRadius: 12, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: B.cream }}>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: B.muted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Document</th>
-                  {['🇺🇸 US', '🇨🇦 CA', '🇲🇽 MX'].map(c => (
-                    <th key={c} style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, fontWeight: 700, color: B.text }}>{c}</th>
+        </div>
+        <div style={{ border: `1px solid ${B.gray20}`, borderRadius: 16, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: B.gray10 }}>
+                <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: B.gray70, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Document</th>
+                {['🇺🇸 US', '🇨🇦 CA', '🇲🇽 MX'].map(c => (
+                  <th key={c} style={{ padding: '14px 16px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: B.darkCard }}>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {DOCS.map((d, i) => (
+                <tr key={i} style={{ borderTop: `1px solid ${B.gray20}`, background: i % 2 === 0 ? B.white : B.gray10 }}>
+                  <td style={{ padding: '14px 20px', fontSize: 15, color: B.darkCard, fontWeight: 500 }}>{d.label}</td>
+                  {['US', 'CA', 'MX'].map(c => (
+                    <td key={c} style={{ padding: '14px 16px', textAlign: 'center' }}>
+                      {d.applies.includes(c)
+                        ? <CheckCircle2 size={16} color={B.tealDeep} style={{ display: 'inline' }} />
+                        : <span style={{ color: B.gray20, fontSize: 18 }}>–</span>
+                      }
+                    </td>
                   ))}
                 </tr>
-              </thead>
-              <tbody>
-                {DOCS.map((d, i) => (
-                  <tr key={i} style={{ borderTop: `1px solid ${B.border}`, background: i % 2 === 0 ? B.white : B.cream }}>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: B.text, fontWeight: 500 }}>{d.label}</td>
-                    {['US', 'CA', 'MX'].map(c => (
-                      <td key={c} style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        {d.applies.includes(c)
-                          ? <CheckCircle2 size={16} color={B.teal} style={{ display: 'inline' }} />
-                          : <span style={{ color: B.border, fontSize: 18 }}>–</span>
-                        }
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────────── */}
-      <section style={{ background: B.teal, padding: '64px 24px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: 30, fontWeight: 700, color: B.white, marginBottom: 16 }}>
+      {/* CTA */}
+      <section style={{ background: `linear-gradient(135deg, ${B.tealNavy} 0%, ${B.darkSec} 100%)`, padding: 'clamp(48px, 6vw, 80px) 24px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: T.h2, fontWeight: 700, color: B.white, margin: '0 0 16px' }}>
           Operating in the USMCA corridor?
         </h2>
-        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>
+        <p style={{ fontSize: T.body, color: 'rgba(255,255,255,0.72)', margin: '0 auto 32px', maxWidth: 440, lineHeight: 1.7 }}>
           Register once. Your profile adapts to the country you operate in.
         </p>
-        <Link href="/register" style={{
-          background: B.white, color: B.teal, fontWeight: 700, fontSize: 15,
-          padding: '13px 36px', borderRadius: 7, textDecoration: 'none', display: 'inline-block',
-        }}>
-          Create your profile
+        <Link href="/register"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: B.tealMid, color: B.tealNavy, fontWeight: 700, fontSize: 15, padding: '13px 30px', borderRadius: 10, textDecoration: 'none' }}>
+          Create your profile <ArrowRight size={16} />
         </Link>
       </section>
 

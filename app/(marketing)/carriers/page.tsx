@@ -7,6 +7,8 @@ import {
   TrendingUp, Clock, Globe2, BadgeCheck,
 } from 'lucide-react';
 import { useState } from 'react';
+import { MarketingHub } from '@/components/marketing/MarketingHub';
+import { CARRIER_HUB } from '@/lib/marketing/hub-links';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const B = {
@@ -216,6 +218,8 @@ export default function CarriersPage() {
           })}
         </div>
       </section>
+
+      <MarketingHub heading="Carriers" pages={CARRIER_HUB.map(p => ({ ...p, active: p.href === '/carriers' }))} />
 
       {/* ── How it works ─────────────────────────────────────────────────────── */}
       <section style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(48px, 6vw, 80px) 24px' }}>

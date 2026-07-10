@@ -164,6 +164,7 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
     EU/other → Category C/CE + Community Licence / TIR; all endorsements renamed to "Dangerous Goods" for international use
   - Shipper profile: all three address blocks (ship-from, registered, operating) use `AddressFields`; `biz_country`/`ops_country` added
   - Locations address book: `AddressFields` component, non-US flag shown in table, `state` no longer force-uppercased to 2 chars
+  - Marketing pages document coverage tiers and per-country compliance — see Marketing / Public → International hub
 
 ---
 
@@ -237,6 +238,27 @@ Legend: ✅ Done  🔲 To Do  🚧 In Progress
 
 - ✅ Blog (public list + post, admin CRUD)
 - ✅ Platform lead capture form (`/platform`)
-- ✅ **Public pricing page** — `/pricing` with 3 tiers (Free/Pro/Enterprise), feature comparison table, FAQ
-- ✅ **Carrier onboarding landing page** — `/carriers` with how-it-works, requirements, earnings, FAQ
+- ✅ **Public pricing page** — `/pricing` with 3 tiers (Starter/Pro/Enterprise), feature comparison table, FAQ
+- ✅ **Carrier onboarding landing page** — `/carriers` (marketing route; duplicate `(legal)/carriers` removed)
+  - How-it-works steps, why-Shipmater cards, earnings table, requirements checklist, FAQ accordion
+- ✅ **Carrier Trust & Safety** — `/carrier-trust`
+  - 5-layer verification story (identity, FMCSA, background, clearinghouse, human review)
+  - Linked from Carriers megamenu + footer
+- ✅ **International marketing hub** — 4 dedicated pages, each with own URL (no shared shortcuts)
+  - `/global` — Global Overview: regional tiers (USMCA / EU-UK-AU / 50+ countries), stats strip, 4-page hub cards
+  - `/usmca` — US · Canada · Mexico: per-country compliance cards, cross-border onboarding steps, document matrix
+  - `/coverage` — Country Coverage Table: GPS / identity / background / payout / docs by region (USMCA, Europe, APAC, LATAM, MENA)
+  - `/international-carriers` — Join from anywhere: credentials by country, 6-step onboarding, benefits, FAQ
+  - Public copy uses generalized terms (Identity Verification, Direct bank payouts, Background screening) — no vendor branding on page
+  - Design aligned with `/carrier-trust` + `/carriers` (IBM Plex Sans, shared colour tokens, typography scale)
+- ✅ **Site navigation wired**
+  - All 5 megamenus use 4 big cards — one unique page per card (no duplicate hrefs, no dead links)
+  - Shippers: `/shippers`, `/shippers/shipping`, `/shippers/tracking`, `/shippers/trust`
+  - Carriers: `/carriers`, `/carriers/earnings`, `/carrier-trust`, `/international-carriers`
+  - How It Works: `/how-it-works`, `/how-it-works/post`, `/how-it-works/track`, `/how-it-works/pay`
+  - Use Cases: `/use-cases`, `/use-cases/freight-logistics`, `/use-cases/medical`, `/use-cases/auto-transport`
+  - International: `/global`, `/usmca`, `/coverage`, `/international-carriers`
+  - Hub card strips on each overview page link to sibling pages (`MarketingHub` + `lib/marketing/hub-links.ts`)
+  - `/shippers` moved from `(legal)` to `(marketing)` route group
+  - Header: Pricing direct link; Footer: Product, Solutions, International, Account, Legal columns
 - 🔲 GPS-only device integration (requires hardware/IoT API design)

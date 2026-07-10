@@ -6,6 +6,8 @@ import {
   Truck, Frame, ShoppingCart, HardHat, Car,
   Shield, FileText, Lock, Zap,
 } from 'lucide-react';
+import { MarketingHub } from '@/components/marketing/MarketingHub';
+import { USE_CASES_HUB } from '@/lib/marketing/hub-links';
 
 // ── Palette & scale ───────────────────────────────────────────────────────────
 const B = {
@@ -274,6 +276,8 @@ export default function UseCasesPage() {
           </div>
         </div>
       </section>
+
+      <MarketingHub heading="Industries" pages={USE_CASES_HUB.map(p => ({ ...p, active: p.href === '/use-cases' }))} />
 
       {/* ── INDUSTRY SECTIONS ────────────────────────────────────────────── */}
       {INDUSTRIES.map((ind, i) => {

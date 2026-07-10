@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { paymentApi, profileApi, orgApi } from '@/lib/api';
+import { paymentApi, profileApi, orgApi, shipperVerificationApi } from '@/lib/api';
 import { PlaidLinkButton } from '@/components/payments/PlaidLinkButton';
 import {
   User, Building2, CreditCard, Bell, Zap,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import AddressFields from '@/components/shared/AddressFields';
+import { ProfileSection } from '@/components/shared/ProfileSection';
+import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -64,11 +66,7 @@ interface NewBankPayload { type: 'bank'; bank_name: string; last4: string; accou
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">
-      {children}
-    </p>
-  );
+  return <label className="profile-label">{children}</label>;
 }
 
 function Field({
@@ -90,12 +88,7 @@ function Field({
           type={type} value={value} readOnly={readOnly}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] transition-colors
-            placeholder:text-[var(--color-text-faint)]
-            focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20
-            ${Icon ? 'pl-9' : ''}
-            ${readOnly ? 'bg-[var(--color-cream)] cursor-default text-[var(--color-text-muted)]' : ''}
-          `}
+          className={`profile-input ${Icon ? 'pl-9' : ''} ${readOnly ? 'bg-[var(--color-cream)] cursor-default text-[var(--color-text-muted)]' : ''}`}
         />
       </div>
     </div>
@@ -108,9 +101,8 @@ function Select({ label, value, onChange, options }: {
   return (
     <div>
       <Label>{label}</Label>
-      <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20">
+      <div className="profile-select-wrap">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="profile-select">
           {options.map((o) => <option key={o}>{o}</option>)}
         </select>
         <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
@@ -220,48 +212,39 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
       </div>
 
       {/* Legal name */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <User size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Legal name</p>
-        </div>
+      <ProfileSection icon={User} title="Legal name">
         <div className="grid grid-cols-2 gap-4">
           <Field label="First name"  value={form.first_name}  onChange={set('first_name')}  placeholder="Alex" />
           <Field label="Middle name" value={form.middle_name} onChange={set('middle_name')} placeholder="Optional" />
           <Field label="Last name"   value={form.last_name}   onChange={set('last_name')}   placeholder="Morgan" />
           <div>
             <Label>Suffix</Label>
-            <select value={form.suffix} onChange={e => set('suffix')(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20">
-              <option value="">None</option>
-              <option>Jr.</option><option>Sr.</option>
-              <option>II</option><option>III</option><option>IV</option>
-            </select>
+            <div className="profile-select-wrap">
+              <select value={form.suffix} onChange={e => set('suffix')(e.target.value)} className="profile-select">
+                <option value="">None</option>
+                <option>Jr.</option><option>Sr.</option>
+                <option>II</option><option>III</option><option>IV</option>
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+            </div>
           </div>
         </div>
-      </div>
+      </ProfileSection>
 
       {/* Contact */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Mail size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Contact</p>
-        </div>
+      <ProfileSection icon={Mail} title="Contact">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@company.com" />
           <Field label="Phone number"  value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" />
         </div>
-      </div>
+      </ProfileSection>
 
       {/* Default ship-from address */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <MapPin size={14} className="text-[var(--color-teal)]" />
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">Default ship-from address</p>
-            <p className="text-xs text-[var(--color-text-faint)]">Pre-filled as pickup on new shipments</p>
-          </div>
-        </div>
+      <ProfileSection
+        icon={MapPin}
+        title="Default ship-from address"
+        subtitle="Pre-filled as pickup on new shipments"
+      >
         <AddressFields
           value={{ address: form.street, city: form.city, state: form.state, zip: form.zip, country: form.country || 'US' }}
           onChange={v => setForm(f => ({
@@ -271,26 +254,25 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
           }))}
           showStreet
         />
-      </div>
+      </ProfileSection>
 
       {/* Shipping defaults */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Zap size={14} className="text-[var(--color-teal)]" />
+      <ProfileSection
+        icon={Zap}
+        title="Shipment defaults"
+        subtitle="Pre-filled on every new shipment"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Default pickup contact — name"  value={form.default_pickup_contact_name}  onChange={set('default_pickup_contact_name')}  placeholder="Warehouse manager" />
+            <Field label="Default pickup contact — phone" value={form.default_pickup_contact_phone} onChange={set('default_pickup_contact_phone')} type="tel" placeholder="+1 (555) 000-0000" />
+          </div>
           <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">Shipment defaults</p>
-            <p className="text-xs text-[var(--color-text-faint)]">Pre-filled on every new shipment</p>
+            <Field label="Internal reference format" value={form.internal_ref_format} onChange={set('internal_ref_format')} placeholder="e.g. PO-{number} or CC-{code}" />
+            <p className="mt-1 text-xs text-[var(--color-text-faint)]">Appears on every shipment for your own record-keeping (PO number, job code, cost center)</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Default pickup contact — name"  value={form.default_pickup_contact_name}  onChange={set('default_pickup_contact_name')}  placeholder="Warehouse manager" />
-          <Field label="Default pickup contact — phone" value={form.default_pickup_contact_phone} onChange={set('default_pickup_contact_phone')} type="tel" placeholder="+1 (555) 000-0000" />
-        </div>
-        <div>
-          <Field label="Internal reference format" value={form.internal_ref_format} onChange={set('internal_ref_format')} placeholder="e.g. PO-{number} or CC-{code}" />
-          <p className="mt-1 text-xs text-[var(--color-text-faint)]">Appears on every shipment for your own record-keeping (PO number, job code, cost center)</p>
-        </div>
-      </div>
+      </ProfileSection>
 
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
@@ -298,6 +280,28 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
 }
 
 // ── Tab: Business ─────────────────────────────────────────────────────────────
+
+function VerificationBadge({ status }: { status: 'verified' | 'review' | 'pending' }) {
+  if (status === 'verified') {
+    return (
+      <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+        <Check size={11} /> Verified
+      </span>
+    );
+  }
+  if (status === 'review') {
+    return (
+      <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+        In review
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 rounded-full bg-[var(--color-cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-faint)]">
+      Not verified
+    </span>
+  );
+}
 
 function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
   const qc = useQueryClient();
@@ -341,21 +345,97 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     },
   });
 
-  const verificationItems = [
-    { label: 'Email address',  verified: initialData.email_verified },
-    { label: 'Phone number',   verified: initialData.phone_verified },
-    { label: 'Business (EIN)', verified: initialData.ein_verified   },
-  ];
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneSent, setPhoneSent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: docsRes, refetch: refetchDocs } = useQuery({
+    queryKey: ['shipper-documents'],
+    queryFn: () => shipperVerificationApi.listDocuments().then(r => r.data.data as { id: number; type: string; name: string }[]),
+  });
+  const docs = docsRes ?? [];
+
+  const resendEmail = useMutation({
+    mutationFn: () => shipperVerificationApi.resendEmail(),
+    onSuccess: (res) => toast.success(res.data?.message ?? 'Verification email sent.'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Could not send email.');
+    },
+  });
+
+  const sendPhone = useMutation({
+    mutationFn: () => shipperVerificationApi.sendPhoneCode(),
+    onSuccess: (res) => {
+      setPhoneSent(true);
+      setDevCode(res.data?.dev_code ?? null);
+      toast.success(res.data?.message ?? 'Code sent.');
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Could not send code.');
+    },
+  });
+
+  const confirmPhone = useMutation({
+    mutationFn: () => shipperVerificationApi.confirmPhoneCode(phoneCode),
+    onSuccess: (res) => {
+      toast.success(res.data?.message ?? 'Phone verified.');
+      setPhoneCode('');
+      setPhoneSent(false);
+      setDevCode(null);
+      qc.invalidateQueries({ queryKey: ['shipper-profile'] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Invalid code.');
+    },
+  });
+
+  const submitBusiness = useMutation({
+    mutationFn: () => shipperVerificationApi.submitBusiness(),
+    onSuccess: (res) => {
+      toast.success(res.data?.message ?? 'Submitted for review.');
+      qc.invalidateQueries({ queryKey: ['shipper-profile'] });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Could not submit.');
+    },
+  });
+
+  async function onUploadDoc(type: 'w9' | 'articles' | 'other', file: File | null) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('document', file);
+      fd.append('type', type);
+      await shipperVerificationApi.uploadDocument(fd);
+      toast.success(`${file.name} uploaded.`);
+      refetchDocs();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const emailStatus = initialData.email_verified ? 'verified' : 'pending';
+  const phoneStatus = initialData.phone_verified ? 'verified' : 'pending';
+  const einStatus = initialData.ein_verified
+    ? 'verified'
+    : initialData.verification_status === 'submitted'
+    ? 'review'
+    : 'pending';
 
   return (
     <div className="space-y-6">
 
       {/* Company identity */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Building2 size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Company identity</p>
-        </div>
+      <ProfileSection icon={Building2} title="Company identity">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Legal business name" value={form.company}       onChange={v => set('company')(v)} icon={Building2} placeholder="Acme Corp LLC" />
           <Field label="DBA (if applicable)"  value={form.dba}          onChange={v => set('dba')(v)}     placeholder="Trading as…" />
@@ -369,35 +449,37 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             'Manufacturing', 'Technology', 'Government', 'Other',
           ]} />
           {/* Tax ID — type selector + number */}
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">
-              Tax ID Type
-            </label>
-            <select
-              value={form.tax_id_type}
-              onChange={e => setForm(f => ({ ...f, tax_id_type: e.target.value }))}
-              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
-            >
-              {[['EIN','EIN (USA)'],['BN','BN (Canada)'],['VAT','VAT Number (EU)'],['ABN','ABN (Australia)'],['GSTIN','GSTIN (India)'],['RFC','RFC (Mexico)'],['other','Other']].map(([v,l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
+          <div>
+            <Label>Tax ID Type</Label>
+            <div className="profile-select-wrap">
+              <select
+                value={form.tax_id_type}
+                onChange={e => setForm(f => ({ ...f, tax_id_type: e.target.value }))}
+                className="profile-select"
+              >
+                {[['EIN','EIN (USA)'],['BN','BN (Canada)'],['VAT','VAT Number (EU)'],['ABN','ABN (Australia)'],['GSTIN','GSTIN (India)'],['RFC','RFC (Mexico)'],['other','Other']].map(([v,l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+            </div>
           </div>
           <Field label={form.tax_id_type || 'Tax ID'} value={form.tax_id || form.ein} onChange={v => setForm(f => ({ ...f, tax_id: v, ein: v }))} icon={Hash} placeholder={form.tax_id_type === 'EIN' ? 'XX-XXXXXXX' : form.tax_id_type === 'VAT' ? 'DE123456789' : 'Tax ID number'} />
           {/* Currency */}
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-faint)]">
-              Operating Currency
-            </label>
-            <select
-              value={form.currency}
-              onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-              className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none"
-            >
-              {[['USD','USD — US Dollar'],['CAD','CAD — Canadian Dollar'],['MXN','MXN — Mexican Peso'],['EUR','EUR — Euro'],['GBP','GBP — British Pound'],['AUD','AUD — Australian Dollar'],['BRL','BRL — Brazilian Real'],['INR','INR — Indian Rupee'],['JPY','JPY — Japanese Yen'],['CNY','CNY — Chinese Yuan'],['SGD','SGD — Singapore Dollar'],['AED','AED — UAE Dirham'],['ZAR','ZAR — South African Rand']].map(([v,l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
+          <div>
+            <Label>Operating Currency</Label>
+            <div className="profile-select-wrap">
+              <select
+                value={form.currency}
+                onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+                className="profile-select"
+              >
+                {[['USD','USD — US Dollar'],['CAD','CAD — Canadian Dollar'],['MXN','MXN — Mexican Peso'],['EUR','EUR — Euro'],['GBP','GBP — British Pound'],['AUD','AUD — Australian Dollar'],['BRL','BRL — Brazilian Real'],['INR','INR — Indian Rupee'],['JPY','JPY — Japanese Yen'],['CNY','CNY — Chinese Yuan'],['SGD','SGD — Singapore Dollar'],['AED','AED — UAE Dirham'],['ZAR','ZAR — South African Rand']].map(([v,l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+            </div>
           </div>
           <Field label="State of incorporation" value={form.state_of_incorporation} onChange={v => set('state_of_incorporation')(v)} placeholder="CO" />
           <Field label="Year established"       value={form.year_established}       onChange={v => set('year_established')(v)}       placeholder="2018" />
@@ -409,17 +491,14 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           <Field label="Website"         value={form.website}         onChange={v => set('website')(v)}         icon={Globe} type="url" placeholder="https://company.com" />
           <Field label="SAM.gov number"  value={form.sam_gov_number}  onChange={v => set('sam_gov_number')(v)}  placeholder="Optional — for government contracts" />
         </div>
-      </div>
+      </ProfileSection>
 
       {/* Registered address */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <MapPin size={14} className="text-[var(--color-teal)]" />
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">Registered address</p>
-            <p className="text-xs text-[var(--color-text-faint)]">Legal registration address for billing and compliance</p>
-          </div>
-        </div>
+      <ProfileSection
+        icon={MapPin}
+        title="Registered address"
+        subtitle="Legal registration address for billing and compliance"
+      >
         <AddressFields
           value={{ address: form.biz_street, city: form.biz_city, state: form.biz_state, zip: form.biz_zip, country: form.biz_country }}
           onChange={v => setForm(f => ({
@@ -429,22 +508,21 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           }))}
           showStreet
         />
-      </div>
+      </ProfileSection>
 
       {/* Operating address */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <MapPin size={14} className="text-[var(--color-teal)]" />
-            <p className="text-sm font-semibold text-[var(--color-text)]">Operating address</p>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
+      <ProfileSection
+        icon={MapPin}
+        title="Operating address"
+        actions={
+          <label className="flex items-center gap-2 cursor-pointer shrink-0">
             <input type="checkbox" checked={form.ops_same_as_biz}
               onChange={e => set('ops_same_as_biz')(e.target.checked)}
               className="w-4 h-4 rounded accent-[var(--color-teal)]" />
             <span className="text-xs text-[var(--color-text-muted)]">Same as registered address</span>
           </label>
-        </div>
+        }
+      >
         {!form.ops_same_as_biz && (
           <AddressFields
             value={{ address: form.ops_street, city: form.ops_city, state: form.ops_state, zip: form.ops_zip, country: form.ops_country }}
@@ -456,14 +534,14 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             showStreet
           />
         )}
-      </div>
+      </ProfileSection>
 
       {/* Verification status */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Verification status</p>
-          <span className={`ml-auto px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+      <ProfileSection
+        icon={Shield}
+        title="Verification status"
+        actions={
+          <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
             initialData.verification_status === 'verified'
               ? 'bg-emerald-50 text-emerald-700'
               : initialData.verification_status === 'submitted'
@@ -474,19 +552,138 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             : initialData.verification_status === 'submitted' ? 'In Review'
             : 'Incomplete'}
           </span>
-        </div>
-        <div className="space-y-3">
-          {verificationItems.map(({ label, verified }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-sm text-[var(--color-text)]">{label}</span>
-              {verified
-                ? <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"><Check size={11} /> Verified</span>
-                : <button className="text-xs font-semibold text-[var(--color-teal)] hover:underline">Verify now →</button>
-              }
+        }
+      >
+        <div className="space-y-5">
+          {/* Email */}
+          <div className="flex items-start justify-between gap-4 border-b border-[var(--color-cream-dark)] pb-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--color-text)]">Email address</p>
+              <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                We send a signed link to your login email. Check spam if it does not arrive.
+              </p>
             </div>
-          ))}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <VerificationBadge status={emailStatus} />
+              {!initialData.email_verified && (
+                <button
+                  type="button"
+                  onClick={() => resendEmail.mutate()}
+                  disabled={resendEmail.isPending}
+                  className="text-xs font-semibold text-[var(--color-teal)] hover:underline disabled:opacity-50"
+                >
+                  {resendEmail.isPending ? 'Sending…' : 'Send verification email'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div className="border-b border-[var(--color-cream-dark)] pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Phone number</p>
+                <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                  SMS one-time code to the phone on your Profile tab
+                  {initialData.phone ? ` (${initialData.phone})` : ' — add a phone first'}.
+                </p>
+              </div>
+              <VerificationBadge status={phoneStatus} />
+            </div>
+            {!initialData.phone_verified && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => sendPhone.mutate()}
+                  disabled={sendPhone.isPending || !initialData.phone?.trim()}
+                  className="rounded-lg bg-[var(--color-teal)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {sendPhone.isPending ? 'Sending…' : phoneSent ? 'Resend code' : 'Send SMS code'}
+                </button>
+                {phoneSent && (
+                  <>
+                    <input
+                      value={phoneCode}
+                      onChange={e => setPhoneCode(e.target.value)}
+                      placeholder="6-digit code"
+                      className="profile-input w-32"
+                      maxLength={10}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => confirmPhone.mutate()}
+                      disabled={confirmPhone.isPending || phoneCode.length < 4}
+                      className="rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {confirmPhone.isPending ? 'Checking…' : 'Confirm'}
+                    </button>
+                  </>
+                )}
+                {devCode && (
+                  <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                    Dev OTP: {devCode}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Business / EIN */}
+          <div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Business (EIN)</p>
+                <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                  Upload a W-9, save company name + tax ID, then submit for platform review.
+                </p>
+              </div>
+              <VerificationBadge status={einStatus} />
+            </div>
+
+            {!initialData.ein_verified && (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(['w9', 'articles'] as const).map((type) => {
+                    const existing = docs.find(d => d.type === type);
+                    return (
+                      <label
+                        key={type}
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                          existing
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-dashed border-[var(--color-cream-dark)] text-[var(--color-text-muted)]'
+                        }`}
+                      >
+                        <Upload size={12} />
+                        {existing ? `${type.toUpperCase()}: ${existing.name}` : `Upload ${type === 'w9' ? 'W-9' : 'Articles of Inc.'}`}
+                        <input
+                          type="file"
+                          accept=".pdf,image/*"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={e => onUploadDoc(type, e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+                {initialData.verification_status !== 'submitted' ? (
+                  <button
+                    type="button"
+                    onClick={() => submitBusiness.mutate()}
+                    disabled={submitBusiness.isPending}
+                    className="rounded-lg bg-[var(--color-slate)] px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {submitBusiness.isPending ? 'Submitting…' : 'Submit for review'}
+                  </button>
+                ) : (
+                  <p className="text-xs text-amber-700">Submitted — waiting for platform review.</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </ProfileSection>
 
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
@@ -495,8 +692,8 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
 
 // ── Tab: Compliance ───────────────────────────────────────────────────────────
 
-function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryChange }: {
-  label: string; hint?: string; required?: boolean;
+function UploadDoc({ required, url, expiry, onFileChange, onExpiryChange }: {
+  label?: string; hint?: string; required?: boolean;
   url: string; expiry: string;
   onFileChange: (name: string) => void;
   onExpiryChange: (date: string) => void;
@@ -507,11 +704,7 @@ function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryC
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-semibold text-[var(--color-text)]">{label}</p>
-        {required && <span className="text-xs font-medium text-red-500">Required</span>}
-      </div>
-      {hint && <p className="text-xs text-[var(--color-text-faint)]">{hint}</p>}
+      {required && <span className="text-xs font-medium text-red-500">Required</span>}
 
       {isExpired   && <div className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">⚠ Certificate expired — upload a new one</div>}
       {expiresSoon && <div className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">⚠ Expires within 30 days — consider renewing</div>}
@@ -531,8 +724,7 @@ function UploadDoc({ label, hint, required, url, expiry, onFileChange, onExpiryC
         </label>
         <div>
           <Label>Expiry date</Label>
-          <input type="date" value={expiry ?? ''} onChange={e => onExpiryChange(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none" />
+          <input type="date" value={expiry ?? ''} onChange={e => onExpiryChange(e.target.value)} className="profile-input" />
         </div>
       </div>
     </div>
@@ -566,41 +758,50 @@ function ComplianceTab({ initialData }: { initialData: ShipperProfile }) {
         Compliance documents are required for specific shipment types. All documents have expiry tracking — you will be alerted 30 days before expiry.
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+      <ProfileSection
+        icon={FileCheck}
+        title="Certificate of Insurance (COI)"
+        subtitle="Required by some carriers before accepting a load. Proves declared value coverage on cargo."
+      >
         <UploadDoc
           label="Certificate of Insurance (COI)"
-          hint="Required by some carriers before accepting a load. Proves declared value coverage on cargo."
           required={false}
           url={form.coi_url}
           expiry={form.coi_expiry}
           onFileChange={name => setForm(f => ({ ...f, coi_url: name }))}
           onExpiryChange={d => setForm(f => ({ ...f, coi_expiry: d }))}
         />
-      </div>
+      </ProfileSection>
 
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+      <ProfileSection
+        icon={FileCheck}
+        title="HIPAA Business Associate Agreement (BAA)"
+        subtitle="Required if your organisation is in healthcare and shipments may contain PHI-adjacent items (medical records, specimens, devices)."
+      >
         <UploadDoc
           label="HIPAA Business Associate Agreement (BAA)"
-          hint="Required if your organisation is in healthcare and shipments may contain PHI-adjacent items (medical records, specimens, devices)."
           required={false}
           url={form.hipaa_baa_url}
           expiry={form.hipaa_baa_expiry}
           onFileChange={name => setForm(f => ({ ...f, hipaa_baa_url: name }))}
           onExpiryChange={d => setForm(f => ({ ...f, hipaa_baa_expiry: d }))}
         />
-      </div>
+      </ProfileSection>
 
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
+      <ProfileSection
+        icon={FileCheck}
+        title="HazMat Shipper Registration (PHMSA)"
+        subtitle="Required if you ship any regulated hazardous materials. Registration is with the Pipeline and Hazardous Materials Safety Administration."
+      >
         <UploadDoc
           label="HazMat Shipper Registration (PHMSA)"
-          hint="Required if you ship any regulated hazardous materials. Registration is with the Pipeline and Hazardous Materials Safety Administration."
           required={false}
           url={form.hazmat_reg_url}
           expiry={form.hazmat_reg_expiry}
           onFileChange={name => setForm(f => ({ ...f, hazmat_reg_url: name }))}
           onExpiryChange={d => setForm(f => ({ ...f, hazmat_reg_expiry: d }))}
         />
-      </div>
+      </ProfileSection>
 
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
@@ -635,11 +836,11 @@ function AddCardModal({ onClose, onAdd, isPending }: { onClose: () => void; onAd
           </div>
         </div>
         <div className="space-y-4">
-          <div><Label>Card number</Label><input value={num} onChange={(e) => setNum(formatCardNum(e.target.value))} placeholder="1234 5678 9012 3456" maxLength={19} className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm font-mono tracking-wider focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
-          <div><Label>Cardholder name</Label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Morgan" className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
+          <div><Label>Card number</Label><input value={num} onChange={(e) => setNum(formatCardNum(e.target.value))} placeholder="1234 5678 9012 3456" maxLength={19} className="profile-input font-mono tracking-wider" /></div>
+          <div><Label>Cardholder name</Label><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Morgan" className="profile-input" /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Expiry</Label><input value={exp} onChange={(e) => setExp(formatExp(e.target.value))} placeholder="MM / YY" maxLength={7} className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
-            <div><Label>CVV</Label><input value={cvv} onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="•••" maxLength={4} type="password" className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
+            <div><Label>Expiry</Label><input value={exp} onChange={(e) => setExp(formatExp(e.target.value))} placeholder="MM / YY" maxLength={7} className="profile-input font-mono" /></div>
+            <div><Label>CVV</Label><input value={cvv} onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="•••" maxLength={4} type="password" className="profile-input font-mono" /></div>
           </div>
         </div>
         <div className="mt-5 flex gap-3">
@@ -669,7 +870,7 @@ function AddBankModal({ onClose, onAdd, isPending }: { onClose: () => void; onAd
           <button onClick={onClose} disabled={isPending} className="text-[var(--color-text-faint)] hover:text-[var(--color-text)] transition-colors"><X size={18} /></button>
         </div>
         <div className="space-y-4">
-          <div><Label>Account holder name</Label><input value={holder} onChange={(e) => setHolder(e.target.value)} placeholder="Alex Morgan" className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
+          <div><Label>Account holder name</Label><input value={holder} onChange={(e) => setHolder(e.target.value)} placeholder="Alex Morgan" className="profile-input" /></div>
           <div><Label>Account type</Label>
             <div className="flex gap-2">
               {(['Checking', 'Savings'] as const).map((t) => (
@@ -677,8 +878,8 @@ function AddBankModal({ onClose, onAdd, isPending }: { onClose: () => void; onAd
               ))}
             </div>
           </div>
-          <div><Label>Routing number</Label><input value={routing} onChange={(e) => setRouting(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="9-digit ABA routing number" maxLength={9} className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" />{routing.length > 0 && routing.length < 9 && <p className="mt-1 text-xs text-amber-600">{9 - routing.length} more digit{9 - routing.length !== 1 ? 's' : ''} needed</p>}</div>
-          <div><Label>Account number</Label><input value={account} onChange={(e) => setAccount(e.target.value.replace(/\D/g, '').slice(0, 17))} placeholder="Account number" maxLength={17} className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm font-mono focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" /></div>
+          <div><Label>Routing number</Label><input value={routing} onChange={(e) => setRouting(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="9-digit ABA routing number" maxLength={9} className="profile-input font-mono" />{routing.length > 0 && routing.length < 9 && <p className="mt-1 text-xs text-amber-600">{9 - routing.length} more digit{9 - routing.length !== 1 ? 's' : ''} needed</p>}</div>
+          <div><Label>Account number</Label><input value={account} onChange={(e) => setAccount(e.target.value.replace(/\D/g, '').slice(0, 17))} placeholder="Account number" maxLength={17} className="profile-input font-mono" /></div>
           <div><Label>Confirm account number</Label><input value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, '').slice(0, 17))} placeholder="Re-enter account number" maxLength={17} className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 bg-[var(--color-white)] ${numMismatch ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : numMatch ? 'border-emerald-400 focus:border-emerald-400 focus:ring-emerald-400/20' : 'border-[var(--color-cream-dark)] focus:border-[var(--color-teal)] focus:ring-[var(--color-teal)]/20'}`} />{numMismatch && <p className="mt-1 text-xs text-red-500">Account numbers don&apos;t match</p>}{numMatch && <p className="mt-1 text-xs text-emerald-600">✓ Numbers match</p>}</div>
         </div>
         <div className="mt-4 rounded-xl bg-[var(--color-cream)] px-3.5 py-3 text-xs text-[var(--color-text-faint)]">🔒 Your bank details are encrypted end-to-end. ACH payments are processed via Stripe.</div>
@@ -711,14 +912,16 @@ function PaymentTab() {
       {showAddCard && <AddCardModal onClose={() => setShowAddCard(false)} onAdd={handleAddCard} isPending={addMutation.isPending} />}
       {showAddBank && <AddBankModal onClose={() => setShowAddBank(false)} onAdd={handleAddBank} isPending={addMutation.isPending} />}
       <div className="space-y-6">
-        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2"><CreditCard size={14} className="text-[var(--color-teal)]" /><p className="text-sm font-semibold text-[var(--color-text)]">Saved payment methods</p></div>
-            <div className="flex items-center gap-2">
+        <ProfileSection
+          icon={CreditCard}
+          title="Saved payment methods"
+          actions={
+            <div className="flex items-center gap-2 shrink-0">
               <button onClick={() => setShowAddBank(true)} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"><Plus size={12} /> Add bank</button>
               <button onClick={() => setShowAddCard(true)} className="flex items-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"><Plus size={12} /> Add card</button>
             </div>
-          </div>
+          }
+        >
           {isLoading ? (
             <div className="flex items-center justify-center py-8 gap-2 text-[var(--color-text-faint)]"><Loader2 size={16} className="animate-spin" /><span className="text-sm">Loading payment methods…</span></div>
           ) : (
@@ -745,21 +948,20 @@ function PaymentTab() {
               {!isLoading && methods.length === 0 && <p className="py-8 text-center text-sm text-[var(--color-text-faint)]">No payment methods saved yet.</p>}
             </div>
           )}
-        </div>
+        </ProfileSection>
         {/* ACH via Plaid */}
-        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-teal-pale)]"><Shield size={14} className="text-[var(--color-teal)]" /></div>
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">ACH bank transfer (Plaid)</p>
-              <p className="text-xs text-[var(--color-text-faint)]">Pay freight invoices directly from your bank account</p>
-            </div>
+        <ProfileSection
+          icon={Shield}
+          title="ACH bank transfer (Plaid)"
+          subtitle="Pay freight invoices directly from your bank account"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+              Connect your bank account to pay via ACH. Funds are verified instantly via Plaid and held in escrow until delivery is confirmed.
+            </p>
+            <PlaidLinkButton />
           </div>
-          <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-            Connect your bank account to pay via ACH. Funds are verified instantly via Plaid and held in escrow until delivery is confirmed.
-          </p>
-          <PlaidLinkButton />
-        </div>
+        </ProfileSection>
       </div>
     </>
   );
@@ -787,12 +989,11 @@ function NotificationsTab({ initialData }: { initialData: ShipperProfile }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Mail size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">Email notifications</p>
-          <span className="ml-auto text-xs text-[var(--color-text-faint)]">{initialData.email}</span>
-        </div>
+      <ProfileSection
+        icon={Mail}
+        title="Email notifications"
+        actions={<span className="shrink-0 text-xs text-[var(--color-text-faint)]">{initialData.email}</span>}
+      >
         <Toggle checked={!!email.carrier_assigned} onChange={setE('carrier_assigned')} label="Carrier assigned"      sub="When a carrier accepts your shipment" />
         <Toggle checked={!!email.pickup_confirmed}  onChange={setE('pickup_confirmed')}  label="Pickup confirmed"       sub="When carrier confirms pickup" />
         <Toggle checked={!!email.in_transit}        onChange={setE('in_transit')}        label="In-transit GPS updates" sub="Every new GPS ping from the carrier" />
@@ -800,19 +1001,18 @@ function NotificationsTab({ initialData }: { initialData: ShipperProfile }) {
         <Toggle checked={!!email.disputed}          onChange={setE('disputed')}          label="Dispute raised"         sub="Immediately when a dispute is opened" />
         <Toggle checked={!!email.weekly_summary}    onChange={setE('weekly_summary')}    label="Weekly summary"         sub="Overview of all shipment activity" />
         <Toggle checked={!!email.marketing}         onChange={setE('marketing')}         label="News & promotions"      sub="Product updates and feature announcements" />
-      </div>
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Phone size={14} className="text-[var(--color-teal)]" />
-          <p className="text-sm font-semibold text-[var(--color-text)]">SMS notifications</p>
-          <span className="ml-auto text-xs text-[var(--color-text-faint)]">{initialData.phone || 'No phone on file'}</span>
-        </div>
+      </ProfileSection>
+      <ProfileSection
+        icon={Phone}
+        title="SMS notifications"
+        actions={<span className="shrink-0 text-xs text-[var(--color-text-faint)]">{initialData.phone || 'No phone on file'}</span>}
+      >
         <Toggle checked={!!sms.carrier_assigned} onChange={setS('carrier_assigned')} label="Carrier assigned"   sub="Text when a carrier accepts" />
         <Toggle checked={!!sms.pickup_confirmed}  onChange={setS('pickup_confirmed')}  label="Pickup confirmed"   sub="Text when carrier picks up" />
         <Toggle checked={!!sms.in_transit}        onChange={setS('in_transit')}        label="In-transit updates" sub="Text on each GPS ping" />
         <Toggle checked={!!sms.delivered}         onChange={setS('delivered')}         label="Delivered"          sub="Text on delivery confirmation" />
         <Toggle checked={!!sms.disputed}          onChange={setS('disputed')}          label="Dispute raised"     sub="Immediate text on dispute" />
-      </div>
+      </ProfileSection>
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
   );
@@ -836,18 +1036,13 @@ function ServicesTab({ initialData }: { initialData: ShipperProfile }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Package size={14} className="text-[var(--color-teal)]" />
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">What do you ship?</p>
-            <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
-              Select all service types your business ships. This helps us match you with the right carriers and pre-filter your carrier search.
-            </p>
-          </div>
-        </div>
+      <ProfileSection
+        icon={Package}
+        title="What do you ship?"
+        subtitle="Select all service types your business ships. This helps us match you with the right carriers and pre-filter your carrier search."
+      >
         <ServiceTypeSelector selected={keys} onChange={setKeys} />
-      </div>
+      </ProfileSection>
       <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
     </div>
   );
@@ -908,21 +1103,21 @@ function TeamTab() {
     <div className="space-y-6">
 
       {/* Members */}
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Users size={14} className="text-[var(--color-teal)]" />
-            <p className="text-sm font-semibold text-[var(--color-text)]">Team members</p>
+      <ProfileSection
+        icon={Users}
+        title="Team members"
+        actions={
+          <div className="flex items-center gap-2 shrink-0">
             <span className="rounded-full bg-[var(--color-cream)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-muted)]">
               {members.length}
             </span>
+            <button onClick={() => setShowInvite(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
+              <Plus size={12} /> Invite member
+            </button>
           </div>
-          <button onClick={() => setShowInvite(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-[var(--color-cream-dark)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors">
-            <Plus size={12} /> Invite member
-          </button>
-        </div>
-
+        }
+      >
         {loadingMembers ? (
           <div className="space-y-3 animate-pulse">
             {[1,2].map(i => <div key={i} className="h-14 rounded-xl bg-[var(--color-cream-dark)]" />)}
@@ -963,12 +1158,11 @@ function TeamTab() {
             ))}
           </div>
         )}
-      </div>
+      </ProfileSection>
 
       {/* Pending invitations */}
       {(invitations as any[]).length > 0 && (
-        <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-          <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Pending invitations</p>
+        <ProfileSection icon={Send} title="Pending invitations">
           <div className="space-y-2">
             {(invitations as any[]).map((inv: any) => (
               <div key={inv.id} className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--color-cream-dark)] px-4 py-3">
@@ -984,7 +1178,7 @@ function TeamTab() {
               </div>
             ))}
           </div>
-        </div>
+        </ProfileSection>
       )}
 
       {/* Invite modal */}
@@ -1000,16 +1194,18 @@ function TeamTab() {
                 <Label>Email address</Label>
                 <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                   placeholder="colleague@company.com"
-                  className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20" />
+                  className="profile-input" />
               </div>
               <div>
                 <Label>Role</Label>
-                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm focus:border-[var(--color-teal)] focus:outline-none">
-                  <option value="admin">Admin — full access except billing</option>
-                  <option value="dispatcher">Dispatcher — create and manage shipments</option>
-                  <option value="viewer">Viewer — read-only</option>
-                </select>
+                <div className="profile-select-wrap">
+                  <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="profile-select">
+                    <option value="admin">Admin — full access except billing</option>
+                    <option value="dispatcher">Dispatcher — create and manage shipments</option>
+                    <option value="viewer">Viewer — read-only</option>
+                  </select>
+                  <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+                </div>
               </div>
             </div>
             <div className="mt-5 flex gap-3">
@@ -1055,8 +1251,7 @@ function SubscriptionTab() {
         <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-[var(--color-slate)]">Professional Plan — Active</p><p className="text-xs text-[var(--color-text-faint)]">Billed monthly · Next charge <strong>$100</strong> on {nextBilling}</p></div>
         <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Active</span>
       </div>
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <p className="mb-3 text-sm font-semibold text-[var(--color-text)]">Billing cycle</p>
+      <ProfileSection icon={CalendarDays} title="Billing cycle">
         <div className="flex gap-3">
           {(['monthly', 'yearly'] as BillingCycle[]).map((c) => (
             <button key={c} onClick={() => setCycle(c)} className={`relative flex-1 rounded-xl border-2 p-4 text-left transition-all ${cycle === c ? 'border-[var(--color-teal)] bg-[var(--color-teal-pale)]' : 'border-[var(--color-cream-dark)] hover:border-[var(--color-teal)]/50'}`}>
@@ -1070,13 +1265,11 @@ function SubscriptionTab() {
         <button disabled={isCurrentPlan} className={`mt-4 w-full rounded-xl py-3 text-sm font-semibold transition-all ${isCurrentPlan ? 'bg-[var(--color-cream-dark)] text-[var(--color-text-faint)] cursor-not-allowed' : 'bg-[var(--color-teal)] text-white hover:bg-[var(--color-teal-dark)] shadow-sm'}`}>
           {isCurrentPlan ? 'This is your current plan' : cycle === 'yearly' ? `Switch to yearly — save $${yearlySaving}/yr` : 'Switch to monthly billing'}
         </button>
-      </div>
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4"><Zap size={14} className="text-[var(--color-teal)]" /><p className="text-sm font-semibold text-[var(--color-text)]">What&apos;s included</p></div>
+      </ProfileSection>
+      <ProfileSection icon={Zap} title="What's included">
         <ul className="space-y-2.5">{FEATURES.map((f) => (<li key={f} className="flex items-center gap-3 text-sm text-[var(--color-text)]"><div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50"><Check size={11} className="text-emerald-600" /></div>{f}</li>))}</ul>
-      </div>
-      <div className="rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-5">
-        <div className="flex items-center gap-2 mb-4"><CalendarDays size={14} className="text-[var(--color-teal)]" /><p className="text-sm font-semibold text-[var(--color-text)]">Billing details</p></div>
+      </ProfileSection>
+      <ProfileSection icon={CalendarDays} title="Billing details">
         <div className="space-y-3">
           {[
             { label: 'Plan', value: 'Professional (Monthly)' }, { label: 'Amount', value: '$100.00 / month' },
@@ -1093,12 +1286,16 @@ function SubscriptionTab() {
           <span className="flex items-center gap-2"><RefreshCw size={13} /> View billing history</span>
           <ChevronRight size={14} />
         </button>
-      </div>
-      <div className="rounded-2xl border border-red-100 bg-red-50/40 p-5">
-        <p className="mb-1 text-sm font-semibold text-red-700">Cancel subscription</p>
-        <p className="mb-4 text-xs text-red-600/80 leading-relaxed">Your plan stays active until the end of the current billing period ({nextBilling}).</p>
+      </ProfileSection>
+      <ProfileSection
+        icon={AlertCircle}
+        title="Cancel subscription"
+        subtitle={`Your plan stays active until the end of the current billing period (${nextBilling}).`}
+        headVariant="danger"
+        className="border-red-100 bg-red-50/40"
+      >
         <button className="rounded-xl border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition-colors">Cancel subscription</button>
-      </div>
+      </ProfileSection>
     </div>
   );
 }

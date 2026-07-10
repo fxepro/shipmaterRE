@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShipperProfile extends Model
 {
@@ -11,7 +12,7 @@ class ShipperProfile extends Model
         'user_id',
         'org_id',
         // Personal
-        'phone', 'street', 'city', 'state', 'zip', 'country',
+        'phone', 'phone_e164', 'street', 'city', 'state', 'zip', 'country',
         // Business identity
         'company_name', 'dba', 'business_type', 'ein',
         'state_of_incorporation', 'year_established', 'employee_count',
@@ -21,7 +22,8 @@ class ShipperProfile extends Model
         // Operating address
         'ops_same_as_biz', 'ops_street', 'ops_city', 'ops_state', 'ops_zip',
         // Verification
-        'verification_status', 'email_verified_at', 'phone_verified_at', 'ein_verified_at',
+        'verification_status', 'verification_notes', 'verification_submitted_at',
+        'email_verified_at', 'phone_verified_at', 'ein_verified_at',
         // Shipping defaults
         'default_pickup_contact_name', 'default_pickup_contact_phone',
         'internal_ref_format', 'preferred_categories', 'notif_recipients',
@@ -50,10 +52,11 @@ class ShipperProfile extends Model
             'coi_expiry'           => 'date',
             'hipaa_baa_expiry'     => 'date',
             'hazmat_reg_expiry'    => 'date',
-            'email_verified_at'    => 'datetime',
-            'phone_verified_at'    => 'datetime',
-            'ein_verified_at'      => 'datetime',
-            'plaid_connected_at'   => 'datetime',
+            'email_verified_at'         => 'datetime',
+            'phone_verified_at'         => 'datetime',
+            'ein_verified_at'           => 'datetime',
+            'verification_submitted_at' => 'datetime',
+            'plaid_connected_at'        => 'datetime',
         ];
     }
 
@@ -65,5 +68,10 @@ class ShipperProfile extends Model
     public function org(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'org_id');
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ShipperDocument::class);
     }
 }

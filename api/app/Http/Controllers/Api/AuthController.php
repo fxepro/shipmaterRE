@@ -7,7 +7,9 @@ use App\Http\Resources\UserResource;
 use App\Models\CarrierProfile;
 use App\Models\Organization;
 use App\Models\OrgMember;
+use App\Models\ShipperProfile;
 use App\Models\User;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +50,16 @@ class AuthController extends Controller
                 'org_id'  => $user->current_org_id,
             ]);
         }
+
+        // Shippers get a profile shell so verification status can attach
+        if ($user->role === 'shipper') {
+            ShipperProfile::create([
+                'user_id' => $user->id,
+                'org_id'  => $user->current_org_id,
+            ]);
+        }
+
+        $user->sendEmailVerificationNotification();
 
         $user->load('currentOrg', 'carrierProfile');
         $token = $user->createToken('web')->plainTextToken;
@@ -103,6 +115,43 @@ class AuthController extends Controller
         $user->load('currentOrg', 'carrierProfile');
 
         return response()->json(['data' => new UserResource($user)]);
+    }
+
+    // POST /api/v1/auth/email/verify  { token }
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'min:32', 'max:128'],
+        ]);
+
+        $payload = \Illuminate\Support\Facades\Cache::pull('email_verify:'.$validated['token']);
+        if (!$payload || empty($payload['user_id'])) {
+            return response()->json(['message' => 'Invalid or expired verification link.'], 403);
+        }
+
+        $user = User::findOrFail($payload['user_id']);
+
+        if (($payload['email'] ?? null) !== $user->getEmailForVerification()) {
+            return response()->json(['message' => 'Email has changed. Request a new verification email.'], 403);
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+            event(new Verified($user));
+
+            if ($user->isShipper() && $user->shipperProfile) {
+                $profile = $user->shipperProfile;
+                $status = 'incomplete';
+                if ($profile->company_name && $profile->ein) {
+                    $status = $profile->ein_verified_at ? 'verified' : (
+                        $profile->verification_status === 'submitted' ? 'submitted' : 'incomplete'
+                    );
+                }
+                $profile->update(['verification_status' => $status]);
+            }
+        }
+
+        return response()->json(['message' => 'Email verified successfully.']);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

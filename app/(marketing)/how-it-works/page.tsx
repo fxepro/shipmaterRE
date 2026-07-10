@@ -6,6 +6,8 @@ import {
   Clock, FileText, BadgeCheck, Zap, Lock, ChevronRight,
   Gem, Stethoscope, Users, Briefcase, Truck, Star,
 } from 'lucide-react';
+import { MarketingHub } from '@/components/marketing/MarketingHub';
+import { HOW_IT_WORKS_HUB } from '@/lib/marketing/hub-links';
 
 // ── Palette & scale (shared system) ──────────────────────────────────────────
 const B = {
@@ -205,6 +207,8 @@ export default function HowItWorksPage() {
           </div>
         </div>
       </section>
+
+      <MarketingHub heading="How It Works" pages={HOW_IT_WORKS_HUB.map(p => ({ ...p, active: p.href === '/how-it-works' }))} />
 
       {/* ── STEPS DETAIL ─────────────────────────────────────────────────── */}
       <section style={{ background: B.white }} className="py-24">

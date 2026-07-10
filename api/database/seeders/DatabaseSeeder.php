@@ -20,32 +20,32 @@ class DatabaseSeeder extends Seeder
     {
         // ── Demo users ────────────────────────────────────────────────────
 
-        $shipper = User::firstOrCreate(
+        $shipper = User::updateOrCreate(
             ['email' => 'alex@demo.com'],
             ['name' => 'Alex Morgan', 'password' => Hash::make('password'), 'role' => 'shipper']
         );
 
-        $carrier1 = User::firstOrCreate(
+        $carrier1 = User::updateOrCreate(
             ['email' => 'jordan@demo.com'],
             ['name' => 'Jordan Reyes', 'password' => Hash::make('password'), 'role' => 'carrier']
         );
 
-        $carrier2 = User::firstOrCreate(
+        $carrier2 = User::updateOrCreate(
             ['email' => 'casey@demo.com'],
             ['name' => 'Casey Rivera', 'password' => Hash::make('password'), 'role' => 'carrier']
         );
 
-        $carrier3 = User::firstOrCreate(
+        $carrier3 = User::updateOrCreate(
             ['email' => 'marcus@demo.com'],
             ['name' => 'Marcus Webb', 'password' => Hash::make('password'), 'role' => 'carrier']
         );
 
-        $receiver = User::firstOrCreate(
+        $receiver = User::updateOrCreate(
             ['email' => 'sam@demo.com'],
             ['name' => 'Sam Chen', 'password' => Hash::make('password'), 'role' => 'receiver']
         );
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@demo.com'],
             ['name' => 'Admin User', 'password' => Hash::make('password'), 'role' => 'admin']
         );
@@ -99,7 +99,7 @@ class DatabaseSeeder extends Seeder
 
         // ── Shipper profile for Alex Morgan ──────────────────────────────────
 
-        ShipperProfile::firstOrCreate(
+        ShipperProfile::updateOrCreate(
             ['user_id' => $shipper->id],
             [
                 'phone'         => '+1 (555) 248-3910',
@@ -117,6 +117,10 @@ class DatabaseSeeder extends Seeder
                 'biz_city'      => 'Denver',
                 'biz_state'     => 'CO',
                 'biz_zip'       => '80216',
+                'verification_status' => 'incomplete',
+                'email_verified_at'   => null,
+                'phone_verified_at'   => null,
+                'ein_verified_at'     => null,
                 'notif_email'   => [
                     'carrier_assigned' => true,
                     'pickup_confirmed'  => true,

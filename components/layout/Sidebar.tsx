@@ -119,6 +119,7 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
         { label: 'Users',         href: '/admin/users',     icon: Users         },
         { label: 'Disputes',      href: '/admin/disputes',  icon: AlertTriangle },
         { label: 'Carrier Queue', href: '/admin/carriers',  icon: Truck         },
+        { label: 'Shipper Queue', href: '/admin/shippers',  icon: Building2     },
       ],
     },
     {

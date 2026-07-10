@@ -1,16 +1,8 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { getCountry, getSubdivisions } from '@/lib/countries';
 import CountrySelect from '@/components/shared/CountrySelect';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 export interface AddressValue {
   address?: string;
@@ -44,16 +36,19 @@ export default function AddressFields({
   const set = (patch: Partial<AddressValue>) => onChange({ ...value, ...patch });
 
   const streetVal = value.address ?? value.street ?? '';
+  const req = required ? <span className="text-destructive ml-1">*</span> : null;
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`space-y-4 ${className}`}>
       {showStreet && (
-        <div className="space-y-1">
-          <Label htmlFor="addr-street">
-            Street Address{required && <span className="text-destructive ml-1">*</span>}
-          </Label>
-          <Input
+        <div>
+          <label htmlFor="addr-street" className="profile-label">
+            Street Address{req}
+          </label>
+          <input
             id="addr-street"
+            type="text"
+            className="profile-input"
             value={streetVal}
             onChange={e => set({ address: e.target.value, street: e.target.value })}
             placeholder="123 Main St, Suite 4"
@@ -61,23 +56,27 @@ export default function AddressFields({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="addr-city">
-            City{required && <span className="text-destructive ml-1">*</span>}
-          </Label>
-          <Input
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="addr-city" className="profile-label">
+            City{req}
+          </label>
+          <input
             id="addr-city"
+            type="text"
+            className="profile-input"
             value={value.city ?? ''}
             onChange={e => set({ city: e.target.value })}
             placeholder="City"
           />
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="addr-zip">{country.postalLabel}</Label>
-          <Input
+        <div>
+          <label htmlFor="addr-zip" className="profile-label">{country.postalLabel}</label>
+          <input
             id="addr-zip"
+            type="text"
+            className="profile-input"
             value={value.zip ?? ''}
             onChange={e => set({ zip: e.target.value })}
             placeholder={country.postalLabel}
@@ -85,29 +84,29 @@ export default function AddressFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {/* State/Province — dropdown for US/CA/MX, free text otherwise */}
-        <div className="space-y-1">
-          <Label htmlFor="addr-state">{country.stateLabel}</Label>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="addr-state" className="profile-label">{country.stateLabel}</label>
           {subdivisions ? (
-            <Select
-              value={value.state ?? ''}
-              onValueChange={v => set({ state: v })}
-            >
-              <SelectTrigger id="addr-state">
-                <SelectValue placeholder={`Select ${country.stateLabel}`} />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
+            <div className="profile-select-wrap">
+              <select
+                id="addr-state"
+                className="profile-select"
+                value={value.state ?? ''}
+                onChange={e => set({ state: e.target.value })}
+              >
+                <option value="">Select {country.stateLabel}</option>
                 {subdivisions.map(([code, name]) => (
-                  <SelectItem key={code} value={code}>
-                    {name}
-                  </SelectItem>
+                  <option key={code} value={code}>{name}</option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+            </div>
           ) : (
-            <Input
+            <input
               id="addr-state"
+              type="text"
+              className="profile-input"
               value={value.state ?? ''}
               onChange={e => set({ state: e.target.value })}
               placeholder={country.stateLabel}
@@ -117,10 +116,7 @@ export default function AddressFields({
 
         <CountrySelect
           value={value.country || 'US'}
-          onChange={code => {
-            // Reset state when switching countries (old value is invalid)
-            set({ country: code, state: '' });
-          }}
+          onChange={code => set({ country: code, state: '' })}
           label="Country"
           required={required}
           id="addr-country"

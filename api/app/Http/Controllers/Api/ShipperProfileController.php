@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceType;
 use App\Models\ShipperProfile;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -84,9 +85,9 @@ class ShipperProfileController extends Controller
             'ops_state'       => $profile?->ops_state    ?? '',
             'ops_zip'         => $profile?->ops_zip      ?? '',
 
-            // Verification
+            // Verification (read-only — set by platform processes, not self-service clicks)
             'verification_status' => $profile?->verification_status ?? 'incomplete',
-            'email_verified'      => !is_null($profile?->email_verified_at),
+            'email_verified'      => !is_null($user->email_verified_at),
             'phone_verified'      => !is_null($profile?->phone_verified_at),
             'ein_verified'        => !is_null($profile?->ein_verified_at),
 
@@ -116,10 +117,11 @@ class ShipperProfileController extends Controller
         ];
     }
 
-    private function calculateVerificationStatus(\App\Models\ShipperProfile $profile): string
+    private function calculateVerificationStatus(ShipperProfile $profile, ?User $user = null): string
     {
+        $user = $user ?? $profile->user;
         if (!$profile->company_name || !$profile->ein) return 'incomplete';
-        if (!$profile->email_verified_at)               return 'incomplete';
+        if (!$user?->email_verified_at)               return 'incomplete';
         if (!$profile->ein_verified_at)                 return 'submitted';
         return 'verified';
     }
@@ -237,7 +239,7 @@ class ShipperProfileController extends Controller
         // Recalculate verification status
         $profile = $user->fresh()->shipperProfile;
         if ($profile) {
-            $status = $this->calculateVerificationStatus($profile);
+            $status = $this->calculateVerificationStatus($profile, $user);
             $profile->update(['verification_status' => $status]);
         }
 

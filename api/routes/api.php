@@ -27,7 +27,7 @@ use App\Http\Controllers\Api\OrgController;
 use App\Http\Controllers\Api\PlatformLeadController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ServiceTypeController;
-use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\ShipperVerificationController;
 use App\Http\Controllers\Api\TrackController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -76,6 +76,8 @@ Route::get('/orgs/{org}/ratings', [RatingController::class, 'profileRatings']);
 // ── Auth (public) ──────────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login',    [AuthController::class, 'login']);
+Route::post('/auth/email/verify', [AuthController::class, 'verifyEmail'])
+    ->middleware('throttle:10,1');
 
 // ── Authenticated ──────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -159,6 +161,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shipper/profile',   [ShipperProfileController::class, 'show']);
     Route::put('/shipper/profile',   [ShipperProfileController::class, 'update']);
 
+    // Shipper verification
+    Route::post('/shipper/verify/email/resend',  [ShipperVerificationController::class, 'resendEmail'])
+        ->middleware('throttle:5,60');
+    Route::post('/shipper/verify/phone/send',    [ShipperVerificationController::class, 'sendPhoneCode'])
+        ->middleware('throttle:5,60');
+    Route::post('/shipper/verify/phone/confirm', [ShipperVerificationController::class, 'confirmPhoneCode'])
+        ->middleware('throttle:10,60');
+    Route::get('/shipper/documents',             [ShipperVerificationController::class, 'listDocuments']);
+    Route::post('/shipper/documents',            [ShipperVerificationController::class, 'uploadDocument']);
+    Route::post('/shipper/verify/business/submit', [ShipperVerificationController::class, 'submitBusiness']);
+
     // Payment methods
     Route::get('/payment-methods',                          [PaymentMethodController::class, 'index']);
     Route::post('/payment-methods',                         [PaymentMethodController::class, 'store']);
@@ -186,6 +199,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin: carrier approval queue (pending_review only)
     Route::get('/admin/carriers/pending-review',    [CarrierController::class, 'pendingReview']);
     Route::post('/admin/carriers/{id}/review',      [CarrierController::class, 'reviewCarrier']);
+    Route::get('/admin/shippers/pending-review',    [ShipperVerificationController::class, 'pendingReview']);
+    Route::post('/admin/shippers/{id}/review',      [ShipperVerificationController::class, 'reviewShipper']);
 
     // Admin: organization management + Stripe toggle
     Route::get('/admin/orgs',                       [AdminOrgController::class, 'index']);

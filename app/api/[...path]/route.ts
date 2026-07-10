@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'; // never cache — every request hits th
 const BACKEND = (
   process.env.API_PROXY_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
-  'http://127.0.0.1:8000'
+  'http://127.0.0.1:8888'
 ).replace(/\/$/, '');
 
 // Hop-by-hop headers we must not forward

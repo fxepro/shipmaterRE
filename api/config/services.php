@@ -62,4 +62,11 @@ return [
         'webhook_secret' => env('CLEARINGHOUSE_WEBHOOK_SECRET'),
     ],
 
+    'twilio' => [
+        'sid'        => env('TWILIO_ACCOUNT_SID'),
+        'token'      => env('TWILIO_AUTH_TOKEN'),
+        'from'       => env('TWILIO_FROM'),
+        'verify_sid' => env('TWILIO_VERIFY_SID'),
+    ],
+
 ];

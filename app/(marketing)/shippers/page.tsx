@@ -6,6 +6,8 @@ import {
   Users, BarChart2, Package, Clock, Building2, CheckCircle2,
   BadgeCheck, Lock,
 } from 'lucide-react';
+import { MarketingHub } from '@/components/marketing/MarketingHub';
+import { SHIPPER_HUB } from '@/lib/marketing/hub-links';
 
 // ── Palette & scale (matches marketing system) ────────────────────────────────
 const B = {
@@ -172,6 +174,8 @@ export default function ShippersPage() {
           ))}
         </div>
       </section>
+
+      <MarketingHub heading="Shippers" pages={SHIPPER_HUB.map(p => ({ ...p, active: p.href === '/shippers' }))} />
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
       <section style={{ background: B.gray10 }}>
