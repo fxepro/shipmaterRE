@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, DollarSign, User,
   Truck, BarChart2, Users, AlertTriangle, Route, MapPin, Building2, FileText,
   Briefcase, PlusCircle, Radio, ClipboardList, BookOpen, Warehouse, Palette,
-  TrendingUp,
+  TrendingUp, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types/user';
@@ -50,19 +50,20 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
       ],
     },
     {
+      section: 'Financials',
+      items: [{ label: 'Payments', href: '/shipper/payments', icon: DollarSign }],
+    },
+    {
       section: 'Reports',
       items: [{ label: 'Reports', href: '/shipper/reports', icon: BarChart2 }],
     },
     {
-      section: 'Resources',
-      items: [{ label: 'Resources', href: '/shipper/resources', icon: BookOpen }],
+      section: 'Account',
+      items: [{ label: 'Profile', href: '/shipper/profile', icon: User }],
     },
     {
-      section: 'Account',
-      items: [
-        { label: 'Payments', href: '/shipper/payments', icon: DollarSign },
-        { label: 'Profile',  href: '/shipper/profile',  icon: User       },
-      ],
+      section: 'Resources',
+      items: [{ label: 'Resources', href: '/shipper/resources', icon: BookOpen }],
     },
   ],
   carrier: [
@@ -79,19 +80,20 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
       ],
     },
     {
+      section: 'Financials',
+      items: [{ label: 'Earnings', href: '/carrier/earnings', icon: DollarSign }],
+    },
+    {
       section: 'Reports',
       items: [{ label: 'Reports', href: '/carrier/reports', icon: BarChart2 }],
     },
     {
-      section: 'Resources',
-      items: [{ label: 'Resources', href: '/carrier/resources', icon: BookOpen }],
+      section: 'Account',
+      items: [{ label: 'Profile', href: '/carrier/profile', icon: User }],
     },
     {
-      section: 'Account',
-      items: [
-        { label: 'Earnings', href: '/carrier/earnings', icon: DollarSign },
-        { label: 'Profile',  href: '/carrier/profile',  icon: User       },
-      ],
+      section: 'Resources',
+      items: [{ label: 'Resources', href: '/carrier/resources', icon: BookOpen }],
     },
   ],
   receiver: [
@@ -131,6 +133,13 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
       ],
     },
     {
+      section: 'Resources',
+      items: [
+        { label: 'Resources', href: '/shipper/resources',  icon: BookOpen },
+        { label: 'Admin',     href: '/admin/resources',    icon: Shield  },
+      ],
+    },
+    {
       section: 'Shipper View',
       items: [
         { label: 'Dashboard',        href: '/shipper',                     icon: LayoutDashboard },
@@ -144,20 +153,22 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
         { label: 'Locations',        href: '/shipper/locations',           icon: Warehouse       },
         { label: 'Route Planner',    href: '/shipper/route-planner',       icon: Route           },
         { label: 'Live Tracking',    href: '/shipper/tracking',            icon: MapPin          },
-        { label: 'Reports',          href: '/shipper/reports',             icon: BarChart2       },
         { label: 'Payments',         href: '/shipper/payments',            icon: DollarSign      },
+        { label: 'Reports',          href: '/shipper/reports',             icon: BarChart2       },
         { label: 'Profile',          href: '/shipper/profile',             icon: User            },
+        { label: 'Resources',        href: '/shipper/resources',           icon: BookOpen        },
       ],
     },
     {
       section: 'Carrier View',
       items: [
-        { label: 'Dashboard',   href: '/carrier',          icon: LayoutDashboard },
-        { label: 'Available',   href: '/carrier/jobs',     icon: Briefcase       },
-        { label: 'My Jobs',     href: '/carrier/my-jobs',  icon: ClipboardList   },
-        { label: 'Offers',      href: '/carrier/offers',   icon: Radio           },
-        { label: 'Earnings',    href: '/carrier/earnings', icon: DollarSign      },
-        { label: 'Profile',     href: '/carrier/profile',  icon: User            },
+        { label: 'Dashboard',   href: '/carrier',           icon: LayoutDashboard },
+        { label: 'Available',   href: '/carrier/jobs',      icon: Briefcase       },
+        { label: 'My Jobs',     href: '/carrier/my-jobs',   icon: ClipboardList   },
+        { label: 'Offers',      href: '/carrier/offers',    icon: Radio           },
+        { label: 'Earnings',    href: '/carrier/earnings',  icon: DollarSign      },
+        { label: 'Profile',     href: '/carrier/profile',   icon: User            },
+        { label: 'Resources',   href: '/carrier/resources', icon: BookOpen        },
       ],
     },
   ],

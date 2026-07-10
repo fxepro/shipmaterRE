@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi, profileApi, orgApi, shipperVerificationApi } from '@/lib/api';
 import { PlaidLinkButton } from '@/components/payments/PlaidLinkButton';
@@ -16,6 +16,13 @@ import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import AddressFields from '@/components/shared/AddressFields';
 import { ProfileSection } from '@/components/shared/ProfileSection';
 import { toast } from 'sonner';
+import {
+  collectFieldIssues,
+  validateProfileTabForm,
+  validateBusinessTabForm,
+  type ProfileTabId,
+  type ValidationIssue,
+} from '@/lib/shipper-profile-validation';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,19 +72,29 @@ interface NewBankPayload { type: 'bank'; bank_name: string; last4: string; accou
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="profile-label">{children}</label>;
+function RequiredMark() {
+  return <span className="text-red-500 font-bold" aria-hidden="true"> *</span>;
+}
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label className="profile-label">
+      {children}
+      {required && <RequiredMark />}
+    </label>
+  );
 }
 
 function Field({
-  label, value, onChange, type = 'text', placeholder, icon: Icon, readOnly,
+  label, value, onChange, type = 'text', placeholder, icon: Icon, readOnly, required, error,
 }: {
   label: string; value: string; onChange?: (v: string) => void;
   type?: string; placeholder?: string; icon?: React.ElementType; readOnly?: boolean;
+  required?: boolean; error?: string;
 }) {
   return (
     <div>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       <div className="relative">
         {Icon && (
           <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]">
@@ -88,25 +105,71 @@ function Field({
           type={type} value={value} readOnly={readOnly}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`profile-input ${Icon ? 'pl-9' : ''} ${readOnly ? 'bg-[var(--color-cream)] cursor-default text-[var(--color-text-muted)]' : ''}`}
+          aria-required={required || undefined}
+          aria-invalid={error ? true : undefined}
+          className={`profile-input ${Icon ? 'pl-9' : ''} ${readOnly ? 'bg-[var(--color-cream)] cursor-default text-[var(--color-text-muted)]' : ''} ${
+            error ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''
+          }`}
         />
+      </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options, required }: {
+  label: string; value: string; onChange: (v: string) => void; options: string[];
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <Label required={required}>{label}</Label>
+      <div className="profile-select-wrap">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="profile-select" aria-required={required || undefined}>
+          {options.map((o) => <option key={o}>{o}</option>)}
+        </select>
+        <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
       </div>
     </div>
   );
 }
 
-function Select({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[];
+function ValidationBanner({
+  issues,
+  onGoToTab,
+}: {
+  issues: ValidationIssue[];
+  onGoToTab: (tab: ProfileTabId) => void;
 }) {
+  if (issues.length === 0) return null;
+
   return (
-    <div>
-      <Label>{label}</Label>
-      <div className="profile-select-wrap">
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="profile-select">
-          {options.map((o) => <option key={o}>{o}</option>)}
-        </select>
-        <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+      <div className="flex items-start gap-3">
+        <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-amber-900">
+            {issues.length} required field{issues.length === 1 ? '' : 's'} need attention
+          </p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            Fields marked with <span className="text-red-500 font-bold">*</span> are required. Fix missing or invalid values below.
+          </p>
+        </div>
       </div>
+      <ul className="space-y-1.5 pl-7">
+        {issues.map((issue) => (
+          <li key={issue.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-amber-900">
+            <span className="font-semibold">{issue.message}</span>
+            <button
+              type="button"
+              onClick={() => onGoToTab(issue.tab)}
+              className="font-semibold text-[var(--color-teal)] hover:underline"
+            >
+              Go to {issue.tab.charAt(0).toUpperCase() + issue.tab.slice(1)}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -174,7 +237,17 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
     internal_ref_format:          initialData.internal_ref_format,
   });
   const [saved, setSaved] = useState(false);
-  const set = (k: keyof typeof form) => (v: string) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const set = (k: keyof typeof form) => (v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setSaved(false);
+    setErrors((e) => {
+      if (!e[k]) return e;
+      const next = { ...e };
+      delete next[k];
+      return next;
+    });
+  };
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -184,9 +257,28 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['shipper-profile'] });
       setSaved(true);
+      toast.success('Profile saved.');
       setTimeout(() => setSaved(false), 3000);
     },
+    onError: () => toast.error('Could not save profile.'),
   });
+
+  const handleSave = () => {
+    const msg = validateProfileTabForm(form);
+    if (msg) {
+      const next: Record<string, string> = {};
+      if (!form.first_name.trim()) next.first_name = 'Required';
+      if (!form.last_name.trim()) next.last_name = 'Required';
+      if (!form.email.trim()) next.email = 'Required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = 'Invalid email';
+      if (!form.phone.trim()) next.phone = 'Required';
+      setErrors(next);
+      toast.error(msg);
+      return;
+    }
+    setErrors({});
+    saveMutation.mutate();
+  };
 
   const initials = [form.first_name[0], form.last_name[0]].filter(Boolean).join('').toUpperCase() || '?';
 
@@ -214,9 +306,9 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
       {/* Legal name */}
       <ProfileSection icon={User} title="Legal name">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="First name"  value={form.first_name}  onChange={set('first_name')}  placeholder="Alex" />
+          <Field label="First name"  value={form.first_name}  onChange={set('first_name')}  placeholder="Alex" required error={errors.first_name} />
           <Field label="Middle name" value={form.middle_name} onChange={set('middle_name')} placeholder="Optional" />
-          <Field label="Last name"   value={form.last_name}   onChange={set('last_name')}   placeholder="Morgan" />
+          <Field label="Last name"   value={form.last_name}   onChange={set('last_name')}   placeholder="Morgan" required error={errors.last_name} />
           <div>
             <Label>Suffix</Label>
             <div className="profile-select-wrap">
@@ -234,8 +326,8 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
       {/* Contact */}
       <ProfileSection icon={Mail} title="Contact">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@company.com" />
-          <Field label="Phone number"  value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" />
+          <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@company.com" required error={errors.email} />
+          <Field label="Phone number"  value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" required error={errors.phone} />
         </div>
       </ProfileSection>
 
@@ -274,7 +366,7 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
         </div>
       </ProfileSection>
 
-      <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
+      <SaveBar saved={saved} onSave={handleSave} isPending={saveMutation.isPending} />
     </div>
   );
 }
@@ -334,16 +426,49 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     ops_country:            initialData.ops_country  ?? 'US',
   });
   const [saved, setSaved] = useState(false);
-  const set = (k: keyof typeof form) => (v: string | boolean) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const [bizErrors, setBizErrors] = useState<Record<string, string>>({});
+  const set = (k: keyof typeof form) => (v: string | boolean) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setSaved(false);
+    if (typeof v === 'string') {
+      setBizErrors((e) => {
+        const key = k === 'tax_id' || k === 'ein' ? 'tax_id' : k === 'company' ? 'company' : '';
+        if (!key || !e[key]) return e;
+        const next = { ...e };
+        delete next[key];
+        return next;
+      });
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: () => profileApi.updateShipper(form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['shipper-profile'] });
       setSaved(true);
+      toast.success('Business details saved.');
       setTimeout(() => setSaved(false), 3000);
     },
+    onError: () => toast.error('Could not save business details.'),
   });
+
+  const handleBusinessSave = () => {
+    const msg = validateBusinessTabForm(form);
+    if (msg) {
+      setBizErrors({
+        ...(!form.company.trim() ? { company: 'Required' } : {}),
+        ...(!(form.tax_id || form.ein).trim()
+          ? { tax_id: 'Required' }
+          : (form.tax_id_type || 'EIN').toUpperCase() === 'EIN' && !/^\d{9}$/.test((form.tax_id || form.ein).replace(/\D/g, ''))
+            ? { tax_id: 'Invalid EIN format' }
+            : {}),
+      });
+      toast.error(msg);
+      return;
+    }
+    setBizErrors({});
+    saveMutation.mutate();
+  };
 
   const [phoneCode, setPhoneCode] = useState('');
   const [phoneSent, setPhoneSent] = useState(false);
@@ -427,6 +552,31 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     },
   });
 
+  const handleSubmitBusiness = () => {
+    const saveMsg = validateBusinessTabForm(form);
+    if (saveMsg) {
+      setBizErrors({
+        ...(!form.company.trim() ? { company: 'Required' } : {}),
+        ...(!(form.tax_id || form.ein).trim()
+          ? { tax_id: 'Required' }
+          : (form.tax_id_type || 'EIN').toUpperCase() === 'EIN' && !/^\d{9}$/.test((form.tax_id || form.ein).replace(/\D/g, ''))
+            ? { tax_id: 'Invalid EIN format' }
+            : {}),
+      });
+      toast.error(saveMsg);
+      return;
+    }
+    if (!docs.some(d => d.type === 'w9')) {
+      toast.error('Upload a W-9 (or equivalent tax form) before submitting for review.');
+      return;
+    }
+    if (!initialData.email_verified) {
+      toast.error('Verify your email before submitting business verification.');
+      return;
+    }
+    submitBusiness.mutate();
+  };
+
   async function onUploadDoc(type: 'w9' | 'articles' | 'other', file: File | null) {
     if (!file) return;
     setUploading(true);
@@ -437,6 +587,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
       await shipperVerificationApi.uploadDocument(fd);
       toast.success(`${file.name} uploaded.`);
       refetchDocs();
+      qc.invalidateQueries({ queryKey: ['shipper-documents'] });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       toast.error(msg ?? 'Upload failed.');
@@ -459,7 +610,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
       {/* Company identity */}
       <ProfileSection icon={Building2} title="Company identity">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Legal business name" value={form.company}       onChange={v => set('company')(v)} icon={Building2} placeholder="Acme Corp LLC" />
+          <Field label="Legal business name" value={form.company}       onChange={v => set('company')(v)} icon={Building2} placeholder="Acme Corp LLC" required error={bizErrors.company} />
           <Field label="DBA (if applicable)"  value={form.dba}          onChange={v => set('dba')(v)}     placeholder="Trading as…" />
           <Select label="Business type" value={form.business_type} onChange={v => set('business_type')(v)} options={[
             'Limited Liability Company (LLC)', 'S-Corporation', 'C-Corporation',
@@ -472,7 +623,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           ]} />
           {/* Tax ID — type selector + number */}
           <div>
-            <Label>Tax ID Type</Label>
+            <Label required>Tax ID Type</Label>
             <div className="profile-select-wrap">
               <select
                 value={form.tax_id_type}
@@ -486,7 +637,24 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
               <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
             </div>
           </div>
-          <Field label={form.tax_id_type || 'Tax ID'} value={form.tax_id || form.ein} onChange={v => setForm(f => ({ ...f, tax_id: v, ein: v }))} icon={Hash} placeholder={form.tax_id_type === 'EIN' ? 'XX-XXXXXXX' : form.tax_id_type === 'VAT' ? 'DE123456789' : 'Tax ID number'} />
+          <Field
+            label={form.tax_id_type || 'Tax ID'}
+            value={form.tax_id || form.ein}
+            onChange={v => {
+              setForm(f => ({ ...f, tax_id: v, ein: v }));
+              setSaved(false);
+              setBizErrors((e) => {
+                if (!e.tax_id) return e;
+                const next = { ...e };
+                delete next.tax_id;
+                return next;
+              });
+            }}
+            icon={Hash}
+            placeholder={form.tax_id_type === 'EIN' ? 'XX-XXXXXXX' : form.tax_id_type === 'VAT' ? 'DE123456789' : 'Tax ID number'}
+            required
+            error={bizErrors.tax_id}
+          />
           {/* Currency */}
           <div>
             <Label>Operating Currency</Label>
@@ -580,12 +748,14 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           {/* Email */}
           <div className="flex items-start justify-between gap-4 border-b border-[var(--color-cream-dark)] pb-4">
             <div>
-              <p className="text-sm font-medium text-[var(--color-text)]">Email address</p>
-              <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
-                {initialData.email
-                  ? <>Send a verification link to <span className="text-[var(--color-text)]">{initialData.email}</span>. Check spam.</>
-                  : 'No login email on this account.'}
-              </p>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Email address <span className="text-red-500 font-bold">*</span>
+                </p>
+                <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
+                  {initialData.email
+                    ? <>Send a verification link to <span className="text-[var(--color-text)]">{initialData.email}</span>. Check spam.</>
+                    : <>Add and save an email on the Profile tab first. <span className="text-red-500 font-bold">*</span></>}
+                </p>
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
               <VerificationBadge status={emailStatus} />
@@ -612,7 +782,9 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           <div className="border-b border-[var(--color-cream-dark)] pb-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Phone number</p>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Phone number <span className="text-red-500 font-bold">*</span>
+                </p>
                 <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
                   {initialData.phone?.trim()
                     ? <>SMS one-time code to <span className="text-[var(--color-text)]">{initialData.phone}</span> (Profile tab).</>
@@ -669,9 +841,11 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Business (EIN)</p>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  Business (EIN) <span className="text-red-500 font-bold">*</span>
+                </p>
                 <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
-                  Upload a W-9, save company name + tax ID, then submit for platform review.
+                  Upload a W-9<span className="text-red-500 font-bold"> *</span>, save company name + tax ID, then submit for platform review.
                 </p>
               </div>
               <VerificationBadge status={einStatus} />
@@ -692,7 +866,12 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
                         }`}
                       >
                         <Upload size={12} />
-                        {existing ? `${type.toUpperCase()}: ${existing.name}` : `Upload ${type === 'w9' ? 'W-9' : 'Articles of Inc.'}`}
+                        {existing ? `${type.toUpperCase()}: ${existing.name}` : (
+                          <>
+                            Upload {type === 'w9' ? 'W-9' : 'Articles of Inc.'}
+                            {type === 'w9' && <span className="text-red-500 font-bold"> *</span>}
+                          </>
+                        )}
                         <input
                           type="file"
                           accept=".pdf,image/*"
@@ -707,7 +886,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
                 {initialData.verification_status !== 'submitted' ? (
                   <button
                     type="button"
-                    onClick={() => submitBusiness.mutate()}
+                    onClick={handleSubmitBusiness}
                     disabled={submitBusiness.isPending}
                     className="rounded-lg bg-[var(--color-slate)] px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                   >
@@ -722,7 +901,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
         </div>
       </ProfileSection>
 
-      <SaveBar saved={saved} onSave={() => saveMutation.mutate()} isPending={saveMutation.isPending} />
+      <SaveBar saved={saved} onSave={handleBusinessSave} isPending={saveMutation.isPending} />
     </div>
   );
 }
@@ -1358,6 +1537,17 @@ export default function ShipperProfilePage() {
     queryFn:  () => profileApi.getShipper().then((r) => r.data.data),
   });
 
+  const validationIssues = profile
+    ? collectFieldIssues({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        company: profile.company,
+        taxId: profile.tax_id || profile.ein,
+        taxIdType: profile.tax_id_type,
+      })
+    : [];
+
   return (
     <div className="w-[75%] min-w-[560px] space-y-6">
       <div>
@@ -1368,6 +1558,13 @@ export default function ShipperProfilePage() {
           Manage your profile, business, payments, subscription and notifications
         </p>
       </div>
+
+      {!isLoading && profile && (
+        <ValidationBanner
+          issues={validationIssues}
+          onGoToTab={(tab) => setActiveTab(tab)}
+        />
+      )}
 
       <div className="flex gap-1 rounded-2xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] p-1.5">
         {TABS.map(({ id, label, icon: Icon }) => (
