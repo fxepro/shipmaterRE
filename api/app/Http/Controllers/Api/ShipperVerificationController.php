@@ -22,13 +22,39 @@ class ShipperVerificationController extends Controller
     {
         $user = $request->user();
 
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['message' => 'Your account has no valid email address.'], 422);
+        }
+
         if ($user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Email is already verified.']);
         }
 
-        $user->sendEmailVerificationNotification();
+        $mailer = config('mail.default');
+        if (in_array($mailer, ['log', 'array'], true)) {
+            return response()->json([
+                'message' => 'Email delivery is not configured on the server (MAIL_MAILER is "'.$mailer.'"). Set Brevo SMTP on Railway before verification emails can be sent.',
+            ], 503);
+        }
 
-        return response()->json(['message' => 'Verification email sent. Check your inbox.']);
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Verification email failed', [
+                'user_id' => $user->id,
+                'email'   => $user->email,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Could not send verification email: '.$e->getMessage(),
+            ], 502);
+        }
+
+        return response()->json([
+            'message' => 'Verification email sent to '.$user->email.'. Check inbox and spam.',
+            'email'   => $user->email,
+        ]);
     }
 
     // ── Phone OTP ───────────────────────────────────────────────────────────

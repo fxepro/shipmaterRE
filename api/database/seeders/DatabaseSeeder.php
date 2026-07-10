@@ -20,34 +20,35 @@ class DatabaseSeeder extends Seeder
     {
         // ── Demo users ────────────────────────────────────────────────────
 
+        // Plain 'password' — User model casts password as 'hashed' (do not Hash::make here).
         $shipper = User::updateOrCreate(
             ['email' => 'alex@demo.com'],
-            ['name' => 'Alex Morgan', 'password' => Hash::make('password'), 'role' => 'shipper']
+            ['name' => 'Alex Morgan', 'password' => 'password', 'role' => 'shipper']
         );
 
         $carrier1 = User::updateOrCreate(
             ['email' => 'jordan@demo.com'],
-            ['name' => 'Jordan Reyes', 'password' => Hash::make('password'), 'role' => 'carrier']
+            ['name' => 'Jordan Reyes', 'password' => 'password', 'role' => 'carrier']
         );
 
         $carrier2 = User::updateOrCreate(
             ['email' => 'casey@demo.com'],
-            ['name' => 'Casey Rivera', 'password' => Hash::make('password'), 'role' => 'carrier']
+            ['name' => 'Casey Rivera', 'password' => 'password', 'role' => 'carrier']
         );
 
         $carrier3 = User::updateOrCreate(
             ['email' => 'marcus@demo.com'],
-            ['name' => 'Marcus Webb', 'password' => Hash::make('password'), 'role' => 'carrier']
+            ['name' => 'Marcus Webb', 'password' => 'password', 'role' => 'carrier']
         );
 
         $receiver = User::updateOrCreate(
             ['email' => 'sam@demo.com'],
-            ['name' => 'Sam Chen', 'password' => Hash::make('password'), 'role' => 'receiver']
+            ['name' => 'Sam Chen', 'password' => 'password', 'role' => 'receiver']
         );
 
         User::updateOrCreate(
             ['email' => 'admin@demo.com'],
-            ['name' => 'Admin User', 'password' => Hash::make('password'), 'role' => 'admin']
+            ['name' => 'Admin User', 'password' => 'password', 'role' => 'admin']
         );
 
         // ── Carrier profiles ──────────────────────────────────────────────

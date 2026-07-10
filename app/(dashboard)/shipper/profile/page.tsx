@@ -361,7 +361,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     onSuccess: (res) => toast.success(res.data?.message ?? 'Verification email sent.'),
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg ?? 'Could not send email.');
+      toast.error(msg ?? 'Could not send email. Check API mail configuration.');
     },
   });
 
@@ -370,7 +370,11 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
     onSuccess: (res) => {
       setPhoneSent(true);
       setDevCode(res.data?.dev_code ?? null);
-      toast.success(res.data?.message ?? 'Code sent.');
+      if (res.data?.dev_code) {
+        toast.message(res.data?.message ?? 'Dev OTP only — SMS not configured.');
+      } else {
+        toast.success(res.data?.message ?? 'Code sent.');
+      }
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -379,7 +383,12 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
   });
 
   const confirmPhone = useMutation({
-    mutationFn: () => shipperVerificationApi.confirmPhoneCode(phoneCode),
+    mutationFn: () => {
+      if (phoneCode.trim().length < 4) {
+        return Promise.reject({ response: { data: { message: 'Enter the code from the SMS.' } } });
+      }
+      return shipperVerificationApi.confirmPhoneCode(phoneCode.trim());
+    },
     onSuccess: (res) => {
       toast.success(res.data?.message ?? 'Phone verified.');
       setPhoneCode('');
@@ -394,7 +403,20 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
   });
 
   const submitBusiness = useMutation({
-    mutationFn: () => shipperVerificationApi.submitBusiness(),
+    mutationFn: () => {
+      const company = (form.company || initialData.company || '').trim();
+      const ein = (form.tax_id || form.ein || initialData.ein || '').trim();
+      if (!company || !ein) {
+        return Promise.reject({ response: { data: { message: 'Save legal business name and tax ID first.' } } });
+      }
+      if (!docs.some(d => d.type === 'w9')) {
+        return Promise.reject({ response: { data: { message: 'Upload a W-9 before submitting for review.' } } });
+      }
+      if (!initialData.email_verified) {
+        return Promise.reject({ response: { data: { message: 'Verify your email before submitting business verification.' } } });
+      }
+      return shipperVerificationApi.submitBusiness();
+    },
     onSuccess: (res) => {
       toast.success(res.data?.message ?? 'Submitted for review.');
       qc.invalidateQueries({ queryKey: ['shipper-profile'] });
@@ -560,7 +582,9 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
             <div>
               <p className="text-sm font-medium text-[var(--color-text)]">Email address</p>
               <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
-                We send a signed link to your login email. Check spam if it does not arrive.
+                {initialData.email
+                  ? <>Send a verification link to <span className="text-[var(--color-text)]">{initialData.email}</span>. Check spam.</>
+                  : 'No login email on this account.'}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
@@ -568,8 +592,14 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
               {!initialData.email_verified && (
                 <button
                   type="button"
-                  onClick={() => resendEmail.mutate()}
-                  disabled={resendEmail.isPending}
+                  onClick={() => {
+                    if (!initialData.email?.trim()) {
+                      toast.error('Add an email on the Profile tab and save first.');
+                      return;
+                    }
+                    resendEmail.mutate();
+                  }}
+                  disabled={resendEmail.isPending || !initialData.email?.trim()}
                   className="text-xs font-semibold text-[var(--color-teal)] hover:underline disabled:opacity-50"
                 >
                   {resendEmail.isPending ? 'Sending…' : 'Send verification email'}
@@ -584,8 +614,9 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Phone number</p>
                 <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
-                  SMS one-time code to the phone on your Profile tab
-                  {initialData.phone ? ` (${initialData.phone})` : ' — add a phone first'}.
+                  {initialData.phone?.trim()
+                    ? <>SMS one-time code to <span className="text-[var(--color-text)]">{initialData.phone}</span> (Profile tab).</>
+                    : 'Add and save a phone number on the Profile tab first.'}
                 </p>
               </div>
               <VerificationBadge status={phoneStatus} />
@@ -594,7 +625,13 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => sendPhone.mutate()}
+                  onClick={() => {
+                    if (!initialData.phone?.trim()) {
+                      toast.error('Add a phone number on the Profile tab and save first.');
+                      return;
+                    }
+                    sendPhone.mutate();
+                  }}
                   disabled={sendPhone.isPending || !initialData.phone?.trim()}
                   className="rounded-lg bg-[var(--color-teal)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                 >

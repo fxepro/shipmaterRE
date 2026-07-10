@@ -14,11 +14,22 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs'; // need Node.js fetch + Buffer, not Edge
 export const dynamic = 'force-dynamic'; // never cache — every request hits the backend
 
-const BACKEND = (
-  process.env.API_PROXY_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  'http://127.0.0.1:8888'
-).replace(/\/$/, '');
+function resolveBackend(): string {
+  let raw = (
+    process.env.API_PROXY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    'http://127.0.0.1:8888'
+  ).trim().replace(/\/$/, '');
+
+  // Netlify env often pasted without scheme → fetch treats it as a relative URL and 502s.
+  if (raw && !/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+
+  return raw;
+}
+
+const BACKEND = resolveBackend();
 
 // Hop-by-hop headers we must not forward
 const HOP_BY_HOP = new Set([

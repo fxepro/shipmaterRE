@@ -86,9 +86,9 @@ class SmsOtpService
             ];
         }
 
-        // Local / no Twilio — log the code (not production).
-        if (app()->environment('production')) {
-            throw new RuntimeException('SMS provider is not configured.');
+        // Local / no Twilio — never pretend SMS was delivered.
+        if (app()->environment('production') || config('app.env') === 'production') {
+            throw new RuntimeException('SMS provider is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SID (or TWILIO_FROM) on the API.');
         }
 
         $code = (string) random_int(100000, 999999);
@@ -99,14 +99,14 @@ class SmsOtpService
             'attempts' => 0,
         ], self::TTL_SECONDS);
 
-        Log::info('[SmsOtpService] Local OTP (Twilio not configured)', [
+        Log::warning('[SmsOtpService] Local OTP only — Twilio not configured', [
             'user_id' => $userId,
             'phone'   => $phone,
             'code'    => $code,
         ]);
 
         return [
-            'message'  => 'Verification code generated (local/dev — check API logs).',
+            'message'  => 'Dev only: SMS not configured. Use the on-screen code.',
             'phone'    => $this->mask($phone),
             'dev_code' => $code,
         ];
