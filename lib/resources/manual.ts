@@ -14,7 +14,7 @@ export interface ManualSubtopic {
   bullets: string[];
   href?: string;
   /** Rich customer guide (tabs + matrices) */
-  guideKey?: 'shipper-profile';
+  guideKey?: 'shipper-profile' | 'carrier-profile';
 }
 
 export interface ManualTopic {
@@ -303,9 +303,9 @@ export const SHIPPER_TOPICS: ManualTopic[] = [
           'Account Settings for your shipper organization. Use the tabs below to keep identity, billing methods, and verification up to date. Invoice history is under Financials → Payments.',
         bullets: [
           'Eight tabs: Profile, Business, Services, Compliance, Payment, Subscription, Notifications, Team',
+          'Amber banner lists missing Profile + Business fields',
           'Verify email and phone before submitting business verification',
-          'Save payment methods on the Payment tab',
-          'Invite teammates on the Team tab',
+          'Save payment methods on the Payment tab; invite teammates on Team',
         ],
         guideKey: 'shipper-profile',
       },
@@ -447,14 +447,14 @@ export const CARRIER_TOPICS: ManualTopic[] = [
         title: 'Profile',
         href: '/carrier/profile',
         summary:
-          'Carrier identity and compliance: who you are, authority numbers, insurance, equipment, and required documents.',
+          'Carrier identity and compliance: who you are, authority numbers, insurance, equipment, and required documents. See the validation matrices below for what is required on each tab.',
         bullets: [
-          'Edit company and user identity',
-          'Maintain DOT/MC and authority details',
-          'Upload and renew insurance and compliance docs',
-          'Manage vehicles / equipment on file',
+          'Ten tabs: Personal through Reviews',
+          'Complete Personal before Identity and Checkr',
+          'Service types drive Insurance and Commercial requirements',
           'Clear verification gaps that block Available jobs',
         ],
+        guideKey: 'carrier-profile',
       },
     ],
   },

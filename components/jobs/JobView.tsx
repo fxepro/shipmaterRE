@@ -52,6 +52,71 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function carrierDisplay(job: any): { name: string; company: string; line: string } {
+  const user =
+    (job.carrier && typeof job.carrier === 'object' ? job.carrier : null) ??
+    (job.contract?.carrier && typeof job.contract.carrier === 'object' ? job.contract.carrier : null);
+  const name =
+    (typeof job.contract?.carrier === 'string' ? job.contract.carrier : null) ??
+    user?.name ??
+    '';
+  const company =
+    job.contract?.carrier_company ??
+    user?.carrier_profile?.company_name ??
+    user?.carrierProfile?.company_name ??
+    '';
+  const line = [name, company].filter(Boolean).join(' · ') || '—';
+  return { name: name || '—', company, line };
+}
+
+function stopItems(stop: any): any[] {
+  return stop.pickup_items ?? stop.pickupItems ?? [];
+}
+
+async function openJobPdf(
+  kind: 'rateConfirmation' | 'bol' | 'invoice',
+  jobId: number,
+  filename: string,
+) {
+  try {
+    const res = await freightJobApi[kind](jobId);
+    const ct = String(res.headers?.['content-type'] ?? '');
+    if (ct.includes('application/json') || ct.includes('text/json')) {
+      const text = await (res.data as Blob).text();
+      try {
+        const err = JSON.parse(text);
+        toast.error(err.message ?? 'Could not open document.');
+      } catch {
+        toast.error('Could not open document.');
+      }
+      return;
+    }
+    const blob = res.data instanceof Blob
+      ? res.data
+      : new Blob([res.data], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (!w) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (e: any) {
+    // Axios error with blob body
+    const data = e?.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const err = JSON.parse(await data.text());
+        toast.error(err.message ?? 'Document failed to load.');
+        return;
+      } catch { /* fall through */ }
+    }
+    toast.error(e?.response?.data?.message ?? e?.message ?? 'Document failed to load.');
+  }
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -106,13 +171,24 @@ function fmt(n: number | string | null | undefined) {
 export function JobView({ job, role, backHref, backLabel, currentUserId, onStopUpdated, onJobUpdated }: JobViewProps) {
   const [pendingStop,   setPendingStop]   = useState<number | null>(null);
   const [showOfferPanel, setShowOfferPanel] = useState(false);
+  const [docLoading, setDocLoading] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const isContracted = !!job.contract_id;
+  const carrier = carrierDisplay(job);
 
   const stops = [...(job.stops ?? [])].sort(
     (a: any, b: any) => (a.optimized_sequence ?? a.sequence) - (b.optimized_sequence ?? b.sequence)
   );
+
+  const manifestRows = stops.flatMap((stop: any) => {
+    if (stop.stop_type !== 'pickup') return [];
+    return stopItems(stop).map((item: any) => ({
+      ...item,
+      pickupName: stop.name || stop.city || stop.address,
+      pickupCity: stop.city,
+    }));
+  });
 
   const mapStops: RouteMapStop[] = stops
     .filter((s: any) => s.lat && s.lng)
@@ -125,6 +201,15 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
   const showMap = mapStops.length >= 2;
 
   const hasRoute = !!(job.route_distance_miles && parseFloat(job.route_distance_miles) > 0);
+
+  async function handleDoc(kind: 'rateConfirmation' | 'bol' | 'invoice', filename: string) {
+    setDocLoading(kind);
+    try {
+      await openJobPdf(kind, job.id, filename);
+    } finally {
+      setDocLoading(null);
+    }
+  }
 
   // Status label: contracted posted = Dispatched, open posted = Live
   function statusLabel(s: string) {
@@ -229,35 +314,37 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
           )}
         </div>
 
-        {/* Documents — posted/in-progress/completed */}
+        {/* Documents — posted/in-progress/completed (auth blob, not bare <a>) */}
         {['posted', 'in_progress', 'completed'].includes(job.status) && (
           <div className="flex items-center gap-2 flex-wrap">
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/rate-confirmation`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+            <button
+              type="button"
+              disabled={!!docLoading}
+              onClick={() => handleDoc('rateConfirmation', `rate-confirmation-${job.id}.pdf`)}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors disabled:opacity-60"
             >
-              <Receipt size={13} /> Rate Conf.
-            </a>
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/bol`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+              {docLoading === 'rateConfirmation' ? <Loader2 size={13} className="animate-spin" /> : <Receipt size={13} />}
+              Rate Conf.
+            </button>
+            <button
+              type="button"
+              disabled={!!docLoading}
+              onClick={() => handleDoc('bol', `bol-${job.id}.pdf`)}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors disabled:opacity-60"
             >
-              <FileText size={13} /> BOL
-            </a>
-            {/* Invoice — shipper only, posted/in_progress/completed */}
+              {docLoading === 'bol' ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+              BOL
+            </button>
             {role === 'shipper' && (
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/invoice`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors"
+              <button
+                type="button"
+                disabled={!!docLoading}
+                onClick={() => handleDoc('invoice', `invoice-${job.id}.pdf`)}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] hover:border-[var(--color-teal)] hover:text-[var(--color-teal)] transition-colors disabled:opacity-60"
               >
-                <DollarSign size={13} /> Invoice
-              </a>
+                {docLoading === 'invoice' ? <Loader2 size={13} className="animate-spin" /> : <DollarSign size={13} />}
+                Invoice
+              </button>
             )}
           </div>
         )}
@@ -386,17 +473,18 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
                           )}
 
                           {/* Items (pickup stops only) */}
-                          {isPickup && stop.pickup_items?.length > 0 && (
+                          {isPickup && stopItems(stop).length > 0 && (
                             <div className="mt-2 space-y-1">
-                              {stop.pickup_items.map((item: any) => (
-                                <div key={item.id} className="flex items-center gap-1.5 text-xs text-[var(--color-text-faint)]">
+                              {stopItems(stop).map((item: any) => (
+                                <div key={item.id ?? item.localId} className="flex items-center gap-1.5 text-xs text-[var(--color-text-faint)]">
                                   <Package size={10} className="shrink-0" />
                                   <span>{item.quantity}× {item.unit} — {item.description}</span>
-                                  {item.delivery_stop && (
+                                  {(item.delivery_stop || item.deliveryStop) && (
                                     <>
                                       <ArrowRight size={9} className="shrink-0" />
                                       <span className="text-[var(--color-text-muted)]">
-                                        {item.delivery_stop.name || item.delivery_stop.city}
+                                        {(item.delivery_stop || item.deliveryStop).name
+                                          || (item.delivery_stop || item.deliveryStop).city}
                                       </span>
                                     </>
                                   )}
@@ -485,15 +573,61 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
             )}
           </SectionCard>
 
-          {/* Contract (contracted + shipper view) */}
-          {isContracted && job.contract && role === 'shipper' && (
-            <SectionCard icon={FileText} title="Contract">
+          {/* Carrier / contractor */}
+          {(isContracted || job.carrier_id) && (
+            <SectionCard icon={Truck} title="Carrier">
               <div className="space-y-3">
-                <InfoRow label="Carrier"   value={[job.contract.carrier, job.contract.carrier_company].filter(Boolean).join(' · ')} />
-                <InfoRow label="Rate type" value={job.contract.rate_type} />
-                <InfoRow label="Rate"      value={String(job.contract.rate)} />
+                <InfoRow label="Name" value={carrier.name} />
+                {carrier.company && <InfoRow label="Company" value={carrier.company} />}
+                {job.contract?.coverage && (
+                  <InfoRow label="Coverage" value={String(job.contract.coverage)} />
+                )}
+                {job.contract?.equipment_type && (
+                  <InfoRow label="Equipment" value={String(job.contract.equipment_type)} />
+                )}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Manifest */}
+          <SectionCard icon={Package} title={`Manifest${manifestRows.length ? ` (${manifestRows.length})` : ''}`}>
+            {manifestRows.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-faint)]">No cargo items on this job yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {manifestRows.map((item: any, i: number) => {
+                  const dest = item.delivery_stop || item.deliveryStop;
+                  return (
+                    <div
+                      key={item.id ?? i}
+                      className="rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-cream)]/40 px-3 py-2.5"
+                    >
+                      <p className="text-sm font-semibold text-[var(--color-text)]">
+                        {item.quantity}× {item.unit} — {item.description || 'Freight'}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-faint)]">
+                        From {item.pickupName}
+                        {dest ? ` → ${dest.name || dest.city || dest.address}` : ''}
+                        {item.weight_lbs ? ` · ${item.weight_lbs} lbs` : ''}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Contract rates */}
+          {isContracted && job.contract && (
+            <SectionCard icon={FileText} title="Contract rate">
+              <div className="space-y-3">
+                <InfoRow label="Rate type" value={String(job.contract.rate_type ?? '—')} />
+                <InfoRow label="Rate" value={fmtAmt(job.contract.rate)} />
+                {job.contract.fuel_surcharge != null && Number(job.contract.fuel_surcharge) > 0 && (
+                  <InfoRow label="Fuel" value={`${job.contract.fuel_surcharge}%`} />
+                )}
                 {job.contract.payment_terms && (
-                  <InfoRow label="Payment" value={job.contract.payment_terms} />
+                  <InfoRow label="Payment" value={String(job.contract.payment_terms)} />
                 )}
               </div>
             </SectionCard>
@@ -587,14 +721,13 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
                    job.payment_status === 'processing' ? 'Processing' : 'Unpaid'}
                 </span>
                 {role === 'shipper' && (
-                  <a
-                    href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/jobs/${job.id}/invoice`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleDoc('invoice', `invoice-${job.id}.pdf`)}
                     className="flex items-center gap-1 text-xs font-semibold text-[var(--color-teal)] hover:underline"
                   >
                     <DollarSign size={11} /> View Invoice
-                  </a>
+                  </button>
                 )}
               </div>
             </SectionCard>

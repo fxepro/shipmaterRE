@@ -25,7 +25,7 @@ class DocumentService
     public function rateConfirmation(FreightJob $job, bool $download = false): Response
     {
         $job->load([
-            'shipper.org.platformTenant',
+            'shipper.currentOrg.platformTenant',
             'shipper.shipperProfile',
             'carrier.carrierProfile',
             'stops.location',
@@ -58,7 +58,7 @@ class DocumentService
     public function carrierAgreement(Contract $contract, bool $download = false): Response
     {
         $contract->load([
-            'shipper.org.platformTenant',
+            'shipper.currentOrg.platformTenant',
             'shipper.shipperProfile',
             'carrier.carrierProfile',
         ]);
@@ -86,7 +86,7 @@ class DocumentService
     public function invoice(FreightJob $job, bool $download = false, bool $forceRegen = false): Response
     {
         $job->load([
-            'shipper.org.platformTenant',
+            'shipper.currentOrg.platformTenant',
             'shipper.shipperProfile',
             'carrier.carrierProfile',
             'stops',
@@ -167,7 +167,7 @@ class DocumentService
     public function bol(FreightJob $job, bool $download = false, bool $forceRegen = false): Response
     {
         $job->load([
-            'shipper.org.platformTenant',
+            'shipper.currentOrg.platformTenant',
             'shipper.shipperProfile',
             'carrier.carrierProfile',
             'stops.location',
@@ -217,7 +217,7 @@ class DocumentService
      */
     public function podResponse(FreightJob $job, JobStop $stop, bool $download = false): Response
     {
-        $job->load(['shipper.org.platformTenant', 'shipper.shipperProfile', 'carrier.carrierProfile']);
+        $job->load(['shipper.currentOrg.platformTenant', 'shipper.shipperProfile', 'carrier.carrierProfile']);
         $stop->load(['evidence' => fn($q) => $q->orderBy('taken_at')]);
 
         $broker  = $this->brokerIdentity($job->shipper);
@@ -282,7 +282,7 @@ class DocumentService
      */
     private function brokerIdentity(User $shipper): array
     {
-        $org     = $shipper->org ?? Organization::find($shipper->current_org_id);
+        $org     = $shipper->currentOrg ?? Organization::find($shipper->current_org_id);
         $profile = $shipper->shipperProfile;
         $tenant  = $org?->platformTenant;
 

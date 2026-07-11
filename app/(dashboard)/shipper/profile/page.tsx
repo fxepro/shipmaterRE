@@ -10,16 +10,22 @@ import {
   Mail, Phone, MapPin, Globe, Hash, Shield,
   AlertCircle, Landmark, X, Loader2, Star,
   CalendarDays, RefreshCw, ChevronRight, Upload, FileCheck,
-  Users, Package, Crown, UserMinus, Send,
+  Users, Package, Crown, UserMinus, Send, MessageCircle,
 } from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import AddressFields from '@/components/shared/AddressFields';
 import { ProfileSection } from '@/components/shared/ProfileSection';
 import { toast } from 'sonner';
+import { COUNTRIES, getCountry } from '@/lib/countries';
 import {
   collectFieldIssues,
   validateProfileTabForm,
   validateBusinessTabForm,
+  validateTeamInvite,
+  profileTabFieldErrors,
+  looksLikeEmail,
+  looksLikePhone,
+  looksLikeNationalPhone,
   type ProfileTabId,
   type ValidationIssue,
 } from '@/lib/shipper-profile-validation';
@@ -30,6 +36,9 @@ type Tab = 'profile' | 'business' | 'services' | 'compliance' | 'payment' | 'sub
 
 interface ShipperProfile {
   name: string; email: string; phone: string; member_since: string;
+  phone_country_code: string;
+  whatsapp: string;
+  whatsapp_country_code: string;
   street: string; city: string; state: string; zip: string; country: string;
   // business
   company: string; dba: string; business_type: string; ein: string;
@@ -71,6 +80,36 @@ interface NewCardPayload { type: 'card'; brand: string; last4: string; exp_month
 interface NewBankPayload { type: 'bank'; bank_name: string; last4: string; account_type: 'checking' | 'savings'; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function DialCodeSelect({
+  value,
+  onChange,
+  id,
+}: {
+  value: string;
+  onChange: (countryCode: string) => void;
+  id?: string;
+}) {
+  const current = getCountry(value || 'US');
+  return (
+    <div className="profile-select-wrap min-w-[7.5rem]">
+      <select
+        id={id}
+        value={current.code}
+        onChange={(e) => onChange(e.target.value)}
+        className="profile-select pr-8"
+        aria-label="Country calling code"
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.flag} {c.dialCode}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+    </div>
+  );
+}
 
 function RequiredMark() {
   return <span className="text-red-500 font-bold" aria-hidden="true"> *</span>;
@@ -226,6 +265,9 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
     suffix:      '',
     email:       initialData.email,
     phone:       initialData.phone,
+    phone_country_code: initialData.phone_country_code || 'US',
+    whatsapp:    initialData.whatsapp || '',
+    whatsapp_country_code: initialData.whatsapp_country_code || initialData.phone_country_code || 'US',
     street:      initialData.street,
     city:        initialData.city,
     state:       initialData.state,
@@ -266,13 +308,7 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
   const handleSave = () => {
     const msg = validateProfileTabForm(form);
     if (msg) {
-      const next: Record<string, string> = {};
-      if (!form.first_name.trim()) next.first_name = 'Required';
-      if (!form.last_name.trim()) next.last_name = 'Required';
-      if (!form.email.trim()) next.email = 'Required';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = 'Invalid email';
-      if (!form.phone.trim()) next.phone = 'Required';
-      setErrors(next);
+      setErrors(profileTabFieldErrors(form));
       toast.error(msg);
       return;
     }
@@ -325,9 +361,65 @@ function ProfileTab({ initialData }: { initialData: ShipperProfile }) {
 
       {/* Contact */}
       <ProfileSection icon={Mail} title="Contact">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
           <Field label="Email address" value={form.email} onChange={set('email')} icon={Mail} type="email" placeholder="you@company.com" required error={errors.email} />
-          <Field label="Phone number"  value={form.phone} onChange={set('phone')} icon={Phone} type="tel" placeholder="+1 (555) 000-0000" required error={errors.phone} />
+          <div>
+            <Label required>Phone number</Label>
+            <div className="flex gap-2">
+              <DialCodeSelect
+                value={form.phone_country_code}
+                onChange={(code) => {
+                  setForm((f) => ({ ...f, phone_country_code: code }));
+                  setSaved(false);
+                }}
+              />
+              <div className="relative flex-1 min-w-0">
+                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]">
+                  <Phone size={14} />
+                </div>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => set('phone')(e.target.value)}
+                  placeholder="555 000 0000"
+                  aria-required
+                  aria-invalid={errors.phone ? true : undefined}
+                  className={`profile-input pl-9 ${errors.phone ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : ''}`}
+                />
+              </div>
+            </div>
+            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+            <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+              Used for SMS verification. Country code is required for international delivery.
+            </p>
+          </div>
+          <div>
+            <Label>WhatsApp</Label>
+            <div className="flex gap-2">
+              <DialCodeSelect
+                value={form.whatsapp_country_code}
+                onChange={(code) => {
+                  setForm((f) => ({ ...f, whatsapp_country_code: code }));
+                  setSaved(false);
+                }}
+              />
+              <div className="relative flex-1 min-w-0">
+                <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]">
+                  <MessageCircle size={14} />
+                </div>
+                <input
+                  type="tel"
+                  value={form.whatsapp}
+                  onChange={(e) => set('whatsapp')(e.target.value)}
+                  placeholder="Optional — same or different number"
+                  className="profile-input pl-9"
+                />
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+              Optional contact channel. No verification required.
+            </p>
+          </div>
         </div>
       </ProfileSection>
 
@@ -767,6 +859,10 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
                       toast.error('Add an email on the Profile tab and save first.');
                       return;
                     }
+                    if (!looksLikeEmail(initialData.email)) {
+                      toast.error('Fix the email format on the Profile tab before verifying.');
+                      return;
+                    }
                     resendEmail.mutate();
                   }}
                   disabled={resendEmail.isPending || !initialData.email?.trim()}
@@ -787,7 +883,7 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
                 </p>
                 <p className="text-xs text-[var(--color-text-faint)] mt-0.5">
                   {initialData.phone?.trim()
-                    ? <>SMS one-time code to <span className="text-[var(--color-text)]">{initialData.phone}</span> (Profile tab).</>
+                    ? <>SMS one-time code to <span className="text-[var(--color-text)]">{getCountry(initialData.phone_country_code || 'US').dialCode} {initialData.phone}</span> (Profile tab).</>
                     : 'Add and save a phone number on the Profile tab first.'}
                 </p>
               </div>
@@ -800,6 +896,10 @@ function BusinessTab({ initialData }: { initialData: ShipperProfile }) {
                   onClick={() => {
                     if (!initialData.phone?.trim()) {
                       toast.error('Add a phone number on the Profile tab and save first.');
+                      return;
+                    }
+                    if (!looksLikeNationalPhone(initialData.phone) && !looksLikePhone(initialData.phone)) {
+                      toast.error('Fix the phone format on the Profile tab before verifying.');
                       return;
                     }
                     sendPhone.mutate();
@@ -1427,7 +1527,14 @@ function TeamTab() {
             <div className="mt-5 flex gap-3">
               <button onClick={() => setShowInvite(false)} className="flex-1 rounded-xl border border-[var(--color-cream-dark)] py-2.5 text-sm font-semibold text-[var(--color-text-muted)] hover:border-[var(--color-teal)] transition-colors">Cancel</button>
               <button
-                onClick={() => inviteMutation.mutate()}
+                onClick={() => {
+                  const msg = validateTeamInvite(inviteEmail, inviteRole);
+                  if (msg) {
+                    toast.error(msg);
+                    return;
+                  }
+                  inviteMutation.mutate();
+                }}
                 disabled={!inviteEmail || inviteMutation.isPending}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[var(--color-teal)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-teal-dark)] disabled:opacity-60 shadow-sm transition-all">
                 {inviteMutation.isPending ? <><Loader2 size={13} className="animate-spin" /> Sending…</> : <><Send size={13} /> Send invite</>}
@@ -1585,11 +1692,11 @@ export default function ShipperProfilePage() {
         </div>
       )}
 
-      {!isLoading && profile && activeTab === 'profile'       && <ProfileTab       initialData={profile} />}
-      {!isLoading && profile && activeTab === 'business'      && <BusinessTab      initialData={profile} />}
-      {!isLoading && profile && activeTab === 'services'      && <ServicesTab      initialData={profile} />}
-      {!isLoading && profile && activeTab === 'compliance'    && <ComplianceTab    initialData={profile} />}
-      {!isLoading && profile && activeTab === 'notifications' && <NotificationsTab initialData={profile} />}
+      {!isLoading && profile && activeTab === 'profile'       && <ProfileTab       key={profile.email} initialData={profile} />}
+      {!isLoading && profile && activeTab === 'business'      && <BusinessTab      key={`biz-${profile.email}`} initialData={profile} />}
+      {!isLoading && profile && activeTab === 'services'      && <ServicesTab      key={`svc-${profile.email}`} initialData={profile} />}
+      {!isLoading && profile && activeTab === 'compliance'    && <ComplianceTab    key={`cmp-${profile.email}`} initialData={profile} />}
+      {!isLoading && profile && activeTab === 'notifications' && <NotificationsTab key={`ntf-${profile.email}`} initialData={profile} />}
       {activeTab === 'payment'       && <PaymentTab />}
       {activeTab === 'subscription'  && <SubscriptionTab />}
       {activeTab === 'team'          && <TeamTab />}

@@ -49,6 +49,9 @@ class ShipperProfileController extends Controller
             'name'          => $user->name,
             'email'         => $user->email,
             'phone'         => $profile?->phone          ?? '',
+            'phone_country_code' => $profile?->phone_country_code ?? 'US',
+            'whatsapp'      => $profile?->whatsapp       ?? '',
+            'whatsapp_country_code' => $profile?->whatsapp_country_code ?? ($profile?->phone_country_code ?? 'US'),
             'member_since'  => $user->created_at->format('M Y'),
 
             // Personal address
@@ -148,6 +151,9 @@ class ShipperProfileController extends Controller
             'name'          => ['sometimes', 'string', 'max:255'],
             'email'         => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'phone'         => ['sometimes', 'nullable', 'string', 'max:40'],
+            'phone_country_code' => ['sometimes', 'nullable', 'string', 'size:2'],
+            'whatsapp'      => ['sometimes', 'nullable', 'string', 'max:40'],
+            'whatsapp_country_code' => ['sometimes', 'nullable', 'string', 'size:2'],
 
             // Personal address
             'street'        => ['sometimes', 'nullable', 'string', 'max:200'],
@@ -225,6 +231,20 @@ class ShipperProfileController extends Controller
         $profileData = array_diff_key($profileData, ['service_type_keys' => null]);
 
         if ($profileData) {
+            // Keep E.164 in sync for SMS when phone / dial country change
+            if (array_key_exists('phone', $profileData) || array_key_exists('phone_country_code', $profileData)) {
+                $existing = ShipperProfile::where('user_id', $user->id)->first();
+                $national = $profileData['phone'] ?? $existing?->phone ?? '';
+                $cc = strtoupper($profileData['phone_country_code'] ?? $existing?->phone_country_code ?? 'US');
+                $profileData['phone_country_code'] = $cc;
+                try {
+                    $profileData['phone_e164'] = app(\App\Services\SmsOtpService::class)
+                        ->normalizeE164((string) $national, $cc);
+                } catch (\Throwable) {
+                    $profileData['phone_e164'] = null;
+                }
+            }
+
             ShipperProfile::updateOrCreate(
                 ['user_id' => $user->id],
                 array_merge($profileData, ['org_id' => $user->current_org_id])

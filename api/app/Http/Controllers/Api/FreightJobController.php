@@ -24,7 +24,7 @@ class FreightJobController extends Controller
     public function shipperIndex(Request $request): JsonResponse
     {
         $jobs = FreightJob::where('shipper_id', $request->user()->id)
-            ->with(['contract', 'stops'])
+            ->with(['contract.carrier.carrierProfile', 'carrier.carrierProfile', 'stops'])
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->status))
             ->when($request->filled('contract_id'), fn($q) => $q->where('contract_id', $request->contract_id))
             ->when($request->type === 'contracted', fn($q) => $q->whereNotNull('contract_id'))
@@ -64,12 +64,12 @@ class FreightJobController extends Controller
     {
         $this->authorise($request, $job);
         $job->load([
-            'contract',
+            'contract.carrier.carrierProfile',
             'stops.pickupItems.deliveryStop',
             'stops.deliveryItems.pickupStop',
             'stops.evidence',
             'shipper',
-            'carrier',
+            'carrier.carrierProfile',
             'offers.carrier',
         ]);
         return response()->json(['data' => $job]);
@@ -89,12 +89,12 @@ class FreightJobController extends Controller
         abort_if(!$canView, 403, 'You do not have access to this job.');
 
         $job->load([
-            'contract',
+            'contract.carrier.carrierProfile',
             'stops.pickupItems.deliveryStop',
             'stops.deliveryItems.pickupStop',
             'stops.evidence',
             'shipper',
-            'carrier',
+            'carrier.carrierProfile',
             'offers' => fn($q) => $q->where('carrier_id', $uid),
         ]);
         return response()->json(['data' => $job]);

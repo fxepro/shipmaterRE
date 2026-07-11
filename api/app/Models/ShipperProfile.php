@@ -12,7 +12,8 @@ class ShipperProfile extends Model
         'user_id',
         'org_id',
         // Personal
-        'phone', 'phone_e164', 'street', 'city', 'state', 'zip', 'country',
+        'phone', 'phone_country_code', 'phone_e164', 'street', 'city', 'state', 'zip', 'country',
+        'whatsapp', 'whatsapp_country_code',
         // Business identity
         'company_name', 'dba', 'business_type', 'ein',
         'state_of_incorporation', 'year_established', 'employee_count',

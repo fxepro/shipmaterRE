@@ -79,7 +79,7 @@ class ShipperVerificationController extends Controller
         }
 
         try {
-            $e164 = $this->sms->normalizeE164($rawPhone);
+            $e164 = $this->sms->normalizeE164((string) $rawPhone, $profile->phone_country_code);
             $result = $this->sms->send($e164, $user->id);
             $profile->update([
                 'phone'      => $rawPhone,

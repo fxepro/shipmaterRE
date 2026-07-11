@@ -5,11 +5,26 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, verificationApi, ratingApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star, ShieldCheck, ExternalLink, RefreshCw } from 'lucide-react';
+import {
+  Upload, Check, Loader2, CheckCircle, AlertCircle, Clock, Plus, Trash2, Star,
+  ShieldCheck, ExternalLink, RefreshCw, ChevronDown, MessageCircle, Phone,
+} from 'lucide-react';
 import ServiceTypeSelector from '@/components/carrier/ServiceTypeSelector';
 import CertificationSelector from '@/components/carrier/CertificationSelector';
 import { certificationApi } from '@/lib/api';
 import { FinancialTab as FinancialTabComponent } from './components/tabs/FinancialTab';
+import { COUNTRIES, getCountry } from '@/lib/countries';
+import {
+  collectCarrierFieldIssues,
+  validateCarrierPersonalForm,
+  carrierPersonalFieldErrors,
+  checkrPrereqError,
+  validateCarrierInsuranceForm,
+  validateCarrierCommercialForm,
+  validateCarrierVehicleForm,
+  type CarrierValidationIssue,
+  type CarrierProfileTabId,
+} from '@/lib/carrier-profile-validation';
 
 // ── FMCSA result type ────────────────────────────────────────────────────────
 interface FmcsaResult {
@@ -56,34 +71,113 @@ type Tab = 'personal' | 'services' | 'certifications' | 'dot' | 'financial' | 'b
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-function Label({ children }: { children: React.ReactNode }) {
+function RequiredMark() {
+  return <span className="text-red-500 font-bold" aria-hidden="true"> *</span>;
+}
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.07em] text-[var(--color-text-muted)]">
       {children}
+      {required && <RequiredMark />}
     </p>
   );
 }
 
+function DialCodeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (countryCode: string) => void;
+}) {
+  const current = getCountry(value || 'US');
+  return (
+    <div className="relative min-w-[7.5rem]">
+      <select
+        value={current.code}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full appearance-none rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3 py-2.5 pr-8 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+        aria-label="Country calling code"
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c.code} value={c.code}>
+            {c.flag} {c.dialCode}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]" />
+    </div>
+  );
+}
+
+function ValidationBanner({
+  issues,
+  onGoToTab,
+}: {
+  issues: CarrierValidationIssue[];
+  onGoToTab: (tab: CarrierProfileTabId) => void;
+}) {
+  if (issues.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+      <div className="flex items-start gap-3">
+        <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-amber-900">
+            {issues.length} required field{issues.length === 1 ? '' : 's'} need attention
+          </p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            Fields marked with <span className="text-red-500 font-bold">*</span> are required. Fix missing or invalid values below.
+          </p>
+        </div>
+      </div>
+      <ul className="space-y-1.5 pl-7">
+        {issues.map((issue) => (
+          <li key={issue.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-amber-900">
+            <span className="font-semibold">{issue.message}</span>
+            <button
+              type="button"
+              onClick={() => onGoToTab(issue.tab)}
+              className="font-semibold text-[var(--color-teal)] hover:underline"
+            >
+              Go to {issue.tab.charAt(0).toUpperCase() + issue.tab.slice(1)}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Field({
-  label, value, onChange, type = 'text', placeholder, readOnly, hint,
+  label, value, onChange, type = 'text', placeholder, readOnly, hint, required, error,
 }: {
   label: string; value: string; onChange?: (v: string) => void;
   type?: string; placeholder?: string; readOnly?: boolean; hint?: string;
+  required?: boolean; error?: string;
 }) {
   return (
     <div>
-      <Label>{label}</Label>
+      <Label required={required}>{label}</Label>
       <input
         type={type} value={value} readOnly={readOnly}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className={`w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] transition-colors
+        aria-required={required || undefined}
+        aria-invalid={error ? true : undefined}
+        className={`w-full rounded-xl border bg-[var(--color-white)] px-3.5 py-2.5 text-sm text-[var(--color-text)] transition-colors
           placeholder:text-[var(--color-text-faint)]
-          focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20
+          focus:outline-none focus:ring-2
+          ${error
+            ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20'
+            : 'border-[var(--color-cream-dark)] focus:border-[var(--color-teal)] focus:ring-[var(--color-teal)]/20'}
           ${readOnly ? 'bg-[var(--color-cream)] cursor-default text-[var(--color-text-muted)]' : ''}
         `}
       />
-      {hint && <p className="text-xs text-[var(--color-text-faint)] mt-1">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {hint && !error && <p className="text-xs text-[var(--color-text-faint)] mt-1">{hint}</p>}
     </div>
   );
 }
@@ -356,10 +450,13 @@ export default function CarrierProfilePage() {
 
   const [personalForm, setPersonalForm] = useState({
     first_name: '', middle_name: '', last_name: '', suffix: '',
-    date_of_birth: '', phone: '',
+    date_of_birth: '', phone: '', phone_country_code: 'US',
+    whatsapp: '', whatsapp_country_code: 'US',
+    company_name: '',
     street: '', city: '', state: '', zip: '',
     id_type: 'dl', dl_number: '', dl_state: '', dl_expiry: '',
   });
+  const [personalErrors, setPersonalErrors] = useState<Record<string, string>>({});
 
   const [dotForm, setDotForm] = useState({
     cdl_number: '', cdl_issuing_state: '', cdl_expiry_date: '', cdl_class: 'A',
@@ -462,6 +559,10 @@ export default function CarrierProfilePage() {
         last_name:   parts.length > 1 ? parts[parts.length - 1] : '',
         date_of_birth: profile.date_of_birth || '',
         phone:       profile.phone     || '',
+        phone_country_code: profile.phone_country_code || 'US',
+        whatsapp:    profile.whatsapp  || '',
+        whatsapp_country_code: profile.whatsapp_country_code || profile.phone_country_code || 'US',
+        company_name: profile.company_name || '',
         street:      profile.street    || '',
         city:        profile.city      || '',
         state:       profile.state     || '',
@@ -471,6 +572,7 @@ export default function CarrierProfilePage() {
         dl_state:    profile.dl_state  || '',
         dl_expiry:   profile.dl_expiry || '',
       }));
+      setPersonalErrors({});
       setDotForm({
         cdl_number: profile.cdl_number || '',
         cdl_issuing_state: profile.cdl_issuing_state || '',
@@ -568,6 +670,38 @@ export default function CarrierProfilePage() {
 
   const save = (data: any) => updateMutation.mutate(data);
 
+  const validationIssues = collectCarrierFieldIssues({
+    firstName: personalForm.first_name || undefined,
+    lastName: personalForm.last_name || undefined,
+    name: profile.name,
+    email: profile.email,
+    phone: personalForm.phone || profile.phone || '',
+    dateOfBirth: personalForm.date_of_birth || profile.date_of_birth || '',
+    street: personalForm.street || profile.street || '',
+    city: personalForm.city || profile.city || '',
+    state: personalForm.state || profile.state || '',
+    zip: personalForm.zip || profile.zip || '',
+    requiredFields: profile.required_fields ?? [],
+    autoPolicyNumber: insuranceForm.auto_policy_number || profile.auto_policy_number || '',
+    cargoPolicyNumber: insuranceForm.cargo_policy_number || profile.cargo_policy_number || '',
+    companyName: personalForm.company_name || profile.company_name || '',
+    dotNumber: dotForm.usdot_number || profile.usdot_number || profile.dot_number || '',
+    mcNumber: dotForm.mc_number || profile.mc_number || '',
+    cdlNumber: dotForm.cdl_number || profile.cdl_number || '',
+    cdlClass: dotForm.cdl_class || profile.cdl_class || '',
+    hazmatEndorsement: !!(dotForm.hazmat_endorsement ?? profile.hazmat_endorsement),
+    vehicleCount: Array.isArray(vehiclesData) ? vehiclesData.length : 0,
+  });
+
+  const checkrBlocked = checkrPrereqError({
+    first_name: personalForm.first_name || (profile.name || '').trim().split(/\s+/)[0] || '',
+    last_name: personalForm.last_name || (() => {
+      const parts = (profile.name || '').trim().split(/\s+/).filter(Boolean);
+      return parts.length > 1 ? parts[parts.length - 1] : '';
+    })(),
+    date_of_birth: personalForm.date_of_birth || profile.date_of_birth || '',
+  });
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'personal',        label: 'Personal' },
     { id: 'services',        label: 'Services' },
@@ -600,6 +734,11 @@ export default function CarrierProfilePage() {
           Manage your profile, verification documents, payments, and vehicles
         </p>
       </div>
+
+      <ValidationBanner
+        issues={validationIssues}
+        onGoToTab={(tab) => setActiveTab(tab as Tab)}
+      />
 
       {/* Profile card */}
       <div className="bg-[var(--color-white)] border border-[var(--color-cream-dark)] rounded-xl p-6 flex items-center gap-4">
@@ -695,9 +834,23 @@ export default function CarrierProfilePage() {
           <div className="space-y-6">
             <SectionTitle>Legal Name</SectionTitle>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="First Name" value={personalForm.first_name} onChange={v => setPersonalForm(p => ({...p, first_name: v}))} placeholder="John" />
+              <Field
+                label="First Name"
+                value={personalForm.first_name}
+                onChange={v => { setPersonalForm(p => ({...p, first_name: v})); setPersonalErrors(e => ({ ...e, first_name: '' })); }}
+                placeholder="John"
+                required
+                error={personalErrors.first_name}
+              />
               <Field label="Middle Name" value={personalForm.middle_name} onChange={v => setPersonalForm(p => ({...p, middle_name: v}))} placeholder="Optional" />
-              <Field label="Last Name" value={personalForm.last_name} onChange={v => setPersonalForm(p => ({...p, last_name: v}))} placeholder="Smith" />
+              <Field
+                label="Last Name"
+                value={personalForm.last_name}
+                onChange={v => { setPersonalForm(p => ({...p, last_name: v})); setPersonalErrors(e => ({ ...e, last_name: '' })); }}
+                placeholder="Smith"
+                required
+                error={personalErrors.last_name}
+              />
               <div>
                 <Label>Suffix</Label>
                 <select value={personalForm.suffix} onChange={e => setPersonalForm(p => ({...p, suffix: e.target.value}))}
@@ -711,9 +864,72 @@ export default function CarrierProfilePage() {
 
             <div className="border-t border-[var(--color-cream-dark)] pt-6">
               <SectionTitle>Contact Information</SectionTitle>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Email Address" value={profile.email} readOnly />
-                <Field label="Phone Number" value={personalForm.phone} onChange={v => setPersonalForm(p => ({...p, phone: v}))} type="tel" />
+              <div className="space-y-4">
+                <Field label="Email Address" value={profile.email} readOnly required />
+                <div>
+                  <Label required>Phone Number</Label>
+                  <div className="flex gap-2">
+                    <DialCodeSelect
+                      value={personalForm.phone_country_code}
+                      onChange={(code) => setPersonalForm(p => ({ ...p, phone_country_code: code }))}
+                    />
+                    <div className="relative flex-1 min-w-0">
+                      <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]">
+                        <Phone size={14} />
+                      </div>
+                      <input
+                        type="tel"
+                        value={personalForm.phone}
+                        onChange={(e) => {
+                          setPersonalForm(p => ({ ...p, phone: e.target.value }));
+                          setPersonalErrors(err => ({ ...err, phone: '' }));
+                        }}
+                        placeholder="555 000 0000"
+                        aria-required
+                        aria-invalid={personalErrors.phone ? true : undefined}
+                        className={`w-full rounded-xl border bg-[var(--color-white)] pl-9 pr-3.5 py-2.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 ${
+                          personalErrors.phone
+                            ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20'
+                            : 'border-[var(--color-cream-dark)] focus:border-[var(--color-teal)] focus:ring-[var(--color-teal)]/20'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  {personalErrors.phone && <p className="mt-1 text-xs text-red-600">{personalErrors.phone}</p>}
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    Local digits only — country code is selected separately.
+                  </p>
+                </div>
+                <div>
+                  <Label>WhatsApp</Label>
+                  <div className="flex gap-2">
+                    <DialCodeSelect
+                      value={personalForm.whatsapp_country_code}
+                      onChange={(code) => setPersonalForm(p => ({ ...p, whatsapp_country_code: code }))}
+                    />
+                    <div className="relative flex-1 min-w-0">
+                      <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-faint)]">
+                        <MessageCircle size={14} />
+                      </div>
+                      <input
+                        type="tel"
+                        value={personalForm.whatsapp}
+                        onChange={(e) => setPersonalForm(p => ({ ...p, whatsapp: e.target.value }))}
+                        placeholder="Optional — same or different number"
+                        className="w-full rounded-xl border border-[var(--color-cream-dark)] bg-[var(--color-white)] pl-9 pr-3.5 py-2.5 text-sm text-[var(--color-text)] focus:border-[var(--color-teal)] focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    Optional contact channel. No verification required.
+                  </p>
+                </div>
+                <Field
+                  label="Company / DBA name"
+                  value={personalForm.company_name}
+                  onChange={v => setPersonalForm(p => ({ ...p, company_name: v }))}
+                  placeholder="Optional — required for some freight authority types"
+                />
               </div>
             </div>
 
@@ -722,11 +938,39 @@ export default function CarrierProfilePage() {
               <p className="text-xs text-[var(--color-text-faint)] mb-4">Required for county-level background check</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <Field label="Street Address" value={personalForm.street} onChange={v => setPersonalForm(p => ({...p, street: v}))} placeholder="3600 Brighton Blvd" />
+                  <Field
+                    label="Street Address"
+                    value={personalForm.street}
+                    onChange={v => { setPersonalForm(p => ({...p, street: v})); setPersonalErrors(e => ({ ...e, street: '' })); }}
+                    placeholder="3600 Brighton Blvd"
+                    required
+                    error={personalErrors.street}
+                  />
                 </div>
-                <Field label="City" value={personalForm.city} onChange={v => setPersonalForm(p => ({...p, city: v}))} placeholder="Denver" />
-                <Field label="State" value={personalForm.state} onChange={v => setPersonalForm(p => ({...p, state: v}))} placeholder="CO" />
-                <Field label="ZIP Code" value={personalForm.zip} onChange={v => setPersonalForm(p => ({...p, zip: v}))} placeholder="80216" />
+                <Field
+                  label="City"
+                  value={personalForm.city}
+                  onChange={v => { setPersonalForm(p => ({...p, city: v})); setPersonalErrors(e => ({ ...e, city: '' })); }}
+                  placeholder="Denver"
+                  required
+                  error={personalErrors.city}
+                />
+                <Field
+                  label="State"
+                  value={personalForm.state}
+                  onChange={v => { setPersonalForm(p => ({...p, state: v})); setPersonalErrors(e => ({ ...e, state: '' })); }}
+                  placeholder="CO"
+                  required
+                  error={personalErrors.state}
+                />
+                <Field
+                  label="ZIP Code"
+                  value={personalForm.zip}
+                  onChange={v => { setPersonalForm(p => ({...p, zip: v})); setPersonalErrors(e => ({ ...e, zip: '' })); }}
+                  placeholder="80216"
+                  required
+                  error={personalErrors.zip}
+                />
               </div>
             </div>
 
@@ -774,7 +1018,18 @@ export default function CarrierProfilePage() {
             <div className="border-t border-[var(--color-cream-dark)] pt-6">
               <SectionTitle>Date of Birth</SectionTitle>
               <div className="max-w-xs">
-                <Field label="Date of Birth" value={personalForm.date_of_birth} onChange={v => setPersonalForm(p => ({...p, date_of_birth: v}))} type="date" />
+                <Field
+                  label="Date of Birth"
+                  value={personalForm.date_of_birth}
+                  onChange={v => {
+                    setPersonalForm(p => ({...p, date_of_birth: v}));
+                    setPersonalErrors(e => ({ ...e, date_of_birth: '' }));
+                  }}
+                  type="date"
+                  required
+                  error={personalErrors.date_of_birth}
+                  hint="Must be 18+. Required for identity verification and background check."
+                />
               </div>
             </div>
 
@@ -819,10 +1074,21 @@ export default function CarrierProfilePage() {
             </div>
 
             <SaveBar saved={saved} onSave={() => {
+              const msg = validateCarrierPersonalForm(personalForm);
+              if (msg) {
+                setPersonalErrors(carrierPersonalFieldErrors(personalForm));
+                toast.error(msg);
+                return;
+              }
+              setPersonalErrors({});
               const fullName = [personalForm.first_name, personalForm.middle_name, personalForm.last_name, personalForm.suffix].filter(Boolean).join(' ');
               save({
                 name:          fullName,
                 phone:         personalForm.phone,
+                phone_country_code: personalForm.phone_country_code,
+                whatsapp:      personalForm.whatsapp || null,
+                whatsapp_country_code: personalForm.whatsapp_country_code,
+                company_name:  personalForm.company_name || null,
                 date_of_birth: personalForm.date_of_birth,
                 street:        personalForm.street,
                 city:          personalForm.city,
@@ -1070,7 +1336,19 @@ export default function CarrierProfilePage() {
               </div>
             </div>
 
-            <SaveBar saved={saved} onSave={() => save(dotForm)} isPending={updateMutation.isPending} />
+            <SaveBar saved={saved} onSave={() => {
+              const msg = validateCarrierCommercialForm(dotForm, profile.required_fields ?? []);
+              if (msg) {
+                toast.error(msg);
+                return;
+              }
+              save({
+                ...dotForm,
+                usdot_number: dotForm.usdot_number,
+                // Keep legacy alias in sync when API still reads dot_number
+                dot_number: dotForm.usdot_number || undefined,
+              });
+            }} isPending={updateMutation.isPending} />
           </div>
         )}
 
@@ -1431,10 +1709,20 @@ export default function CarrierProfilePage() {
                   <p className="text-xs text-[var(--color-text-faint)] mt-0.5">Criminal · MVR · Sex offender registry · OFAC — results in 3–5 business days</p>
                 </div>
                 <button
-                  disabled={bgCheckLoading || !profile.name || !profile.date_of_birth}
+                  disabled={bgCheckLoading || !!checkrBlocked}
                   className="flex items-center gap-2 rounded-lg bg-[var(--color-teal)] text-white px-5 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-[var(--color-teal-light)] transition-colors"
-                  title={!profile.name || !profile.date_of_birth ? 'Complete name and date of birth in Personal tab first' : ''}
+                  title={checkrBlocked || ''}
                   onClick={async () => {
+                    const prereq = checkrPrereqError({
+                      first_name: personalForm.first_name,
+                      last_name: personalForm.last_name,
+                      date_of_birth: personalForm.date_of_birth || profile.date_of_birth || '',
+                    });
+                    if (prereq) {
+                      toast.error(prereq);
+                      setActiveTab('personal');
+                      return;
+                    }
                     setBgCheckLoading(true);
                     try {
                       const res = await verificationApi.initiateBackgroundCheck();
@@ -1525,7 +1813,20 @@ export default function CarrierProfilePage() {
               </div>
             </div>
 
-            <SaveBar saved={insuranceSaved} onSave={() => insuranceMutation.mutate()} isPending={insuranceMutation.isPending} />
+            <SaveBar saved={insuranceSaved} onSave={() => {
+              const msg = validateCarrierInsuranceForm(
+                {
+                  auto_policy_number: insuranceForm.auto_policy_number,
+                  cargo_policy_number: insuranceForm.cargo_policy_number,
+                },
+                profile.required_fields ?? [],
+              );
+              if (msg) {
+                toast.error(msg);
+                return;
+              }
+              insuranceMutation.mutate();
+            }} isPending={insuranceMutation.isPending} />
           </div>
         )}
 
@@ -1697,8 +1998,9 @@ export default function CarrierProfilePage() {
                 <div className="flex gap-3 pt-2 border-t border-[var(--color-cream-dark)]">
                   <button
                     onClick={() => {
-                      if (!vehicleForm.year || !vehicleForm.make || !vehicleForm.model) {
-                        toast.error('Year, make and model are required');
+                      const msg = validateCarrierVehicleForm(vehicleForm);
+                      if (msg) {
+                        toast.error(msg);
                         return;
                       }
                       const { id, ...data } = vehicleForm;

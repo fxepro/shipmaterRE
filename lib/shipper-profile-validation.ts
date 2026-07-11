@@ -1,4 +1,16 @@
-/** Customer-facing shipper profile validation (matches Resources Manual matrix). */
+/** Customer-facing shipper profile validation (matches Resources Manual matrices). */
+
+import {
+  blank,
+  looksLikeEmail,
+  looksLikeNationalPhone,
+  looksLikePhone,
+  looksLikeEin,
+  looksLikeRoutingNumber,
+  looksLikeCardNumber,
+  looksLikeCardExpiry,
+  looksLikeCvv,
+} from '@/lib/profile-field-formats';
 
 export type ProfileTabId =
   | 'profile'
@@ -30,19 +42,16 @@ export interface ProfileValidationInput {
   taxIdType?: string;
 }
 
-function blank(v: string | undefined | null) {
-  return !String(v ?? '').trim();
-}
-
-function looksLikeEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-}
-
-/** US EIN: 9 digits, optional XX-XXXXXXX formatting. */
-export function looksLikeEin(v: string) {
-  const digits = v.replace(/\D/g, '');
-  return digits.length === 9;
-}
+export {
+  looksLikeEmail,
+  looksLikeNationalPhone,
+  looksLikePhone,
+  looksLikeEin,
+  looksLikeRoutingNumber,
+  looksLikeCardNumber,
+  looksLikeCardExpiry,
+  looksLikeCvv,
+};
 
 /**
  * Banner issues only: missing required fields or bad format.
@@ -87,7 +96,7 @@ export function collectFieldIssues(p: ProfileValidationInput): ValidationIssue[]
       id: 'email_format',
       tab: 'profile',
       field: 'Email',
-      message: 'Enter a valid email address on the Profile tab.',
+      message: 'Enter a valid email (for example you@company.com) on the Profile tab.',
       blocking: true,
     });
   }
@@ -97,6 +106,14 @@ export function collectFieldIssues(p: ProfileValidationInput): ValidationIssue[]
       tab: 'profile',
       field: 'Phone',
       message: 'Phone number is required on the Profile tab.',
+      blocking: true,
+    });
+  } else if (!looksLikeNationalPhone(p.phone) && !looksLikePhone(p.phone)) {
+    issues.push({
+      id: 'phone_format',
+      tab: 'profile',
+      field: 'Phone',
+      message: 'Enter a valid phone number (local digits) on the Profile tab.',
       blocking: true,
     });
   }
@@ -145,9 +162,30 @@ export function validateProfileTabForm(form: {
   if (blank(form.first_name)) return 'First name is required.';
   if (blank(form.last_name)) return 'Last name is required.';
   if (blank(form.email)) return 'Email is required.';
-  if (!looksLikeEmail(form.email)) return 'Enter a valid email address.';
+  if (!looksLikeEmail(form.email)) return 'Enter a valid email (for example you@company.com).';
   if (blank(form.phone)) return 'Phone number is required.';
+  if (!looksLikeNationalPhone(form.phone) && !looksLikePhone(form.phone)) {
+    return 'Enter a valid phone number (local digits for your country code).';
+  }
   return null;
+}
+
+export function profileTabFieldErrors(form: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+}): Record<string, string> {
+  const next: Record<string, string> = {};
+  if (blank(form.first_name)) next.first_name = 'Required';
+  if (blank(form.last_name)) next.last_name = 'Required';
+  if (blank(form.email)) next.email = 'Required';
+  else if (!looksLikeEmail(form.email)) next.email = 'Invalid email format';
+  if (blank(form.phone)) next.phone = 'Required';
+  else if (!looksLikeNationalPhone(form.phone) && !looksLikePhone(form.phone)) {
+    next.phone = 'Invalid phone format';
+  }
+  return next;
 }
 
 export function validateBusinessTabForm(form: {
@@ -162,5 +200,38 @@ export function validateBusinessTabForm(form: {
   if ((form.tax_id_type || 'EIN').toUpperCase() === 'EIN' && !looksLikeEin(tax)) {
     return 'EIN must be 9 digits (for example 12-3456789).';
   }
+  return null;
+}
+
+export function validateTeamInvite(email: string, role: string): string | null {
+  if (blank(email)) return 'Invite email is required.';
+  if (!looksLikeEmail(email)) return 'Enter a valid invite email (for example name@company.com).';
+  if (blank(role)) return 'Select a role for the invite.';
+  return null;
+}
+
+export function validateAddCardForm(form: {
+  number: string;
+  name: string;
+  expiry: string;
+  cvc: string;
+}): string | null {
+  if (blank(form.name)) return 'Cardholder name is required.';
+  if (!looksLikeCardNumber(form.number)) return 'Enter a valid card number (13–19 digits).';
+  if (!looksLikeCardExpiry(form.expiry)) return 'Enter expiry as MM/YY.';
+  if (!looksLikeCvv(form.cvc)) return 'Enter a valid CVV (3–4 digits).';
+  return null;
+}
+
+export function validateAddBankForm(form: {
+  holder: string;
+  routing: string;
+  account: string;
+  confirm: string;
+}): string | null {
+  if (blank(form.holder) || form.holder.trim().length < 2) return 'Account holder name is required.';
+  if (!looksLikeRoutingNumber(form.routing)) return 'Routing number must be 9 digits.';
+  if (form.account.replace(/\D/g, '').length < 4) return 'Account number must be at least 4 digits.';
+  if (form.account !== form.confirm) return 'Account numbers do not match.';
   return null;
 }

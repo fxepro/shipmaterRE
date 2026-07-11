@@ -218,13 +218,18 @@ class StripeConnectController extends Controller
 
                 // Auto-trigger Checkr background check
                 $user = $profile->user;
-                if ($user && !$profile->checkr_candidate_id) {
-                    $parts     = explode(' ', trim($user->name), 2);
+                if ($user && !$profile->checkr_candidate_id && $profile->date_of_birth) {
+                    $parts     = preg_split('/\s+/', trim((string) $user->name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                    $firstName = $parts[0] ?? '';
+                    $lastName  = count($parts) > 1 ? $parts[count($parts) - 1] : '';
+                    if ($firstName === '' || $lastName === '') {
+                        return;
+                    }
                     $candidate = $this->checkr->createCandidate([
-                        'first_name' => $parts[0],
-                        'last_name'  => $parts[1] ?? '',
+                        'first_name' => $firstName,
+                        'last_name'  => $lastName,
                         'email'      => $user->email,
-                        'dob'        => $profile->date_of_birth?->format('Y-m-d'),
+                        'dob'        => $profile->date_of_birth->format('Y-m-d'),
                     ]);
 
                     if ($candidate) {

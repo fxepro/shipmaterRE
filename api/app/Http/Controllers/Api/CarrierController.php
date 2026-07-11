@@ -36,7 +36,7 @@ class CarrierController extends Controller
             'completion_percentage'   => $completion,
 
             // Personal
-            'date_of_birth'           => $profile?->date_of_birth,
+            'date_of_birth'           => $profile?->date_of_birth?->toDateString(),
             'ssn_last_4'              => $profile?->ssn_last_4,
             'photo_url'               => $profile?->photo_url,
 
@@ -92,6 +92,10 @@ class CarrierController extends Controller
                                             ?->expires_at?->toDateString(),
             'company_name'            => $profile?->company_name ?? '',
             'phone'                   => $profile?->phone ?? '',
+            'phone_country_code'      => $profile?->phone_country_code ?? 'US',
+            'whatsapp'                => $profile?->whatsapp ?? '',
+            'whatsapp_country_code'   => $profile?->whatsapp_country_code
+                ?? ($profile?->phone_country_code ?? 'US'),
 
             // Medical
             'medical_examiner_name'   => $profile?->medical_examiner_name,
@@ -319,6 +323,9 @@ class CarrierController extends Controller
             'dot_number'            => ['sometimes', 'nullable', 'string', 'max:20'],
             'company_name'          => ['sometimes', 'nullable', 'string', 'max:200'],
             'phone'                 => ['sometimes', 'nullable', 'string', 'max:40'],
+            'phone_country_code'    => ['sometimes', 'nullable', 'string', 'size:2'],
+            'whatsapp'              => ['sometimes', 'nullable', 'string', 'max:40'],
+            'whatsapp_country_code' => ['sometimes', 'nullable', 'string', 'size:2'],
             'street'                => ['sometimes', 'nullable', 'string', 'max:255'],
             'city'                  => ['sometimes', 'nullable', 'string', 'max:100'],
             'state'                 => ['sometimes', 'nullable', 'string', 'max:2'],
@@ -371,8 +378,36 @@ class CarrierController extends Controller
         if (isset($profileData['date_of_birth']) && $profileData['date_of_birth']) {
             $dob = \Carbon\Carbon::parse($profileData['date_of_birth']);
             $isAdult = $dob->age >= 18;
-            $profileData['age_verified']    = $isAdult;
-            $profileData['age_verified_at'] = $isAdult ? now() : null;
+            if (! $isAdult) {
+                return response()->json([
+                    'message' => 'You must be 18 or older.',
+                    'errors'  => ['date_of_birth' => ['You must be 18 or older.']],
+                ], 422);
+            }
+            $profileData['age_verified']    = true;
+            $profileData['age_verified_at'] = now();
+        }
+
+        // Build E.164 from national phone + country dial code
+        if (array_key_exists('phone', $profileData) || array_key_exists('phone_country_code', $profileData)) {
+            $existing = $user->carrierProfile;
+            $national = $profileData['phone'] ?? $existing?->phone ?? '';
+            $cc = strtoupper($profileData['phone_country_code'] ?? $existing?->phone_country_code ?? 'US');
+            $profileData['phone_country_code'] = $cc;
+            if ($national !== '' && $national !== null) {
+                try {
+                    $profileData['phone_e164'] = app(\App\Services\SmsOtpService::class)
+                        ->normalizeE164((string) $national, $cc);
+                } catch (\Throwable) {
+                    $profileData['phone_e164'] = null;
+                }
+            } else {
+                $profileData['phone_e164'] = null;
+            }
+        }
+
+        if (array_key_exists('whatsapp_country_code', $profileData) && $profileData['whatsapp_country_code']) {
+            $profileData['whatsapp_country_code'] = strtoupper($profileData['whatsapp_country_code']);
         }
 
         // Update profile table fields

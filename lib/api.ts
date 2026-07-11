@@ -193,6 +193,13 @@ export const freightJobApi = {
   optimise:    (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/optimise`),
   saveBilling: (id: number, data: Record<string, unknown>) => api.patch(`/api/v1/shipper/freight-jobs/${id}/billing`, data),
   post:        (id: number)                       => api.post(`/api/v1/shipper/freight-jobs/${id}/post`),
+  /** PDF docs — must use blob + Bearer (plain <a> links return JSON 401). */
+  rateConfirmation: (id: number) =>
+    api.get(`/api/v1/jobs/${id}/rate-confirmation`, { responseType: 'blob', headers: { Accept: 'application/pdf' } }),
+  bol: (id: number) =>
+    api.get(`/api/v1/jobs/${id}/bol`, { responseType: 'blob', headers: { Accept: 'application/pdf' } }),
+  invoice: (id: number) =>
+    api.get(`/api/v1/jobs/${id}/invoice`, { responseType: 'blob', headers: { Accept: 'application/pdf' } }),
   // Carrier
   carrierList: (params?: Record<string, unknown>) => api.get('/api/v1/carrier/freight-jobs', { params }),
   carrierGet:  (id: number)                       => api.get(`/api/v1/carrier/freight-jobs/${id}`),

@@ -161,16 +161,73 @@ class SmsOtpService
         return true;
     }
 
-    public function normalizeE164(string $phone): string
+    public function normalizeE164(string $phone, ?string $countryCode = null): string
     {
-        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        $trimmed = trim($phone);
+        $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
+
+        // Already includes country digits via leading +
+        if (str_starts_with($trimmed, '+')) {
+            if (strlen($digits) < 10 || strlen($digits) > 15) {
+                throw new RuntimeException('Enter a valid phone number including country code.');
+            }
+
+            return '+'.$digits;
+        }
+
+        // Strip leading 0 from national numbers (common internationally)
+        $national = ltrim($digits, '0');
+
+        $dial = $this->dialDigitsForCountry($countryCode);
+        if ($dial !== '') {
+            // Avoid double-prefix if user pasted full international digits
+            if (! str_starts_with($national, $dial)) {
+                $national = $dial.$national;
+            }
+            if (strlen($national) < 10 || strlen($national) > 15) {
+                throw new RuntimeException('Enter a valid phone number for the selected country.');
+            }
+
+            return '+'.$national;
+        }
+
+        // Legacy fallback: 10-digit → +1 (US/CA)
         if (strlen($digits) === 10) {
-            $digits = '1'.$digits;
+            return '+1'.$digits;
+        }
+        if (strlen($digits) === 11 && str_starts_with($digits, '1')) {
+            return '+'.$digits;
         }
         if (strlen($digits) < 10 || strlen($digits) > 15) {
             throw new RuntimeException('Enter a valid phone number including country code.');
         }
+
         return '+'.$digits;
+    }
+
+    /** ISO country → dial digits without +. */
+    private function dialDigitsForCountry(?string $countryCode): string
+    {
+        if (! $countryCode) {
+            return '';
+        }
+        static $map = [
+            'US' => '1', 'CA' => '1', 'MX' => '52',
+            'GB' => '44', 'DE' => '49', 'FR' => '33', 'NL' => '31', 'PL' => '48',
+            'ES' => '34', 'IT' => '39', 'SE' => '46', 'NO' => '47', 'CH' => '41',
+            'AT' => '43', 'BE' => '32', 'DK' => '45', 'FI' => '358', 'PT' => '351',
+            'CZ' => '420', 'RO' => '40', 'HU' => '36', 'UA' => '380', 'TR' => '90',
+            'AU' => '61', 'NZ' => '64', 'IN' => '91', 'JP' => '81', 'CN' => '86',
+            'SG' => '65', 'AE' => '971', 'SA' => '966', 'IL' => '972', 'KR' => '82',
+            'ID' => '62', 'PH' => '63', 'MY' => '60', 'TH' => '66', 'VN' => '84',
+            'PK' => '92', 'BD' => '880',
+            'BR' => '55', 'AR' => '54', 'CL' => '56', 'CO' => '57', 'PE' => '51',
+            'VE' => '58', 'GT' => '502',
+            'ZA' => '27', 'NG' => '234', 'EG' => '20', 'KE' => '254', 'MA' => '212',
+            'GH' => '233', 'ET' => '251',
+        ];
+
+        return $map[strtoupper($countryCode)] ?? '';
     }
 
     private function cacheKey(int $userId, string $phone): string

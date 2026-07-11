@@ -7,8 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Package, Truck } from 'lucide-react';
-import { authApi, setStoredToken } from '@/lib/api';
-import { getRolePath } from '@/lib/auth';
+import { authApi } from '@/lib/api';
+import { establishSession, getRolePath } from '@/lib/auth';
 import { getTenantConfigClient, type TenantConfig } from '@/lib/tenant';
 
 const B = {
@@ -91,7 +91,7 @@ export default function RegisterPage() {
     try {
       const res = await authApi.register(data);
       const { token } = res.data as { token: string };
-      setStoredToken(token);
+      establishSession(token);
       router.replace(getRolePath(data.role));
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;

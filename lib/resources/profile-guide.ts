@@ -24,11 +24,10 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Your personal contact details and shipping defaults. Email and phone saved here are what verification uses on the Business tab—save before you verify.',
     bullets: [
-      'Update legal name (first, middle, last, suffix)',
-      'Set email and phone for your login contact',
-      'Save a default ship-from address for new shipments',
-      'Set default pickup contact name and phone',
-      'Define an internal reference format (PO, job code, cost center)',
+      'Required: first name, last name, email, phone (with country code)',
+      'Optional: middle name, suffix, WhatsApp, ship-from address, pickup contact, internal ref format',
+      'Email format must look like you@company.com (short domain ending)',
+      'Phone: local digits only (6–12); country code is selected separately',
     ],
   },
   {
@@ -37,11 +36,10 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Your company identity, addresses, and verification. Complete company details here, then verify email, phone, and business so partners can trust your account.',
     bullets: [
-      'Enter legal business name, DBA, type, and industry',
-      'Add tax ID type and number (for example EIN in the US)',
-      'Set operating currency and company contact details',
-      'Save registered and operating addresses',
-      'Verify email, phone, and business (see validation matrix below)',
+      'Required: legal business name and tax ID (EIN must be 9 digits in the US)',
+      'Optional: DBA, type, industry, currency, addresses, company contacts',
+      'Upload W-9 (or equivalent) before submitting business for review',
+      'Verify email and phone first — those actions toast if contact data is missing',
     ],
   },
   {
@@ -50,8 +48,8 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Tell the platform what kinds of freight you ship so carrier matching and search stay relevant to your business.',
     bullets: [
-      'Select all service types your company ships',
-      'Save to improve carrier matching and filters',
+      'Optional: select all service types your company ships',
+      'No required fields — save whenever you update selections',
     ],
   },
   {
@@ -60,9 +58,8 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Optional documents some loads or partners may require. Upload files and track expiry dates so you are not caught with an expired certificate.',
     bullets: [
-      'Upload Certificate of Insurance (COI) and set expiry',
-      'Upload HIPAA BAA when healthcare-related shipments apply',
-      'Upload HazMat shipper registration when you ship regulated hazmat',
+      'Optional unless a partner or load type asks for them',
+      'COI, HIPAA BAA, and HazMat registration with expiry dates',
       'Renew before expiry — you are alerted about 30 days out',
     ],
   },
@@ -72,10 +69,10 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Saved ways to pay for freight. Cards and bank accounts live here; invoice history lives under Financials → Payments.',
     bullets: [
-      'Add a credit or debit card',
-      'Add a bank account for ACH, or connect a bank securely',
-      'Set a default payment method',
-      'Remove methods you no longer use',
+      'Not in the page banner — validated when you add a method',
+      'Card: name, 13–19 digit number, MM/YY expiry, 3–4 digit CVV',
+      'Bank: holder name, 9-digit routing, account (≥4 digits) with confirm match',
+      'You can also connect a bank securely via Plaid',
     ],
   },
   {
@@ -84,10 +81,8 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Your plan and billing cycle for the workspace—what is included, when you are charged next, and options to change or cancel.',
     bullets: [
-      'See your current plan and next billing date',
-      'Compare monthly and yearly billing',
-      'Review what the plan includes',
-      'Cancel at the end of the current billing period if needed',
+      'No required profile fields',
+      'See plan, billing cycle, and cancel options here',
     ],
   },
   {
@@ -96,8 +91,7 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Choose which shipment events reach you by email or text so you stay informed without unnecessary noise.',
     bullets: [
-      'Toggle email alerts (carrier assigned, pickup, in transit, delivered, disputes, weekly summary, news)',
-      'Toggle SMS alerts for the same operational events',
+      'Optional toggles for email and SMS events',
       'Save preferences so they apply going forward',
     ],
   },
@@ -107,10 +101,9 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
     summary:
       'Invite coworkers to your organization and manage roles so the right people can post jobs, pay, or view only.',
     bullets: [
-      'Invite teammates by email',
-      'Assign roles (owner, admin, dispatcher, viewer, and similar)',
-      'Update or remove member access',
-      'Track pending invitations',
+      'Invite requires a valid email and a role (admin, dispatcher, viewer, …)',
+      'Invalid invite emails are blocked with a toast — not listed in the page banner',
+      'Update or remove member access anytime',
     ],
   },
 ];
@@ -119,24 +112,24 @@ export const SHIPPER_PROFILE_TABS: GuideSection[] = [
 export const SHIPPER_VERIFICATION_MATRIX: GuideMatrix = {
   title: 'Verification checklist',
   description:
-    'Complete these in order. Email and phone use the contact values saved on the Profile tab. Business review needs company details and a tax form on the Business tab.',
+    'Complete these in order. Email and phone use the contact values saved on the Profile tab. Business review needs company details and a tax form on the Business tab. Failures toast when you click the action — they are not listed in the amber banner.',
   columns: ['Step', 'Required first', 'What you do', 'When it is done'],
   rows: [
     [
       'Email',
-      'Email saved on Profile tab',
+      'Valid email saved on Profile tab',
       'Send verification email → open the link in your inbox (check spam)',
       'Badge shows Verified',
     ],
     [
       'Phone',
-      'Phone saved on Profile tab',
+      'Valid phone + country code saved on Profile tab',
       'Send code by text → enter the code on Business tab',
       'Badge shows Verified',
     ],
     [
       'Business',
-      'Email verified; legal business name and tax ID saved; W-9 (or equivalent tax form) uploaded',
+      'Email verified; legal business name and tax ID saved; W-9 (or equivalent) uploaded',
       'Submit for review on Business tab',
       'In review → Verified after platform approval',
     ],
@@ -147,16 +140,45 @@ export const SHIPPER_VERIFICATION_MATRIX: GuideMatrix = {
 export const SHIPPER_REQUIREMENTS_MATRIX: GuideMatrix = {
   title: 'What is required where',
   description:
-    'Use this when something is blocked or a badge stays “Not verified.”',
-  columns: ['Item', 'Where to enter it', 'Needed for'],
+    'Use this when something is blocked or a badge stays “Not verified.” The amber banner at the top of Account Settings only lists missing or invalid data fields.',
+  columns: ['Item', 'Where', 'Rule', 'Shown in'],
   rows: [
-    ['Email address', 'Profile tab', 'Email verification; business submit'],
-    ['Phone number', 'Profile tab', 'Phone verification'],
-    ['Legal business name', 'Business tab', 'Business verification'],
-    ['Tax ID (e.g. EIN)', 'Business tab', 'Business verification'],
-    ['W-9 or equivalent tax form', 'Business tab (upload)', 'Business verification'],
-    ['Articles of incorporation', 'Business tab (upload)', 'Optional support document'],
-    ['Payment card or bank', 'Payment tab', 'Paying freight charges'],
-    ['COI / HIPAA / HazMat docs', 'Compliance tab', 'Specific shipment types or partners'],
+    ['First name', 'Profile', 'Required', 'Banner + save'],
+    ['Last name', 'Profile', 'Required', 'Banner + save'],
+    ['Email', 'Profile', 'Required; valid format (e.g. you@company.com)', 'Banner + save'],
+    ['Phone', 'Profile', 'Required; 6–12 local digits + country code', 'Banner + save'],
+    ['WhatsApp', 'Profile', 'Optional; no verification', '—'],
+    ['Legal business name', 'Business', 'Required', 'Banner + save'],
+    ['Tax ID / EIN', 'Business', 'Required; EIN = 9 digits', 'Banner + save'],
+    ['W-9 / tax form', 'Business (upload)', 'Required to submit business', 'Toast on submit'],
+    ['Service types', 'Services', 'Optional', '—'],
+    ['COI / HIPAA / HazMat', 'Compliance', 'Optional / partner-specific', '—'],
+    ['Card / bank', 'Payment', 'Validated when adding', 'Toast on add'],
+    ['Invite email + role', 'Team', 'Required to send invite; valid email', 'Toast on invite'],
+  ],
+};
+
+/** How validation behaves across the page. */
+export const SHIPPER_VALIDATION_BEHAVIOR_MATRIX: GuideMatrix = {
+  title: 'How validation works',
+  description:
+    'Three layers keep the page clear: a banner for missing data, save blockers on each tab, and toasts for verification or add-method actions.',
+  columns: ['Layer', 'When it appears', 'What it covers'],
+  rows: [
+    [
+      'Amber banner',
+      'While browsing any Account Settings tab',
+      'Missing or invalid Profile + Business fields only',
+    ],
+    [
+      'Save on tab',
+      'When you click Save',
+      'Blocks save; shows inline errors and a toast',
+    ],
+    [
+      'Action toast',
+      'When you click Verify / Submit / Invite / Add card or bank',
+      'Email, SMS, W-9 submit, team invite, payment method rules',
+    ],
   ],
 };

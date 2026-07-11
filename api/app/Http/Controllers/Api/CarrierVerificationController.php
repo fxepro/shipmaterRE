@@ -144,9 +144,19 @@ class CarrierVerificationController extends Controller
         $user    = $request->user();
         $profile = $user->carrierProfile;
 
-        if (!$profile || !$user->name || !$profile->date_of_birth) {
+        $parts = preg_split('/\s+/', trim((string) $user->name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $firstName = $parts[0] ?? '';
+        $lastName  = count($parts) > 1 ? $parts[count($parts) - 1] : '';
+
+        if (!$profile || !$firstName || !$lastName || !$profile->date_of_birth) {
             return response()->json([
-                'error' => 'Complete your name and date of birth in the Personal tab before running a background check.',
+                'error' => 'Complete your first name, last name, and date of birth in the Personal tab before running a background check.',
+            ], 422);
+        }
+
+        if ($profile->date_of_birth->age < 18) {
+            return response()->json([
+                'error' => 'You must be 18 or older to run a background check.',
             ], 422);
         }
 
@@ -154,10 +164,9 @@ class CarrierVerificationController extends Controller
         $candidateId = $profile->checkr_candidate_id;
 
         if (!$candidateId) {
-            $parts     = explode(' ', trim($user->name), 2);
             $candidate = $this->checkr->createCandidate([
-                'first_name' => $parts[0],
-                'last_name'  => $parts[1] ?? '',
+                'first_name' => $firstName,
+                'last_name'  => $lastName,
                 'email'      => $user->email,
                 'dob'        => $profile->date_of_birth->format('Y-m-d'),
             ]);

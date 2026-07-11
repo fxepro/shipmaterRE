@@ -1,6 +1,13 @@
 import { authApi, setStoredToken, clearStoredToken, getStoredToken } from './api';
 import { getDemoUser, clearDemoUser } from './demo';
+import { queryClient } from './queryClient';
 import type { User } from '@/types/user';
+
+/** Clear demo leftovers + React Query cache whenever a real session starts or ends. */
+export function resetClientSession(): void {
+  clearDemoUser();
+  queryClient.clear();
+}
 
 export async function getUser(): Promise<User | null> {
   // Real token takes priority — if a Sanctum token is stored, use it.
@@ -11,6 +18,8 @@ export async function getUser(): Promise<User | null> {
     try {
       const res = await authApi.me();
       const user = res.data.data as User;
+      // Stale demo cookie must not outlive a real login
+      clearDemoUser();
       console.log('[auth] me() OK – user:', user?.email, 'role:', user?.role);
       return user;
     } catch (e: unknown) {
@@ -38,15 +47,28 @@ export async function login(email: string, password: string): Promise<User> {
   console.log('[auth] login raw response:', res.data);
   const { token, data } = res.data as { token: string; data: User };
   console.log('[auth] token received:', token ? `${token.slice(0, 30)}…` : 'MISSING');
+  if (!token) {
+    throw new Error('Login succeeded but no token was returned.');
+  }
+  resetClientSession();
   setStoredToken(token);
   console.log('[auth] token stored. Reading back:', getStoredToken()?.slice(0, 30));
   return data;
 }
 
+/** Persist a register/login token and wipe prior user/demo cache. */
+export function establishSession(token: string): void {
+  if (!token || token === 'undefined' || token === 'null') {
+    throw new Error('No auth token returned.');
+  }
+  resetClientSession();
+  setStoredToken(token);
+}
+
 export async function logout(): Promise<void> {
-  clearDemoUser();
   try { await authApi.logout(); } catch { /* ignore */ }
   clearStoredToken();
+  resetClientSession();
   console.log('[auth] logged out – token cleared');
 }
 

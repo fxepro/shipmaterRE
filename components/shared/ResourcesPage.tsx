@@ -8,9 +8,16 @@ import {
   SHIPPER_PROFILE_TABS,
   SHIPPER_VERIFICATION_MATRIX,
   SHIPPER_REQUIREMENTS_MATRIX,
+  SHIPPER_VALIDATION_BEHAVIOR_MATRIX,
   type GuideMatrix,
   type GuideSection,
 } from '@/lib/resources/profile-guide';
+import {
+  CARRIER_PROFILE_TABS,
+  CARRIER_VERIFICATION_MATRIX,
+  CARRIER_REQUIREMENTS_MATRIX,
+  CARRIER_VALIDATION_BEHAVIOR_MATRIX,
+} from '@/lib/resources/carrier-profile-guide';
 
 type ResourcesTab = 'manual' | 'library';
 
@@ -18,31 +25,44 @@ function basePath(audience: ManualAudience) {
   return audience === 'shipper' ? '/shipper/resources' : '/carrier/resources';
 }
 
+function resolveGuide(guideKey: string | undefined) {
+  if (guideKey === 'shipper-profile') {
+    return {
+      sections: SHIPPER_PROFILE_TABS,
+      matrices: [
+        SHIPPER_VALIDATION_BEHAVIOR_MATRIX,
+        SHIPPER_VERIFICATION_MATRIX,
+        SHIPPER_REQUIREMENTS_MATRIX,
+      ],
+    };
+  }
+  if (guideKey === 'carrier-profile') {
+    return {
+      sections: CARRIER_PROFILE_TABS,
+      matrices: [
+        CARRIER_VALIDATION_BEHAVIOR_MATRIX,
+        CARRIER_VERIFICATION_MATRIX,
+        CARRIER_REQUIREMENTS_MATRIX,
+      ],
+    };
+  }
+  return null;
+}
+
+/** Prefer explicit guideKey; fall back by audience + Account topic so tables always show. */
+function guideKeyForTopic(audience: ManualAudience, topic: ManualTopic): string | undefined {
+  const fromSub = topic.subtopics.find((s) => s.guideKey)?.guideKey;
+  if (fromSub) return fromSub;
+  if (topic.slug === 'account') {
+    return audience === 'carrier' ? 'carrier-profile' : 'shipper-profile';
+  }
+  return undefined;
+}
+
 function GuideBody({ sections, matrices }: { sections: GuideSection[]; matrices: GuideMatrix[] }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sections.map((s) => (
-          <section
-            key={s.id}
-            id={s.id}
-            className="scroll-mt-6 rounded-xl border border-[var(--color-cream-dark)] bg-white overflow-hidden flex flex-col"
-          >
-            <div className="card-head card-head-tint px-5 py-3">
-              <h3 className="text-sm font-semibold text-[var(--color-text)]">{s.title}</h3>
-            </div>
-            <div className="px-5 py-4 space-y-3 flex-1">
-              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{s.summary}</p>
-              <ul className="list-disc pl-4 space-y-1 text-sm text-[var(--color-text)]">
-                {s.bullets.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        ))}
-      </div>
-
+      {/* Matrices first — tables are the lookup users need; tab cards follow */}
       {matrices.map((m) => (
         <section
           key={m.title}
@@ -93,19 +113,33 @@ function GuideBody({ sections, matrices }: { sections: GuideSection[]; matrices:
           </div>
         </section>
       ))}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sections.map((s) => (
+          <section
+            key={s.id}
+            id={s.id}
+            className="scroll-mt-6 rounded-xl border border-[var(--color-cream-dark)] bg-white overflow-hidden flex flex-col"
+          >
+            <div className="card-head card-head-tint px-5 py-3">
+              <h3 className="text-sm font-semibold text-[var(--color-text)]">{s.title}</h3>
+            </div>
+            <div className="px-5 py-4 space-y-3 flex-1">
+              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{s.summary}</p>
+              <ul className="list-disc pl-4 space-y-1 text-sm text-[var(--color-text)]">
+                {s.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
 
 function SubtopicCard({ sub }: { sub: ManualSubtopic }) {
-  const guide =
-    sub.guideKey === 'shipper-profile'
-      ? {
-          sections: SHIPPER_PROFILE_TABS,
-          matrices: [SHIPPER_VERIFICATION_MATRIX, SHIPPER_REQUIREMENTS_MATRIX],
-        }
-      : null;
-
   return (
     <div className="space-y-4">
       <section
@@ -132,7 +166,6 @@ function SubtopicCard({ sub }: { sub: ManualSubtopic }) {
           </ul>
         </div>
       </section>
-      {guide && <GuideBody sections={guide.sections} matrices={guide.matrices} />}
     </div>
   );
 }
@@ -190,7 +223,8 @@ export function ResourcesTopicDetail({
   const topics = topicsFor(audience);
   const base = basePath(audience);
   const Icon = topic.icon;
-  const hasRichGuide = topic.subtopics.some((s) => s.guideKey);
+  const guide = resolveGuide(guideKeyForTopic(audience, topic));
+  const hasRichGuide = !!guide;
 
   return (
     <ResourcesShell audience={audience} tab="manual">
@@ -231,10 +265,19 @@ export function ResourcesTopicDetail({
             </div>
           </div>
 
+          {guide && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-[var(--color-slate)] px-0.5">
+                Validation &amp; requirements
+              </h3>
+              <GuideBody sections={guide.sections} matrices={guide.matrices} />
+            </div>
+          )}
+
           {topic.subtopics.length > 0 && (
             <div className={hasRichGuide ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 gap-4'}>
               {topic.subtopics.map((sub) =>
-                sub.guideKey ? (
+                sub.guideKey || hasRichGuide ? (
                   <SubtopicCard key={sub.id} sub={sub} />
                 ) : (
                   <section

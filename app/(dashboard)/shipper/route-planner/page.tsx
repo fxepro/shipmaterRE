@@ -9,30 +9,43 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { optimizeRoute, reorderBySequence } from '@/lib/route-optimize';
+import {
+  LocationSearch,
+  formatLocationLine,
+  type LocationOption,
+} from '@/components/shipper/LocationSearch';
+import { savePlannerHandoff, type PlannerStopRole } from '@/lib/route-planner-handoff';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Stop {
   id: string;
   address: string;
+  role: PlannerStopRole;
   lat?: number;
   lng?: number;
-  resolved?: string; // display name from geocoder
+  city?: string;
+  state?: string;
+  zip?: string;
+  resolved?: string;
+  locationId?: number;
+  locationName?: string;
   error?: boolean;
 }
 
 interface RouteLeg {
   fromLabel: string;
   toLabel: string;
-  distance: number; // metres
-  duration: number; // seconds
+  distance: number;
+  duration: number;
 }
 
 interface RouteResult {
   legs: RouteLeg[];
-  totalDistance: number; // metres
-  totalDuration: number; // seconds
-  geometry: [number, number][]; // [lng, lat][]
+  totalDistance: number;
+  totalDuration: number;
+  geometry: [number, number][];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,35 +62,160 @@ function fmtDuration(secs: number) {
   return `${h}h ${m}m`;
 }
 
-function stopLabel(index: number, total: number) {
-  if (index === 0) return 'Origin';
-  if (index === total - 1 && total > 2) return 'Final stop';
-  return `Stop ${index}`;
-}
-
 function markerLetter(index: number) {
-  return String.fromCharCode(65 + index); // A, B, C …
+  return String.fromCharCode(65 + index);
 }
 
-// ─── Geocoding (Nominatim) ────────────────────────────────────────────────────
-// Production: this call moves to Laravel → Google Places API
+const US_STATES: Record<string, string> = {
+  al: 'alabama', ak: 'alaska', az: 'arizona', ar: 'arkansas', ca: 'california',
+  co: 'colorado', ct: 'connecticut', de: 'delaware', fl: 'florida', ga: 'georgia',
+  hi: 'hawaii', id: 'idaho', il: 'illinois', in: 'indiana', ia: 'iowa',
+  ks: 'kansas', ky: 'kentucky', la: 'louisiana', me: 'maine', md: 'maryland',
+  ma: 'massachusetts', mi: 'michigan', mn: 'minnesota', ms: 'mississippi',
+  mo: 'missouri', mt: 'montana', ne: 'nebraska', nv: 'nevada', nh: 'new hampshire',
+  nj: 'new jersey', nm: 'new mexico', ny: 'new york', nc: 'north carolina',
+  nd: 'north dakota', oh: 'ohio', ok: 'oklahoma', or: 'oregon', pa: 'pennsylvania',
+  ri: 'rhode island', sc: 'south carolina', sd: 'south dakota', tn: 'tennessee',
+  tx: 'texas', ut: 'utah', vt: 'vermont', va: 'virginia', wa: 'washington',
+  wv: 'west virginia', wi: 'wisconsin', wy: 'wyoming', dc: 'district of columbia',
+};
 
-async function geocode(address: string): Promise<{ lat: number; lng: number; display: string } | null> {
+/** Pull trailing US state from "city, CO" / "street, town, Colorado". */
+function parseUsState(address: string): { abbr: string; name: string } | null {
+  const cleaned = address.trim().replace(/\s*,?\s*(usa|u\.s\.a\.|united states)\s*$/i, '');
+  const m = cleaned.match(/,\s*([A-Za-z]{2})\s*$/);
+  if (m) {
+    const abbr = m[1].toLowerCase();
+    if (US_STATES[abbr]) return { abbr, name: US_STATES[abbr] };
+  }
+  const lower = cleaned.toLowerCase();
+  for (const [abbr, name] of Object.entries(US_STATES)) {
+    if (lower.endsWith(`, ${name}`) || lower.endsWith(` ${name}`)) {
+      return { abbr, name };
+    }
+  }
+  return null;
+}
+
+function resultInState(
+  r: { display_name: string; address?: Record<string, string> },
+  state: { abbr: string; name: string },
+): boolean {
+  const a = r.address;
+  if (a) {
+    const code = (a['ISO3166-2-lvl4'] || '').toLowerCase(); // e.g. us-co
+    if (code === `us-${state.abbr}`) return true;
+    const st = (a.state || a.state_code || '').toLowerCase();
+    if (st === state.name || st === state.abbr) return true;
+  }
+  const d = r.display_name.toLowerCase();
+  return d.includes(`, ${state.name},`) || d.includes(`, ${state.abbr.toUpperCase()},`)
+    || d.endsWith(`, ${state.name}, united states`)
+    || d.includes(`${state.name}, united states`);
+}
+
+const STATE_NAME_TO_ABBR: Record<string, string> = Object.fromEntries(
+  Object.entries(US_STATES).map(([abbr, name]) => [name, abbr.toUpperCase()]),
+);
+
+function stateAbbr(raw?: string): string {
+  if (!raw) return '';
+  const t = raw.trim();
+  if (t.length === 2) return t.toUpperCase();
+  return STATE_NAME_TO_ABBR[t.toLowerCase()] ?? t.slice(0, 10).toUpperCase();
+}
+
+function partsFromNominatim(addr?: Record<string, string>): {
+  city: string; state: string; zip: string; street: string;
+} {
+  if (!addr) return { city: '', state: '', zip: '', street: '' };
+  const city =
+    addr.city || addr.town || addr.village || addr.hamlet ||
+    addr.municipality || addr.suburb || addr.county || '';
+  const state = stateAbbr(addr.state_code || addr.state);
+  const zip = (addr.postcode || '').split(';')[0].trim();
+  const street = [addr.house_number, addr.road].filter(Boolean).join(' ');
+  return { city, state, zip, street };
+}
+
+/** Fallback when Nominatim omits structured fields: "Pueblo, CO" / "Street, City, ST 80107" */
+function partsFromFreeText(address: string, hintState?: { abbr: string } | null): {
+  city: string; state: string; zip: string;
+} {
+  const cleaned = address.trim().replace(/\s*,?\s*(usa|u\.s\.a\.|united states)\s*$/i, '');
+  const zipM = cleaned.match(/\b(\d{5})(?:-\d{4})?\s*$/);
+  const zip = zipM?.[1] ?? '';
+  const withoutZip = zipM ? cleaned.slice(0, zipM.index).replace(/[,\s]+$/, '') : cleaned;
+  const stateM = withoutZip.match(/,\s*([A-Za-z]{2})$/);
+  let state = stateM ? stateM[1].toUpperCase() : (hintState?.abbr.toUpperCase() ?? '');
+  let rest = stateM ? withoutZip.slice(0, stateM.index).trim() : withoutZip;
+  const bits = rest.split(',').map(s => s.trim()).filter(Boolean);
+  const city = bits.length >= 2 ? bits[bits.length - 1] : (bits[0] ?? rest);
+  if (!state && hintState) state = hintState.abbr.toUpperCase();
+  return { city, state, zip };
+}
+
+async function geocode(address: string): Promise<{
+  lat: number; lng: number; display: string;
+  city: string; state: string; zip: string; street: string;
+} | null> {
   try {
+    const state = parseUsState(address);
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&addressdetails=0`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=8&addressdetails=1&countrycodes=us`,
       { headers: { 'User-Agent': 'Shipmater/1.0 route-planner' } },
     );
-    const data = await res.json();
+    const data: Array<{
+      lat: string;
+      lon: string;
+      display_name: string;
+      type?: string;
+      class?: string;
+      addresstype?: string;
+      importance?: number;
+      name?: string;
+      address?: Record<string, string>;
+    }> = await res.json();
     if (!data.length) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display: data[0].display_name };
+
+    const SETTLEMENT = new Set([
+      'city', 'town', 'village', 'hamlet', 'suburb', 'neighbourhood',
+      'neighborhood', 'locality', 'residential', 'house', 'building',
+      'road', 'street',
+    ]);
+    const AVOID = new Set(['county', 'state', 'country', 'region']);
+
+    const scored = data.map((r, i) => {
+      const kind = (r.addresstype || r.type || '').toLowerCase();
+      let score = (r.importance ?? 0) * 10 - i;
+      if (SETTLEMENT.has(kind)) score += 100;
+      if (AVOID.has(kind)) score -= 50;
+      const name = (r.name || '').toLowerCase();
+      if (name.endsWith(' county') || kind === 'county') score -= 40;
+      if (state) {
+        if (resultInState(r, state)) score += 500;
+        else score -= 300;
+      }
+      return { r, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0].r;
+    const fromNom = partsFromNominatim(best.address);
+    const fromText = partsFromFreeText(address, state);
+
+    return {
+      lat: parseFloat(best.lat),
+      lng: parseFloat(best.lon),
+      display: best.display_name,
+      city: fromNom.city || fromText.city || best.name || 'Unknown',
+      state: fromNom.state || fromText.state || 'NA',
+      zip: fromNom.zip || fromText.zip || '00000',
+      street: fromNom.street || '',
+    };
   } catch {
     return null;
   }
 }
-
-// ─── Routing (OSRM public) ────────────────────────────────────────────────────
-// Production: POST /api/v1/routes/plan → Laravel → Google Directions API
 
 async function fetchRoute(
   waypoints: { lat: number; lng: number; label: string }[],
@@ -117,13 +255,11 @@ function RoutePlannerMap({
   const markersRef = useRef<any[]>([]);
   const mapReadyRef = useRef(false);
 
-  // Keep refs in sync so applyUpdate always reads the latest values
   const latestStopsRef = useRef(stops);
   const latestResultRef = useRef(result);
   latestStopsRef.current = stops;
   latestResultRef.current = result;
 
-  // Core update: draws markers + route, then fits bounds
   const applyUpdate = useCallback((ml: any) => {
     const map = mapRef.current;
     if (!map) return;
@@ -136,11 +272,11 @@ function RoutePlannerMap({
 
     geocodedStops.forEach((stop, i) => {
       const letter = markerLetter(i);
-      const isOrigin = i === 0;
+      const isPickup = stop.role === 'pickup';
       const el = document.createElement('div');
       el.style.cssText = `
         width:32px;height:32px;border-radius:50%;
-        background:${isOrigin ? '#0F1923' : '#2A8C8A'};
+        background:${isPickup ? '#0F1923' : '#2A8C8A'};
         border:3px solid #fff;
         box-shadow:0 2px 6px rgba(0,0,0,0.3);
         display:flex;align-items:center;justify-content:center;
@@ -175,7 +311,6 @@ function RoutePlannerMap({
     }
   }, []);
 
-  // Initialise map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -187,20 +322,17 @@ function RoutePlannerMap({
         style: process.env.NEXT_PUBLIC_MAPTILER_KEY && process.env.NEXT_PUBLIC_MAPTILER_KEY !== 'your-maptiler-key'
           ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`
           : 'https://tiles.openfreemap.org/styles/liberty',
-        center: [-98.5795, 39.8283], // US centre
+        center: [-98.5795, 39.8283],
         zoom: 3.5,
       });
       mapRef.current = map;
 
       map.on('load', () => {
         mapReadyRef.current = true;
-
-        // Route source + layers (empty to start)
         map.addSource('route', {
           type: 'geojson',
           data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
         });
-        // White casing behind the teal line
         map.addLayer({
           id: 'route-casing',
           type: 'line',
@@ -215,8 +347,6 @@ function RoutePlannerMap({
           paint: { 'line-color': '#2A8C8A', 'line-width': 4, 'line-opacity': 0.9 },
           layout: { 'line-join': 'round', 'line-cap': 'round' },
         });
-
-        // Apply any update that arrived before the map was ready
         applyUpdate(ml);
       });
     });
@@ -228,7 +358,6 @@ function RoutePlannerMap({
     };
   }, [applyUpdate]);
 
-  // Re-apply whenever stops or result change (map must be ready)
   useEffect(() => {
     if (!mapReadyRef.current) return;
     import('maplibre-gl').then((ml) => applyUpdate(ml));
@@ -245,8 +374,8 @@ function uid() { return `stop-${++idCounter}`; }
 export default function RoutePlannerPage() {
   const router = useRouter();
   const [stops, setStops] = useState<Stop[]>([
-    { id: uid(), address: '' },
-    { id: uid(), address: '' },
+    { id: uid(), address: '', role: 'pickup' },
+    { id: uid(), address: '', role: 'delivery' },
   ]);
   const [planning, setPlanning] = useState(false);
   const [result, setResult] = useState<RouteResult | null>(null);
@@ -254,15 +383,55 @@ export default function RoutePlannerPage() {
   const [dragSrc, setDragSrc] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
-  // ── Stop management ────────────────────────────────────────────────────────
-
   function updateAddress(id: string, value: string) {
-    setStops(prev => prev.map(s => s.id === id ? { ...s, address: value, lat: undefined, lng: undefined, resolved: undefined, error: false } : s));
+    setStops(prev => prev.map(s =>
+      s.id === id
+        ? {
+            ...s,
+            address: value,
+            lat: undefined,
+            lng: undefined,
+            city: undefined,
+            state: undefined,
+            zip: undefined,
+            resolved: undefined,
+            locationId: undefined,
+            locationName: undefined,
+            error: false,
+          }
+        : s
+    ));
+    setResult(null);
+  }
+
+  function setRole(id: string, role: PlannerStopRole) {
+    setStops(prev => prev.map(s => s.id === id ? { ...s, role } : s));
+  }
+
+  function selectLocation(id: string, loc: LocationOption) {
+    const line = formatLocationLine(loc);
+    setStops(prev => prev.map(s =>
+      s.id === id
+        ? {
+            ...s,
+            address: line,
+            lat: loc.lat ?? undefined,
+            lng: loc.lng ?? undefined,
+            city: loc.city || undefined,
+            state: loc.state || undefined,
+            zip: loc.zip || undefined,
+            resolved: loc.name || line,
+            locationId: loc.id,
+            locationName: loc.name,
+            error: false,
+          }
+        : s
+    ));
     setResult(null);
   }
 
   function addStop() {
-    setStops(prev => [...prev, { id: uid(), address: '' }]);
+    setStops(prev => [...prev, { id: uid(), address: '', role: 'delivery' }]);
     setResult(null);
   }
 
@@ -275,11 +444,12 @@ export default function RoutePlannerPage() {
   }
 
   function reset() {
-    setStops([{ id: uid(), address: '' }, { id: uid(), address: '' }]);
+    setStops([
+      { id: uid(), address: '', role: 'pickup' },
+      { id: uid(), address: '', role: 'delivery' },
+    ]);
     setResult(null);
   }
-
-  // ── Drag-to-reorder ────────────────────────────────────────────────────────
 
   function handleDragStart(i: number) { setDragSrc(i); }
   function handleDragOver(e: React.DragEvent, i: number) { e.preventDefault(); setDragOver(i); }
@@ -295,29 +465,43 @@ export default function RoutePlannerPage() {
   }
   function handleDragEnd() { setDragSrc(null); setDragOver(null); }
 
-  // ── Use in shipment ────────────────────────────────────────────────────────
-
   function useInShipment() {
-    const geocoded = stops.filter(s => s.lat !== undefined);
-    if (geocoded.length < 2) { toast.error('Plan the route first.'); return; }
-    const origin = geocoded[0];
-    const dest   = geocoded[geocoded.length - 1];
-    const params = new URLSearchParams({
-      pickup:      origin.resolved ?? origin.address,
-      pickupLat:   String(origin.lat!),
-      pickupLng:   String(origin.lng!),
-      delivery:    dest.resolved   ?? dest.address,
-      deliveryLat: String(dest.lat!),
-      deliveryLng: String(dest.lng!),
-    });
-    if (result) {
-      params.set('distanceM', String(Math.round(result.totalDistance)));
-      params.set('durationS',  String(Math.round(result.totalDuration)));
+    const filled = stops.filter(s => s.address.trim() && s.lat != null && s.lng != null);
+    if (filled.length < 2) {
+      toast.error('Plan the route first.');
+      return;
     }
-    router.push(`/shipper/shipments/new?${params}`);
-  }
 
-  // ── Plan ──────────────────────────────────────────────────────────────────
+    const pickups = filled.filter(s => s.role === 'pickup');
+    const deliveries = filled.filter(s => s.role === 'delivery');
+    if (pickups.length < 1) {
+      toast.error('Tag at least one stop as Pickup.');
+      return;
+    }
+    if (deliveries.length < 1) {
+      toast.error('Tag at least one stop as Delivery.');
+      return;
+    }
+
+    savePlannerHandoff({
+      stops: filled.map(s => ({
+        address: s.address,
+        label: s.resolved ?? s.address,
+        lat: s.lat!,
+        lng: s.lng!,
+        city: s.city || '',
+        state: s.state || '',
+        zip: s.zip || '',
+        name: s.locationName ?? s.resolved ?? null,
+        locationId: s.locationId ?? null,
+        role: s.role,
+      })),
+      distanceM: result ? Math.round(result.totalDistance) : undefined,
+      durationS: result ? Math.round(result.totalDuration) : undefined,
+    });
+
+    router.push('/shipper/shipments/new?fromPlanner=1');
+  }
 
   async function handlePlan() {
     const filled = stops.filter(s => s.address.trim().length > 0);
@@ -329,35 +513,75 @@ export default function RoutePlannerPage() {
     setPlanning(true);
     setResult(null);
 
-    // Geocode all filled stops
-    const geocoded: Stop[] = [...stops];
+    const geocoded: Stop[] = [];
     let anyFailed = false;
 
-    for (let i = 0; i < geocoded.length; i++) {
-      const s = geocoded[i];
+    for (const s of stops) {
       if (!s.address.trim()) continue;
+      // Trust address-book coords; always re-geocode free-text (avoids stale wrong pins)
+      if (s.locationId && s.lat != null && s.lng != null) {
+        geocoded.push({ ...s, error: false });
+        continue;
+      }
       const geo = await geocode(s.address);
       if (!geo) {
-        geocoded[i] = { ...s, error: true };
+        geocoded.push({ ...s, error: true, lat: undefined, lng: undefined });
         anyFailed = true;
         toast.error(`Address not found: "${s.address}"`);
       } else {
-        geocoded[i] = { ...s, lat: geo.lat, lng: geo.lng, resolved: geo.display, error: false };
+        geocoded.push({
+          ...s,
+          lat: geo.lat,
+          lng: geo.lng,
+          city: geo.city,
+          state: geo.state,
+          zip: geo.zip,
+          // Prefer street line when Nominatim has one; keep user text otherwise
+          address: geo.street || s.address,
+          resolved: s.locationName ?? geo.display,
+          error: false,
+        });
       }
     }
 
-    setStops(geocoded);
+    // Keep entry fields in the order the user typed — only update coords / errors
+    const byId = new Map(geocoded.map(g => [g.id, g]));
+    setStops(prev => prev.map(s => byId.get(s.id) ?? s));
 
-    if (anyFailed) { setPlanning(false); return; }
+    if (anyFailed) {
+      setPlanning(false);
+      return;
+    }
 
-    const waypoints = geocoded
-      .filter(s => s.lat !== undefined)
-      .map((s, i) => ({ lat: s.lat!, lng: s.lng!, label: markerLetter(i) }));
+    // Shortest route order for the result only (e.g. A→C→B). Entry list stays A, B, C.
+    const letterById = new Map(
+      geocoded.map((s, i) => [s.id, markerLetter(i)]),
+    );
+    const optim = optimizeRoute(
+      geocoded.map(s => ({
+        id: s.id,
+        lat: s.lat!,
+        lng: s.lng!,
+        type: 'pickup' as const,
+        required_pickups: [],
+      })),
+      'shortest_route',
+    );
+    const ordered = reorderBySequence(geocoded, optim.sequence);
+
+    const waypoints = ordered.map(s => ({
+      lat: s.lat!,
+      lng: s.lng!,
+      label: letterById.get(s.id) ?? '?',
+    }));
 
     try {
       const route = await fetchRoute(waypoints);
       setResult(route);
-      toast.success(`Route planned · ${fmtDistance(route.totalDistance)} · ${fmtDuration(route.totalDuration)}`);
+      const path = waypoints.map(w => w.label).join(' → ');
+      toast.success(
+        `${path} · ${fmtDistance(route.totalDistance)} · ${fmtDuration(route.totalDuration)}`,
+      );
     } catch (e: any) {
       toast.error(e.message ?? 'Route planning failed.');
     } finally {
@@ -368,13 +592,10 @@ export default function RoutePlannerPage() {
   const canPlan = stops.filter(s => s.address.trim()).length >= 2;
 
   return (
-    // Break out of the dashboard p-6 padding and take full height
     <div className="-m-6 flex h-[calc(100vh-56px)] overflow-hidden">
 
-      {/* ── Left panel ── */}
       <div className="flex w-[360px] shrink-0 flex-col border-r border-[var(--color-cream-dark)] bg-[var(--color-white)] overflow-hidden">
 
-        {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-[var(--color-cream-dark)]">
           <div className="flex items-center justify-between">
             <h1 className="text-xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
@@ -386,17 +607,18 @@ export default function RoutePlannerPage() {
               </button>
             )}
           </div>
-          <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">Plan the most efficient multi-stop route</p>
+          <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">
+            Tag Pickup / Delivery, then Plan — shortest path keeps your labels
+          </p>
         </div>
 
-        {/* Stops form */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
           {stops.map((stop, i) => {
-            const isOrigin = i === 0;
             const isLast   = i === stops.length - 1;
             const letter   = markerLetter(i);
             const isDragging  = dragSrc === i;
             const isDropTarget = dragOver === i && dragSrc !== i;
+            const isPickup = stop.role === 'pickup';
 
             return (
               <div
@@ -412,71 +634,89 @@ export default function RoutePlannerPage() {
                   isDropTarget && 'ring-2 ring-[var(--color-teal)] ring-offset-1',
                 )}
               >
-                <div className="flex items-center gap-2 group relative">
-                  {/* Connector line (between stops) */}
+                <div className="flex items-start gap-2 group relative">
                   {!isLast && (
                     <div className="absolute left-[23px] top-[38px] h-[calc(100%+6px)] w-[2px] bg-[var(--color-cream-dark)] z-0" />
                   )}
 
-                  {/* Drag grip */}
-                  <div className="shrink-0 cursor-grab active:cursor-grabbing text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)] transition-colors">
+                  <div className="shrink-0 pt-2 cursor-grab active:cursor-grabbing text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)] transition-colors">
                     <GripVertical size={14} />
                   </div>
 
-                  {/* Marker dot */}
                   <div
-                    className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm"
-                    style={{ background: isOrigin ? 'var(--color-slate)' : 'var(--color-teal)' }}
+                    className="relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm"
+                    style={{ background: isPickup ? 'var(--color-slate)' : 'var(--color-teal)' }}
                   >
                     {letter}
                   </div>
 
-                  {/* Address input */}
-                  <div className="flex-1 relative">
-                    <input
-                      value={stop.address}
-                      onChange={e => updateAddress(stop.id, e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handlePlan()}
-                      placeholder={isOrigin ? 'Starting address…' : `Drop-off address ${i}…`}
-                      className={cn(
-                        'w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors',
-                        'bg-[var(--color-cream)] border',
-                        stop.error
-                          ? 'border-[var(--color-danger)] bg-red-50 text-[var(--color-danger)]'
-                          : stop.resolved
-                            ? 'border-[var(--color-teal)] text-[var(--color-text)]'
-                            : 'border-[var(--color-cream-dark)] text-[var(--color-text)]',
-                        'placeholder:text-[var(--color-text-faint)]',
-                        'focus:border-[var(--color-teal)]',
+                  <div className="flex-1 relative min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setRole(stop.id, 'pickup')}
+                        className={cn(
+                          'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
+                          isPickup
+                            ? 'bg-[var(--color-slate)] text-white'
+                            : 'bg-[var(--color-cream)] text-[var(--color-text-faint)] hover:text-[var(--color-text)]',
+                        )}
+                      >
+                        Pickup
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole(stop.id, 'delivery')}
+                        className={cn(
+                          'rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors',
+                          !isPickup
+                            ? 'bg-[var(--color-teal)] text-white'
+                            : 'bg-[var(--color-cream)] text-[var(--color-text-faint)] hover:text-[var(--color-text)]',
+                        )}
+                      >
+                        Delivery
+                      </button>
+                      {stops.length > 2 && (
+                        <button
+                          onClick={() => removeStop(stop.id)}
+                          className="ml-auto shrink-0 rounded-md p-1 text-[var(--color-text-faint)] hover:bg-[var(--color-cream-dark)] hover:text-[var(--color-danger)] transition-colors"
+                        >
+                          <X size={13} />
+                        </button>
                       )}
+                    </div>
+                    <LocationSearch
+                      mode="freeText"
+                      type={stop.role}
+                      value={stop.address}
+                      onChange={v => updateAddress(stop.id, v)}
+                      onSelect={loc => selectLocation(stop.id, loc)}
+                      onKeyDown={e => e.key === 'Enter' && handlePlan()}
+                      placeholder={
+                        isPickup
+                          ? 'Search pickup or type address…'
+                          : 'Search delivery or type address…'
+                      }
+                      error={!!stop.error}
+                      resolved={!!stop.resolved && !stop.error}
                     />
                     {stop.resolved && !stop.error && (
-                      <p className="mt-0.5 truncate px-1 text-xs text-[var(--color-teal)]">
-                        ✓ {stop.resolved.split(',').slice(0, 2).join(',')}
+                      <p className="truncate px-1 text-xs text-[var(--color-teal)]">
+                        ✓ {stop.locationName
+                          ? stop.locationName
+                          : stop.resolved.split(',').slice(0, 2).join(',')}
                       </p>
                     )}
                     {stop.error && (
-                      <p className="mt-0.5 px-1 text-xs text-[var(--color-danger)]">Address not found</p>
+                      <p className="px-1 text-xs text-[var(--color-danger)]">Address not found</p>
                     )}
                   </div>
-
-                  {/* Remove button (min 2 stops) */}
-                  {stops.length > 2 && (
-                    <button
-                      onClick={() => removeStop(stop.id)}
-                      className="shrink-0 rounded-md p-1 text-[var(--color-text-faint)] hover:bg-[var(--color-cream-dark)] hover:text-[var(--color-danger)] transition-colors"
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
                 </div>
-                {/* Gap between stops */}
                 {!isLast && <div className="h-2" />}
               </div>
             );
           })}
 
-          {/* Add stop */}
           <div className="pt-3">
             <button
               onClick={addStop}
@@ -487,7 +727,6 @@ export default function RoutePlannerPage() {
             </button>
           </div>
 
-          {/* Plan button */}
           <div className="pt-3">
             <button
               onClick={handlePlan}
@@ -495,24 +734,25 @@ export default function RoutePlannerPage() {
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-teal)] py-3 text-sm font-semibold text-white hover:bg-[var(--color-teal-light)] disabled:opacity-50 transition-colors shadow-sm"
             >
               {planning ? (
-                <><Loader2 size={15} className="animate-spin" /> Planning route…</>
+                <><Loader2 size={15} className="animate-spin" /> Optimising route…</>
               ) : (
-                <><Navigation2 size={15} /> PLAN ROUTE</>
+                <><Navigation2 size={15} /> PLAN SHORTEST ROUTE</>
               )}
             </button>
             <p className="mt-2 text-center text-xs text-[var(--color-text-faint)]">
-              Powered by OSRM · Production uses Google Directions
+              Entry order stays put · result may be A→C→B
             </p>
           </div>
 
-          {/* ── Results ── */}
           {result && (
             <div className="pt-4 space-y-3">
               <div className="h-px bg-[var(--color-cream-dark)]" />
 
-              {/* Summary */}
               <div className="rounded-xl bg-[var(--color-teal-pale)] p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-teal)] mb-2">Route Summary</p>
+                <p className="text-xs font-medium uppercase tracking-[0.07em] text-[var(--color-teal)] mb-2">Optimised path</p>
+                <p className="text-sm font-semibold text-[var(--color-teal)] mb-3">
+                  {[result.legs[0]?.fromLabel, ...result.legs.map(l => l.toLabel)].filter(Boolean).join(' → ')}
+                </p>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-teal)]">
                     <Ruler size={13} />
@@ -528,7 +768,6 @@ export default function RoutePlannerPage() {
                 </div>
               </div>
 
-              {/* Legs */}
               <div className="space-y-2">
                 {result.legs.map((leg, i) => (
                   <button
@@ -570,28 +809,28 @@ export default function RoutePlannerPage() {
                 ))}
               </div>
 
-              {/* Use in shipment CTA */}
               <button
                 onClick={useInShipment}
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-slate)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-slate-80)] transition-colors shadow-sm"
               >
                 <ArrowRight size={14} /> Use this route in a shipment
               </button>
+              <p className="text-center text-xs text-[var(--color-text-faint)]">
+                Prefills New Shipment: pickup + deliveries — you add the manifest
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Map panel ── */}
       <div className="relative flex-1">
         <RoutePlannerMap stops={stops} result={result} />
 
-        {/* Empty state overlay */}
         {!result && (
           <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-8">
             <div className="flex items-center gap-2 rounded-full bg-[var(--color-slate)]/80 px-4 py-2 backdrop-blur-sm">
               <MapPin size={13} className="text-[var(--color-teal-light)]" />
-              <p className="text-sm text-white/80">Enter addresses and click <span className="font-semibold text-white">PLAN ROUTE</span></p>
+              <p className="text-sm text-white/80">Enter addresses and click <span className="font-semibold text-white">PLAN SHORTEST ROUTE</span></p>
             </div>
           </div>
         )}

@@ -27,6 +27,7 @@ class AuthController extends Controller
             'email'    => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role'     => ['required', Rule::in(['shipper', 'carrier', 'receiver'])],
+            'company_name' => ['sometimes', 'nullable', 'string', 'max:200'],
         ]);
 
         $user = User::create([
@@ -54,12 +55,20 @@ class AuthController extends Controller
         // Shippers get a profile shell so verification status can attach
         if ($user->role === 'shipper') {
             ShipperProfile::create([
-                'user_id' => $user->id,
-                'org_id'  => $user->current_org_id,
+                'user_id'      => $user->id,
+                'org_id'       => $user->current_org_id,
+                'company_name' => $request->input('company_name') ?: null,
             ]);
         }
 
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Registration verification email failed', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
 
         $user->load('currentOrg', 'carrierProfile');
         $token = $user->createToken('web')->plainTextToken;
