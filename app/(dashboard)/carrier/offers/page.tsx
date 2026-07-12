@@ -116,7 +116,7 @@ export default function CarrierOffersPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           My Offers
         </h1>
         <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">

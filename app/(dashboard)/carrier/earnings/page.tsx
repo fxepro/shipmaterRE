@@ -22,7 +22,7 @@ export default function CarrierEarningsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Earnings</h1>
+      <h1 className="page-title">Earnings</h1>
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="This Month"     value={earnings?.month_total ?? 0} currency accentColor="var(--color-teal)" />

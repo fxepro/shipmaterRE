@@ -1318,7 +1318,7 @@ export function CreateJobWizard({ mode = 'job' }: { mode?: CreateJobWizardMode }
 
       {/* Page header */}
       <div>
-        <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           {editJobId
             ? 'Edit Draft Job'
             : isShipment

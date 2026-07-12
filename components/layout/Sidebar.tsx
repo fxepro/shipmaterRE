@@ -176,8 +176,6 @@ const NAV: Record<UserRole, { section: string; items: NavItem[] }[]> = {
 
 interface SidebarProps {
   role: UserRole;
-  userName: string;
-  orgName?: string;
   /** True when the user's org is a white-label platform tenant */
   isPlatformTenant?: boolean;
   /** Tenant's custom brand name — replaces "Shipmater" in the wordmark */
@@ -186,7 +184,7 @@ interface SidebarProps {
   logoUrl?: string;
 }
 
-export function Sidebar({ role, userName, orgName, isPlatformTenant, brandName, logoUrl }: SidebarProps) {
+export function Sidebar({ role, isPlatformTenant, brandName, logoUrl }: SidebarProps) {
   const pathname = usePathname();
 
   const baseSections = NAV[role] ?? [];
@@ -203,52 +201,46 @@ export function Sidebar({ role, userName, orgName, isPlatformTenant, brandName, 
 
   return (
     <aside
-      className="hidden md:flex flex-col w-[224px] shrink-0 h-screen sticky top-0 overflow-y-auto"
+      className="sidebar-scroll hidden md:flex flex-col w-[224px] shrink-0 h-screen sticky top-0 overflow-y-auto"
       style={{ background: 'var(--primary)', fontFamily: 'var(--font-sans)' }}
     >
       {/* Brand header */}
-      <div className="px-4 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
+      <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={brandName ?? 'Logo'} className="h-8 object-contain" />
+          <img src={logoUrl} alt={brandName ?? 'Logo'} className="h-7 object-contain" />
         ) : (
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {/* Icon placeholder when no logo */}
             <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
               style={{ background: 'rgba(255,255,255,0.15)', color: 'var(--on-dark)' }}
             >
               {(brandName ?? 'S').charAt(0).toUpperCase()}
             </div>
             <span
               style={{
-                fontSize: 15, fontWeight: 700, color: 'var(--on-dark)',
-                letterSpacing: '0.04em',
+                fontSize: 'var(--text-nav)', fontWeight: 500, color: 'var(--on-dark)',
+                letterSpacing: '0.04em', lineHeight: 1.3,
               }}
             >
               {brandName ?? 'Shipmater'}
             </span>
           </div>
         )}
-        {/* Company / org name shown under brand when set */}
-        {orgName && (
-          <p className="mt-1.5 truncate text-[11px]" style={{ color: 'rgba(255,255,255,0.50)' }}>
-            {orgName}
-          </p>
-        )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-5">
+      <nav className="flex-1 px-2.5 py-2.5 space-y-2.5">
         {sections.map(({ section, items }) => (
           <div key={section}>
             <p
-              className="mb-1.5 px-2 text-[11px] font-medium uppercase"
+              className="mb-0.5 px-2 text-caption font-medium uppercase"
               style={{ letterSpacing: '0.08em', color: 'var(--on-dark-muted)', opacity: 0.75 }}
             >
               {section}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-0">
               {items.map((item) => {
                 const isActive =
                   pathname === item.href ||
@@ -265,16 +257,18 @@ export function Sidebar({ role, userName, orgName, isPlatformTenant, brandName, 
                     <Link
                       href={item.href}
                       className={cn(
-                        'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium transition-colors',
+                        'group flex items-center gap-2 rounded-md px-2 py-1.5 font-medium transition-colors',
                         isActive ? 'shadow-sm' : 'hover:bg-white/12'
                       )}
                       style={{
                         background: isActive ? 'var(--navy)' : 'transparent',
                         color:      isActive ? 'var(--on-dark)' : 'var(--on-dark-muted)',
+                        fontSize: 'var(--text-nav)',
+                        fontWeight: 500,
                       }}
                     >
                       <item.icon
-                        size={16}
+                        size={15}
                         style={{ color: isActive ? '#FFFFFF' : 'var(--on-dark-muted)', opacity: isActive ? 1 : 0.85 }}
                       />
                       {item.label}

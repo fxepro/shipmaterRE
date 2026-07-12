@@ -198,7 +198,7 @@ export default function CarrierDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           Dashboard
         </h1>
         {isApproved && (

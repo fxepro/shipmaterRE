@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { MarketingHub } from '@/components/marketing/MarketingHub';
 import { SHIPPER_HUB } from '@/lib/marketing/hub-links';
+import { T } from '@/lib/type-scale';
+
 
 const B = {
   teal:     '#90E0EF',
@@ -25,15 +27,8 @@ const B = {
   gray10:   '#F4F4F4',
   white:    '#FFFFFF',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
-const T = {
-  hero: 'clamp(36px, 5.5vw, 56px)' as string | number,
-  h2:   'clamp(26px, 3.5vw, 32px)' as string | number,
-  h3:   22,
-  h4:   17,
-  body: 16,
-  label: 13,
-};
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 const STATS = [
   { value: '<2 min', label: 'Average time to post' },
@@ -87,7 +82,7 @@ const SERVICE_TYPES = [
 
 export default function ShippersShippingPage() {
   return (
-    <div style={{ fontFamily: IBM, WebkitFontSmoothing: 'antialiased', background: B.white }}>
+    <div style={{ fontFamily: BODY, WebkitFontSmoothing: 'antialiased', background: B.white }}>
 
       {/* Hero */}
       <section style={{ background: `linear-gradient(145deg, ${B.tealNavy} 0%, ${B.tealDark} 55%, ${B.teal} 100%)`, position: 'relative', overflow: 'hidden' }}>

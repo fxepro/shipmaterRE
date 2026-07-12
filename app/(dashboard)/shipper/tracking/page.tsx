@@ -369,7 +369,7 @@ export default function LiveTrackingPage() {
 
         <div className="shrink-0 border-b border-[var(--color-cream-dark)] bg-[var(--color-white)] px-5 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-[var(--color-slate)]">Live Tracking</h1>
+            <h1 className="page-title">Live Tracking</h1>
             {active.length > 0 && (
               <div className="flex items-center gap-1.5 rounded-full bg-[var(--color-teal-pale)] px-2.5 py-1 text-xs font-bold text-[var(--color-teal)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-teal)] animate-pulse" />

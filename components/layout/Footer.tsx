@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { INDUSTRIES } from '@/lib/marketing/industries';
 
 const B = {
   teal:     '#90E0EF',
@@ -6,7 +7,8 @@ const B = {
   darkCard: '#0A1520',
   white:    '#FFFFFF',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 const COLS = [
   {
@@ -14,9 +16,15 @@ const COLS = [
     links: [
       ['How It Works', '/how-it-works'],
       ['Use Cases',    '/use-cases'],
+      ['Industries',   '/industries'],
+      ['Blog',         '/blog'],
       ['Pricing',      '/pricing'],
       ['Platform',     '/platform'],
     ],
+  },
+  {
+    heading: 'Industries',
+    links: INDUSTRIES.map((i) => [i.title, `/industries/${i.slug}`] as [string, string]),
   },
   {
     heading: 'Solutions',
@@ -54,14 +62,14 @@ const COLS = [
 
 export function Footer() {
   return (
-    <footer style={{ background: B.darkCard, borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: IBM }}>
+    <footer style={{ background: B.darkCard, borderTop: '1px solid rgba(255,255,255,0.06)', fontFamily: BODY }}>
       <div className="mx-auto max-w-[1200px] px-6 py-14">
 
         {/* Top row */}
         <div className="flex flex-wrap items-start justify-between gap-10 mb-12">
           <div>
-            <p style={{ fontWeight: 700, fontSize: 20, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Shipmater</p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 6, maxWidth: 200, lineHeight: 1.6 }}>
+            <p style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 'var(--text-h5)', lineHeight: 'var(--lh-h5)', color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Shipmater</p>
+            <p style={{ fontSize: 'var(--text-body-sm)', color: 'rgba(255,255,255,0.38)', marginTop: 6, maxWidth: 200, lineHeight: 1.6 }}>
               Dispatch · Live Tracking · Safe Carry
             </p>
           </div>
@@ -69,13 +77,13 @@ export function Footer() {
           <div className="flex flex-wrap gap-10">
             {COLS.map(({ heading, links }) => (
               <div key={heading}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)', marginBottom: 12 }}>
+                <p style={{ fontSize: 'var(--text-caption)', fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)', marginBottom: 12, lineHeight: 1.5 }}>
                   {heading}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {links.map(([label, href]) => (
                     <Link key={href} href={href}
-                      style={{ fontSize: 14, color: 'rgba(255,255,255,0.50)', textDecoration: 'none' }}
+                      style={{ fontSize: 'var(--text-body-sm)', color: 'rgba(255,255,255,0.50)', textDecoration: 'none', lineHeight: 1.6 }}
                       className="hover:text-white transition-colors">
                       {label}
                     </Link>
@@ -88,11 +96,11 @@ export function Footer() {
 
         {/* Bottom row */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>© 2026 Shipmater. All rights reserved.</p>
+          <p style={{ fontSize: 'var(--text-fine)', color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>© 2026 Shipmater. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 20 }}>
-            <Link href="/privacy" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms"   style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/cookies" style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', textDecoration: 'none' }} className="hover:text-white transition-colors">Cookies</Link>
+            <Link href="/privacy" style={{ fontSize: 'var(--text-fine)', color: 'rgba(255,255,255,0.28)', textDecoration: 'none', lineHeight: 1.5 }} className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms"   style={{ fontSize: 'var(--text-fine)', color: 'rgba(255,255,255,0.28)', textDecoration: 'none', lineHeight: 1.5 }} className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/cookies" style={{ fontSize: 'var(--text-fine)', color: 'rgba(255,255,255,0.28)', textDecoration: 'none', lineHeight: 1.5 }} className="hover:text-white transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ export function ProfileHeader({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="page-title">
             {name}
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">{email}</p>

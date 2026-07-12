@@ -12,7 +12,8 @@ const B = {
   gray10:   '#F4F4F4',
   white:    '#FFFFFF',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 export interface HubPage {
   icon: LucideIcon;

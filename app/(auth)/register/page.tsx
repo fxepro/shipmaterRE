@@ -25,7 +25,8 @@ const B = {
   red:      '#C0392B',
   redBg:    '#FEF2F2',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 const schema = z.object({
   name:                  z.string().min(2, 'Name is required'),
@@ -58,7 +59,7 @@ const ROLES = [
 
 const inputStyle = {
   width: '100%',
-  fontFamily: IBM,
+  fontFamily: BODY,
   fontSize: 15,
   color: B.gray100,
   background: B.gray10,
@@ -101,7 +102,7 @@ export default function RegisterPage() {
 
   return (
     <div style={{
-      fontFamily: IBM,
+      fontFamily: BODY,
       WebkitFontSmoothing: 'antialiased',
       minHeight: '100vh',
       background: `linear-gradient(145deg, ${B.darkCard} 0%, ${navyColor} 100%)`,
@@ -118,7 +119,7 @@ export default function RegisterPage() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={tenant.logo_url_dark} alt={brandName} style={{ maxHeight: 40, maxWidth: 200, objectFit: 'contain' }} />
         ) : (
-          <span style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+          <span style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 'var(--text-h5)', lineHeight: 'var(--lh-h5)', color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
             {brandName}
           </span>
         )}
@@ -133,10 +134,10 @@ export default function RegisterPage() {
         padding: '40px 36px',
         boxShadow: '0 24px 64px rgba(0,0,0,0.30)',
       }}>
-        <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: 22, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
+        <h1 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 'var(--text-h5)', lineHeight: 'var(--lh-h5)', color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
           Create an account
         </h1>
-        <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
+        <p style={{ fontFamily: BODY, fontSize: 'var(--text-body)', lineHeight: 'var(--lh-body)', color: B.gray50, marginBottom: 28 }}>
           Join {brandName} — free to get started
         </p>
 
@@ -144,7 +145,7 @@ export default function RegisterPage() {
 
           {/* Role selector */}
           <div style={{ marginBottom: 24 }}>
-            <p style={{ fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 10 }}>
+            <p style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 10 }}>
               I am a…
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -187,10 +188,10 @@ export default function RegisterPage() {
                       <Icon size={16} color={active ? accentColor : B.gray50} />
                     </div>
                     <div>
-                      <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: 14, color: active ? accentColor : B.gray100, marginBottom: 2 }}>
+                      <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: 14, color: active ? accentColor : B.gray100, marginBottom: 2 }}>
                         {label}
                       </p>
-                      <p style={{ fontFamily: IBM, fontSize: 12, color: active ? accentColor : B.gray50, lineHeight: 1.5, opacity: active ? 0.85 : 1 }}>
+                      <p style={{ fontFamily: BODY, fontSize: 12, color: active ? accentColor : B.gray50, lineHeight: 1.5, opacity: active ? 0.85 : 1 }}>
                         {description}
                       </p>
                     </div>
@@ -203,7 +204,7 @@ export default function RegisterPage() {
           {/* Name + Company */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
             <div>
-              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
                 Full name
               </label>
               <input
@@ -212,10 +213,10 @@ export default function RegisterPage() {
                 placeholder="Jane Smith"
                 {...register('name')}
               />
-              {errors.name && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.name.message}</p>}
+              {errors.name && <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.name.message}</p>}
             </div>
             <div>
-              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
                 Company <span style={{ color: B.gray50, fontWeight: 400 }}>(optional)</span>
               </label>
               <input
@@ -229,7 +230,7 @@ export default function RegisterPage() {
 
           {/* Email */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+            <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
               Email address
             </label>
             <input
@@ -240,13 +241,13 @@ export default function RegisterPage() {
               placeholder="you@company.com"
               {...register('email')}
             />
-            {errors.email && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>}
+            {errors.email && <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>}
           </div>
 
           {/* Password + Confirm */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
             <div>
-              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
                 Password
               </label>
               <input
@@ -257,10 +258,10 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 {...register('password')}
               />
-              {errors.password && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>}
+              {errors.password && <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>}
             </div>
             <div>
-              <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+              <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
                 Confirm
               </label>
               <input
@@ -271,14 +272,14 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 {...register('password_confirmation')}
               />
-              {errors.password_confirmation && <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password_confirmation.message}</p>}
+              {errors.password_confirmation && <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password_confirmation.message}</p>}
             </div>
           </div>
 
           {/* API error */}
           {error && (
             <div style={{ background: B.redBg, border: '1px solid #FECACA', borderRadius: 6, padding: '10px 14px', marginBottom: 18 }}>
-              <p style={{ fontFamily: IBM, fontSize: 13, color: B.red }}>{error}</p>
+              <p style={{ fontFamily: BODY, fontSize: 13, color: B.red }}>{error}</p>
             </div>
           )}
 
@@ -288,7 +289,7 @@ export default function RegisterPage() {
             disabled={isSubmitting}
             style={{
               width: '100%',
-              fontFamily: IBM,
+              fontFamily: BODY,
               fontSize: 15,
               fontWeight: 600,
               color: B.white,
@@ -306,7 +307,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Sign in link */}
-      <p style={{ fontFamily: IBM, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
+      <p style={{ fontFamily: BODY, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
         Already have an account?{' '}
         <Link href="/login" style={{ color: B.teal, fontWeight: 500, textDecoration: 'none' }}
           className="hover:underline">
@@ -316,7 +317,7 @@ export default function RegisterPage() {
 
       {/* "Powered by" — hidden if tenant opts out */}
       {tenant && !tenant.hide_powered_by && (
-        <p style={{ fontFamily: IBM, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
+        <p style={{ fontFamily: BODY, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
           Powered by Shipmater
         </p>
       )}

@@ -286,10 +286,7 @@ export function JobView({ job, role, backHref, backLabel, currentUserId, onStopU
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1
-              className="text-2xl text-[var(--color-slate)]"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
+            <h1 className="page-title">
               {job.title || `Job #${job.id}`}
             </h1>
 

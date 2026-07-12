@@ -217,7 +217,7 @@ export default function AdminBlogPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Blog</h1>
+            <h1 className="page-title">Blog</h1>
             <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{data?.meta?.total ?? 0} total posts</p>
           </div>
           <button

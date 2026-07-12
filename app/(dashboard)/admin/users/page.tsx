@@ -16,7 +16,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>User Management</h1>
+      <h1 className="page-title">User Management</h1>
 
       {isLoading ? (
         <div className="skeleton h-64 rounded-xl" />

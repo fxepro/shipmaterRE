@@ -12,15 +12,18 @@ const B = {
   darkSec:  '#0A2E40',
   white:    '#FFFFFF',
 };
-const ROBOTO = "'Roboto', 'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 const NAV: { label: string; href: string; menu?: string }[] = [
   { label: 'How It Works',  href: '/how-it-works',  menu: 'how-it-works'  },
-  { label: 'Use Cases',     href: '/use-cases',     menu: 'use-cases'     },
+  { label: 'Use Cases',     href: '/use-cases'                            },
+  { label: 'Industries',    href: '/industries',    menu: 'industries'    },
   { label: 'Shippers',      href: '/shippers',      menu: 'shippers'      },
   { label: 'Carriers',      href: '/carriers',      menu: 'carriers'      },
   { label: 'International', href: '/global',        menu: 'international' },
   { label: 'Pricing',       href: '/pricing'                              },
+  { label: 'Blog',          href: '/blog'                                 },
 ];
 
 export function Header() {
@@ -55,7 +58,8 @@ export function Header() {
           {/* Wordmark */}
           <Link href="/"
             style={{
-              fontFamily: ROBOTO, fontWeight: 700, fontSize: 26,
+              fontFamily: DISPLAY, fontWeight: 600, fontSize: 'var(--text-h5)',
+              lineHeight: 'var(--lh-h5)',
               color: B.white, letterSpacing: '0.08em',
               textTransform: 'uppercase', textDecoration: 'none',
             }}>
@@ -76,8 +80,9 @@ export function Header() {
                   style={{
                     alignItems: 'center',
                     gap:        4,
-                    fontFamily: ROBOTO,
-                    fontSize:   16,
+                    fontFamily: BODY,
+                    fontSize:   'var(--text-nav)',
+                    lineHeight: 1.4,
                     fontWeight: isActive || isOpen ? 600 : 400,
                     color:      isActive || isOpen ? B.teal : 'rgba(255,255,255,0.70)',
                     background: 'none',
@@ -101,7 +106,7 @@ export function Header() {
               ) : (
                 <Link key={href} href={href}
                   style={{
-                    fontFamily: ROBOTO, fontSize: 16,
+                    fontFamily: BODY, fontSize: 'var(--text-nav)', lineHeight: 1.4,
                     fontWeight: isActive ? 600 : 400,
                     color:      isActive ? B.teal : 'rgba(255,255,255,0.70)',
                     textDecoration: 'none',
@@ -113,15 +118,15 @@ export function Header() {
             })}
 
             <Link href="/login"
-              style={{ fontFamily: ROBOTO, fontSize: 16, fontWeight: 400, color: 'rgba(255,255,255,0.70)', textDecoration: 'none' }}
+              style={{ fontFamily: BODY, fontSize: 'var(--text-body)', fontWeight: 400, lineHeight: 'var(--lh-body)', color: 'rgba(255,255,255,0.70)', textDecoration: 'none' }}
               className="hidden sm:block hover:text-white transition-colors">
               Sign in
             </Link>
 
             <Link href="/register"
               style={{
-                background: B.tealDark, fontFamily: ROBOTO, fontSize: 16,
-                fontWeight: 600, color: B.white,
+                background: B.tealDark, fontFamily: BODY, fontSize: 'var(--text-body)',
+                fontWeight: 600, color: B.white, lineHeight: 'var(--lh-body)',
                 padding: '9px 20px', borderRadius: 6, textDecoration: 'none',
               }}
               className="hover:opacity-90 transition-opacity">

@@ -4,10 +4,10 @@ import Link from 'next/link';
 import {
   Package, MapPin, ShieldCheck, ClipboardList,
   Briefcase, DollarSign, Globe, UserCircle2, Lock,
-  Building2, Truck, Stethoscope, Car,
   Globe2, Flag, Table2,
   ArrowRight, type LucideIcon,
 } from 'lucide-react';
+import { INDUSTRIES } from '@/lib/marketing/industries';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -20,7 +20,8 @@ const C = {
   muted:     '#64748B',
   border:    '#E2ECF0',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 interface MenuItem {
   icon:  LucideIcon;
@@ -49,15 +50,15 @@ export const MENUS: Record<string, MenuConfig> = {
     cta: { label: 'See the full walkthrough', href: '/how-it-works' },
   },
 
-  'use-cases': {
+  industries: {
     heading: 'Industries',
-    items: [
-      { icon: Building2,   title: 'All Industries', desc: 'Six industries — one platform, same vetting and tracking standard.', href: '/use-cases' },
-      { icon: Truck,       title: 'Freight',        desc: 'FTL, LTL, hotshot, multi-stop routes, and heavy haul.',              href: '/use-cases/freight-logistics' },
-      { icon: Stethoscope, title: 'Medical',        desc: 'Cold chain, chain of custody, and HIPAA-aligned delivery.',        href: '/use-cases/medical' },
-      { icon: Car,         title: 'Auto Transport', desc: 'VIN logging, condition photos, dealer and private moves.',           href: '/use-cases/auto-transport' },
-    ],
-    cta: { label: 'See all industry details', href: '/use-cases' },
+    items: INDUSTRIES.map((i) => ({
+      icon:  i.icon,
+      title: i.title,
+      desc:  i.accent,
+      href:  `/industries/${i.slug}`,
+    })),
+    cta: { label: 'See all industries', href: '/industries' },
   },
 
   'shippers': {
@@ -113,8 +114,8 @@ function BigMenuCard({ item }: { item: MenuItem }) {
           <Icon size={22} color={C.primary} strokeWidth={1.8} />
         </div>
         <div>
-          <p style={{ fontFamily: IBM, fontWeight: 700, fontSize: 16, color: C.text, lineHeight: 1.3, marginBottom: 6 }}>{item.title}</p>
-          <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: 14, color: C.muted, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+          <p style={{ fontFamily: BODY, fontWeight: 700, fontSize: 16, color: C.text, lineHeight: 1.3, marginBottom: 6 }}>{item.title}</p>
+          <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: 14, color: C.muted, lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
         </div>
       </div>
     </Link>
@@ -133,7 +134,7 @@ export function MegaMenuPanel({ menuKey }: { menuKey: string }) {
       borderRadius: '0 0 10px 10px', zIndex: 100,
     }}>
       <div className="mx-auto max-w-[1200px] px-6" style={{ paddingTop: 28, paddingBottom: 0 }}>
-        <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase', color: C.muted, marginBottom: 16 }}>
+        <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: 11, letterSpacing: '0.10em', textTransform: 'uppercase', color: C.muted, marginBottom: 16 }}>
           {menu.heading}
         </p>
         <div className="grid grid-cols-4 gap-4" style={{ marginBottom: 8 }}>
@@ -150,7 +151,7 @@ export function MegaMenuPanel({ menuKey }: { menuKey: string }) {
         <div className="mx-auto max-w-[1200px] px-6">
           <Link href={menu.cta.href} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontFamily: IBM, fontWeight: 600, fontSize: 13, color: C.navy, textDecoration: 'none',
+            fontFamily: BODY, fontWeight: 600, fontSize: 13, color: C.navy, textDecoration: 'none',
           }}
           className="hover:text-[#0096C7] transition-colors group">
             {menu.cta.label}

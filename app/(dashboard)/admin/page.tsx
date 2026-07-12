@@ -32,7 +32,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Admin Console</h1>
+      <h1 className="page-title">Admin Console</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -61,7 +61,14 @@ export default function AdminDashboard() {
         <div className="px-5 py-4 border-b border-[var(--color-cream-dark)]">
           <p className="font-medium text-[var(--color-text)]">Recent Shipments</p>
         </div>
-        {isLoading ? <div className="skeleton h-48 m-4 rounded-lg" /> : <div className="p-1"><ShipmentTable shipments={shipments} onView={(id) => router.push(`/admin/shipments/${id}`)} /></div>}
+        {isLoading ? <div className="skeleton h-48 m-4 rounded-lg" /> : (
+          <ShipmentTable
+            shipments={shipments}
+            onView={(id) => router.push(`/admin/shipments/${id}`)}
+            embedded
+          />
+        )}
+
       </div>
     </div>
   );

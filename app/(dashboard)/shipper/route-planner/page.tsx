@@ -598,7 +598,7 @@ export default function RoutePlannerPage() {
 
         <div className="px-5 pt-5 pb-4 border-b border-[var(--color-cream-dark)]">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1 className="page-title">
               Route Planner
             </h1>
             {result && (

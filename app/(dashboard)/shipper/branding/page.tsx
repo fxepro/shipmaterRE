@@ -186,7 +186,7 @@ export default function BrandingPage() {
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="page-title">
             White-Label Branding
           </h1>
           <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">

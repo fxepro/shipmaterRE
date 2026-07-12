@@ -727,7 +727,7 @@ export default function CarrierProfilePage() {
 
       {/* Page heading */}
       <div>
-        <h1 className="text-3xl font-bold text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           Account Settings
         </h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">

@@ -6,8 +6,10 @@ import {
   ShieldCheck, Globe, Rocket, Lock, CheckCircle2,
 } from 'lucide-react';
 import { marketingApi } from '@/lib/api';
+import { T } from '@/lib/type-scale';
 
-// ── Palette / type (marketing system — IBM Plex Sans, inline) ─────────────────
+
+// ── Palette / type (Source Sans 3 body · Jost headings) ───────────────────────
 const B = {
   teal:     '#90E0EF',
   tealMid:  '#48CAE4',
@@ -27,14 +29,8 @@ const B = {
   white:    '#FFFFFF',
   green:    '#1B9C6B',
 };
-const T = {
-  hero: 'clamp(34px, 5vw, 52px)' as string | number,
-  h2:   'clamp(26px, 3.5vw, 34px)' as string | number,
-  h3:   22,
-  body: 16,
-  label: 13,
-};
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 // ── Tiers ─────────────────────────────────────────────────────────────────────
 const TIERS = [
@@ -110,11 +106,11 @@ const FAQ = [
 function MatrixCell({ v }: { v: Cell }) {
   if (v === true)  return <Check size={17} style={{ color: B.green }} />;
   if (v === false) return <Minus size={15} style={{ color: B.gray50 }} />;
-  return <span style={{ fontFamily: IBM, fontSize: 13.5, color: B.gray90 }}>{v}</span>;
+  return <span style={{ fontFamily: BODY, fontSize: 13.5, color: B.gray90 }}>{v}</span>;
 }
 
 const inputStyle = {
-  width: '100%', fontFamily: IBM, fontSize: 15, color: B.gray100,
+  width: '100%', fontFamily: BODY, fontSize: 15, color: B.gray100,
   background: B.white, border: `1px solid ${B.gray20}`, borderRadius: 8,
   padding: '11px 14px', outline: 'none', boxSizing: 'border-box' as const,
 };
@@ -146,7 +142,7 @@ export default function PlatformPage() {
   }
 
   return (
-    <div style={{ fontFamily: IBM, color: B.gray100, background: B.white }}>
+    <div style={{ fontFamily: BODY, color: B.gray100, background: B.white }}>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(155deg, ${B.darkSec} 0%, ${B.darkCard} 100%)`, color: B.white }}>
@@ -154,15 +150,15 @@ export default function PlatformPage() {
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(144,224,239,0.12)', color: B.teal, fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 999, marginBottom: 22 }}>
             <Building2 size={13} /> White-Label Platform
           </span>
-          <h1 style={{ fontFamily: IBM, fontSize: T.hero, fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.02em', marginBottom: 20, color: B.white }}>
+          <h1 style={{ fontFamily: DISPLAY, fontSize: T.hero, fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.02em', marginBottom: 20, color: B.white }}>
             Launch your own freight platform —<br />under your brand, not ours.
           </h1>
-          <p style={{ fontFamily: IBM, fontSize: 19, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', maxWidth: 660, margin: '0 auto 32px' }}>
+          <p style={{ fontFamily: BODY, fontSize: 19, lineHeight: 1.6, color: 'rgba(255,255,255,0.72)', maxWidth: 660, margin: '0 auto 32px' }}>
             Everything you need to run a branded dispatch, tracking and settlement platform —
             without building it. You operate; we power it.
           </p>
           <button onClick={() => selectPlan('growth')}
-            style={{ background: B.tealDark, color: B.white, fontFamily: IBM, fontSize: 16, fontWeight: 600, padding: '14px 30px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            style={{ background: B.tealDark, color: B.white, fontFamily: BODY, fontSize: 16, fontWeight: 600, padding: '14px 30px', borderRadius: 8, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             Talk to sales <ArrowRight size={17} />
           </button>
         </div>
@@ -180,8 +176,8 @@ export default function PlatformPage() {
               <div style={{ width: 44, height: 44, borderRadius: 10, background: B.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
                 <Icon size={21} style={{ color: B.tealDark }} />
               </div>
-              <h3 style={{ fontFamily: IBM, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{title}</h3>
-              <p style={{ fontFamily: IBM, fontSize: 15, lineHeight: 1.6, color: B.gray70 }}>{desc}</p>
+              <h3 style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{title}</h3>
+              <p style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: B.gray70 }}>{desc}</p>
             </div>
           ))}
         </div>
@@ -191,10 +187,10 @@ export default function PlatformPage() {
       <section style={{ background: B.gray10 }}>
         <div className="mx-auto max-w-[1080px] px-6 py-20">
           <div className="text-center" style={{ marginBottom: 48 }}>
-            <h2 style={{ fontFamily: IBM, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12 }}>
+            <h2 style={{ fontFamily: DISPLAY, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12 }}>
               Three ways to run it
             </h2>
-            <p style={{ fontFamily: IBM, fontSize: 17, color: B.gray70, maxWidth: 560, margin: '0 auto' }}>
+            <p style={{ fontFamily: BODY, fontSize: 17, color: B.gray70, maxWidth: 560, margin: '0 auto' }}>
               The same platform, at the level of isolation and control you need. Every plan is white-label.
             </p>
           </div>
@@ -218,22 +214,22 @@ export default function PlatformPage() {
                   <div style={{ width: 46, height: 46, borderRadius: 11, background: B.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
                     <Icon size={22} style={{ color: B.tealDark }} />
                   </div>
-                  <h3 style={{ fontFamily: IBM, fontSize: 24, fontWeight: 700, marginBottom: 4 }}>{tier.name}</h3>
-                  <p style={{ fontFamily: IBM, fontSize: 13, fontWeight: 600, color: B.tealDark, marginBottom: 16 }}>{tier.tag}</p>
-                  <p style={{ fontFamily: IBM, fontSize: 14.5, lineHeight: 1.6, color: B.gray70, marginBottom: 20 }}>{tier.who}</p>
+                  <h3 style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, marginBottom: 4 }}>{tier.name}</h3>
+                  <p style={{ fontFamily: BODY, fontSize: 13, fontWeight: 600, color: B.tealDark, marginBottom: 16 }}>{tier.tag}</p>
+                  <p style={{ fontFamily: BODY, fontSize: 14.5, lineHeight: 1.6, color: B.gray70, marginBottom: 20 }}>{tier.who}</p>
 
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
                     {tier.points.map((p) => (
                       <li key={p} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
                         <CheckCircle2 size={16} style={{ color: B.tealDark, flexShrink: 0, marginTop: 2 }} />
-                        <span style={{ fontFamily: IBM, fontSize: 14, lineHeight: 1.5, color: B.gray90 }}>{p}</span>
+                        <span style={{ fontFamily: BODY, fontSize: 14, lineHeight: 1.5, color: B.gray90 }}>{p}</span>
                       </li>
                     ))}
                   </ul>
 
                   <button onClick={() => selectPlan(tier.id)}
                     style={{
-                      width: '100%', fontFamily: IBM, fontSize: 15, fontWeight: 600, padding: '12px', borderRadius: 8, cursor: 'pointer',
+                      width: '100%', fontFamily: BODY, fontSize: 15, fontWeight: 600, padding: '12px', borderRadius: 8, cursor: 'pointer',
                       border: tier.featured ? 'none' : `1px solid ${B.tealDark}`,
                       background: tier.featured ? B.tealDark : B.white,
                       color: tier.featured ? B.white : B.tealDark,
@@ -249,23 +245,23 @@ export default function PlatformPage() {
 
       {/* ── Comparison matrix ─────────────────────────────────────────────── */}
       <section className="mx-auto max-w-[1080px] px-6 py-20">
-        <h2 style={{ fontFamily: IBM, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 40 }}>
+        <h2 style={{ fontFamily: DISPLAY, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 40 }}>
           Compare the plans
         </h2>
         <div style={{ overflowX: 'auto', border: `1px solid ${B.gray20}`, borderRadius: 14 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
             <thead>
               <tr style={{ background: B.tealBg }}>
-                <th style={{ textAlign: 'left', fontFamily: IBM, fontSize: 13, fontWeight: 700, color: B.darkSec, padding: '16px 20px' }}>Capability</th>
+                <th style={{ textAlign: 'left', fontFamily: BODY, fontSize: 13, fontWeight: 700, color: B.darkSec, padding: '16px 20px' }}>Capability</th>
                 {['Startup', 'Growth', 'Enterprise'].map((h) => (
-                  <th key={h} style={{ textAlign: 'left', fontFamily: IBM, fontSize: 14, fontWeight: 700, color: B.darkSec, padding: '16px 20px' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', fontFamily: BODY, fontSize: 14, fontWeight: 700, color: B.darkSec, padding: '16px 20px' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {MATRIX.map((row, i) => (
                 <tr key={row.label} style={{ borderTop: `1px solid ${B.gray20}`, background: i % 2 ? B.gray10 : B.white }}>
-                  <td style={{ fontFamily: IBM, fontSize: 14, fontWeight: 500, color: B.gray90, padding: '14px 20px' }}>{row.label}</td>
+                  <td style={{ fontFamily: BODY, fontSize: 14, fontWeight: 500, color: B.gray90, padding: '14px 20px' }}>{row.label}</td>
                   {row.vals.map((v, j) => (
                     <td key={j} style={{ padding: '14px 20px' }}><MatrixCell v={v} /></td>
                   ))}
@@ -279,14 +275,14 @@ export default function PlatformPage() {
       {/* ── FAQ ───────────────────────────────────────────────────────────── */}
       <section style={{ background: B.gray10 }}>
         <div className="mx-auto max-w-[1080px] px-6 py-20">
-          <h2 style={{ fontFamily: IBM, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 40 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 40 }}>
             Common questions
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {FAQ.map(({ q, a }) => (
               <div key={q} style={{ background: B.white, border: `1px solid ${B.gray20}`, borderRadius: 12, padding: '20px 24px' }}>
-                <p style={{ fontFamily: IBM, fontSize: 16, fontWeight: 600, color: B.gray100, marginBottom: 7 }}>{q}</p>
-                <p style={{ fontFamily: IBM, fontSize: 15, lineHeight: 1.6, color: B.gray70 }}>{a}</p>
+                <p style={{ fontFamily: BODY, fontSize: 16, fontWeight: 600, color: B.gray100, marginBottom: 7 }}>{q}</p>
+                <p style={{ fontFamily: BODY, fontSize: 15, lineHeight: 1.6, color: B.gray70 }}>{a}</p>
               </div>
             ))}
           </div>
@@ -301,18 +297,18 @@ export default function PlatformPage() {
               <div style={{ width: 64, height: 64, borderRadius: 999, background: 'rgba(27,156,107,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                 <CheckCircle2 size={32} style={{ color: '#4ADE80' }} />
               </div>
-              <h2 style={{ fontFamily: IBM, fontSize: 28, fontWeight: 700, marginBottom: 12, color: B.white }}>Thanks — we&rsquo;ll be in touch.</h2>
-              <p style={{ fontFamily: IBM, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>
+              <h2 style={{ fontFamily: DISPLAY, fontSize: 28, fontWeight: 700, marginBottom: 12, color: B.white }}>Thanks — we&rsquo;ll be in touch.</h2>
+              <p style={{ fontFamily: BODY, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>
                 Our team will reach out within one business day to scope your platform.
               </p>
             </div>
           ) : (
             <>
               <div className="text-center" style={{ marginBottom: 36 }}>
-                <h2 style={{ fontFamily: IBM, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12, color: B.white }}>
+                <h2 style={{ fontFamily: DISPLAY, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 12, color: B.white }}>
                   Let&rsquo;s talk
                 </h2>
-                <p style={{ fontFamily: IBM, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>
+                <p style={{ fontFamily: BODY, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>
                   Tell us what you&rsquo;re building. We&rsquo;ll put together a proposal.
                 </p>
               </div>
@@ -345,18 +341,18 @@ export default function PlatformPage() {
                 </div>
 
                 {status === 'error' && (
-                  <p style={{ fontFamily: IBM, fontSize: 13, color: '#DC2626', marginTop: 14 }}>{error}</p>
+                  <p style={{ fontFamily: BODY, fontSize: 13, color: '#DC2626', marginTop: 14 }}>{error}</p>
                 )}
 
                 <button type="submit" disabled={status === 'sending'}
                   style={{
-                    width: '100%', marginTop: 22, fontFamily: IBM, fontSize: 16, fontWeight: 600,
+                    width: '100%', marginTop: 22, fontFamily: BODY, fontSize: 16, fontWeight: 600,
                     color: B.white, background: status === 'sending' ? B.gray50 : B.tealDark,
                     border: 'none', borderRadius: 8, padding: '13px', cursor: status === 'sending' ? 'not-allowed' : 'pointer',
                   }}>
                   {status === 'sending' ? 'Sending…' : 'Request a proposal'}
                 </button>
-                <p style={{ fontFamily: IBM, fontSize: 12, color: B.gray50, textAlign: 'center', marginTop: 12 }}>
+                <p style={{ fontFamily: BODY, fontSize: 12, color: B.gray50, textAlign: 'center', marginTop: 12 }}>
                   No spam. We&rsquo;ll only use this to contact you about your platform.
                 </p>
               </form>
@@ -369,7 +365,7 @@ export default function PlatformPage() {
 }
 
 // ── Form field helpers ────────────────────────────────────────────────────────
-const labelStyle = { display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 600, color: B.gray70, marginBottom: 6 };
+const labelStyle = { display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 600, color: B.gray70, marginBottom: 6 };
 
 function Field({ label, name, type = 'text', required, placeholder }: {
   label: string; name: string; type?: string; required?: boolean; placeholder?: string;

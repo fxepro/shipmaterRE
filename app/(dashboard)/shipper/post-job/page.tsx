@@ -57,7 +57,7 @@ export default function PostJobPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Post a Freight Job</h1>
+      <h1 className="page-title">Post a Freight Job</h1>
 
       {/* Step indicator */}
       <div className="flex items-center gap-0">

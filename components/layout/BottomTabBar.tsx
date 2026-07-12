@@ -52,7 +52,7 @@ export function BottomTabBar({ role }: { role: UserRole }) {
           <Link
             key={tab.href + tab.label}
             href={tab.href}
-            className="flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-xs font-medium transition-colors"
+            className="flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-fine font-medium transition-colors"
             style={{ color: isActive ? 'var(--navy)' : 'var(--text-faint)' }}
           >
             <tab.icon size={18} />

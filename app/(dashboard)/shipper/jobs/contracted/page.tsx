@@ -98,7 +98,7 @@ export default function ContractedJobsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="page-title">
             Contracted Jobs
           </h1>
           <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">

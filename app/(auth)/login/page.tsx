@@ -23,7 +23,8 @@ const B = {
   red:      '#C0392B',
   redBg:    '#FEF2F2',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 const schema = z.object({
   email:    z.string().email('Enter a valid email'),
@@ -66,7 +67,7 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      fontFamily: IBM,
+      fontFamily: BODY,
       WebkitFontSmoothing: 'antialiased',
       minHeight: '100vh',
       background: `linear-gradient(145deg, ${B.darkCard} 0%, ${navyColor} 100%)`,
@@ -83,7 +84,7 @@ export default function LoginPage() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={tenant.logo_url_dark} alt={brandName} style={{ maxHeight: 40, maxWidth: 200, objectFit: 'contain' }} />
         ) : (
-          <span style={{ fontFamily: IBM, fontWeight: 700, fontSize: 26, color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+          <span style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 'var(--text-h5)', lineHeight: 'var(--lh-h5)', color: B.white, letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
             {brandName}
           </span>
         )}
@@ -98,10 +99,10 @@ export default function LoginPage() {
         padding: '40px 36px',
         boxShadow: '0 24px 64px rgba(0,0,0,0.30)',
       }}>
-        <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: 22, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
+        <h1 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 'var(--text-h5)', lineHeight: 'var(--lh-h5)', color: B.gray100, letterSpacing: '-0.02em', marginBottom: 6 }}>
           Sign in
         </h1>
-        <p style={{ fontFamily: IBM, fontSize: 15, color: B.gray50, marginBottom: 28 }}>
+        <p style={{ fontFamily: BODY, fontSize: 'var(--text-body)', lineHeight: 'var(--lh-body)', color: B.gray50, marginBottom: 28 }}>
           Welcome back to {brandName}
         </p>
 
@@ -109,7 +110,7 @@ export default function LoginPage() {
 
           {/* Email */}
           <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
+            <label style={{ display: 'block', fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70, marginBottom: 6 }}>
               Email address
             </label>
             <input
@@ -118,7 +119,7 @@ export default function LoginPage() {
               placeholder="you@company.com"
               style={{
                 width: '100%',
-                fontFamily: IBM,
+                fontFamily: BODY,
                 fontSize: 15,
                 color: B.gray100,
                 background: B.gray10,
@@ -131,17 +132,17 @@ export default function LoginPage() {
               {...register('email')}
             />
             {errors.email && (
-              <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>
+              <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.email.message}</p>
             )}
           </div>
 
           {/* Password */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <label style={{ fontFamily: IBM, fontSize: 13, fontWeight: 500, color: B.gray70 }}>
+              <label style={{ fontFamily: BODY, fontSize: 13, fontWeight: 500, color: B.gray70 }}>
                 Password
               </label>
-              <Link href="/forgot-password" style={{ fontFamily: IBM, fontSize: 12, color: B.tealDark, textDecoration: 'none' }}
+              <Link href="/forgot-password" style={{ fontFamily: BODY, fontSize: 12, color: B.tealDark, textDecoration: 'none' }}
                 className="hover:underline">
                 Forgot password?
               </Link>
@@ -152,7 +153,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               style={{
                 width: '100%',
-                fontFamily: IBM,
+                fontFamily: BODY,
                 fontSize: 15,
                 color: B.gray100,
                 background: B.gray10,
@@ -165,14 +166,14 @@ export default function LoginPage() {
               {...register('password')}
             />
             {errors.password && (
-              <p style={{ fontFamily: IBM, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>
+              <p style={{ fontFamily: BODY, fontSize: 12, color: B.red, marginTop: 4 }}>{errors.password.message}</p>
             )}
           </div>
 
           {/* API error */}
           {error && (
             <div style={{ background: B.redBg, border: `1px solid #FECACA`, borderRadius: 6, padding: '10px 14px', marginBottom: 18 }}>
-              <p style={{ fontFamily: IBM, fontSize: 13, color: B.red }}>{error}</p>
+              <p style={{ fontFamily: BODY, fontSize: 13, color: B.red }}>{error}</p>
             </div>
           )}
 
@@ -182,7 +183,7 @@ export default function LoginPage() {
             disabled={isSubmitting}
             style={{
               width: '100%',
-              fontFamily: IBM,
+              fontFamily: BODY,
               fontSize: 15,
               fontWeight: 600,
               color: B.white,
@@ -201,7 +202,7 @@ export default function LoginPage() {
       </div>
 
       {/* Register link */}
-      <p style={{ fontFamily: IBM, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
+      <p style={{ fontFamily: BODY, fontSize: 14, color: 'rgba(255,255,255,0.50)', marginTop: 24 }}>
         Don&apos;t have an account?{' '}
         <Link href="/register" style={{ color: tenant ? B.teal : B.teal, fontWeight: 500, textDecoration: 'none' }}
           className="hover:underline">
@@ -211,7 +212,7 @@ export default function LoginPage() {
 
       {/* "Powered by" — hidden if tenant opts out */}
       {tenant && !tenant.hide_powered_by && (
-        <p style={{ fontFamily: IBM, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
+        <p style={{ fontFamily: BODY, fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
           Powered by Shipmater
         </p>
       )}

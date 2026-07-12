@@ -244,7 +244,7 @@ export default function CarrierAvailablePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Available Jobs</h1>
+      <h1 className="page-title">Available Jobs</h1>
 
       {/* Tabs + My Services toggle */}
       <div className="flex items-center justify-between border-b border-[var(--color-cream-dark)]">

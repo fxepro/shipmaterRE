@@ -50,8 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
       <Sidebar
         role={user.role}
-        userName={user.name}
-        orgName={user.org?.name}
         isPlatformTenant={user.org?.is_platform_tenant ?? false}
         brandName={brandName}
         logoUrl={logoUrl}

@@ -8,11 +8,16 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 interface ShipmentTableProps {
   shipments: Shipment[];
   onView?: (id: number) => void;
+  /** When true, skip the outer border frame (use inside a .card). */
+  embedded?: boolean;
 }
 
-export function ShipmentTable({ shipments, onView }: ShipmentTableProps) {
+export function ShipmentTable({ shipments, onView, embedded }: ShipmentTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border)' }}>
+    <div
+      className="overflow-x-auto"
+      style={embedded ? undefined : { border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
+    >
       <table className="data-table">
         <thead>
           <tr>

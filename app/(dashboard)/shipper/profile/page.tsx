@@ -1658,7 +1658,7 @@ export default function ShipperProfilePage() {
   return (
     <div className="w-[75%] min-w-[560px] space-y-6">
       <div>
-        <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           Account Settings
         </h1>
         <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">

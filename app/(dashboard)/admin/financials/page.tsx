@@ -131,7 +131,7 @@ export default function AdminFinancialsPage() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="page-title">
             Financial Reporting
           </h1>
           <p className="mt-0.5 text-sm text-[var(--color-text-faint)]">

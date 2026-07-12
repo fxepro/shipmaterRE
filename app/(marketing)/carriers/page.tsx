@@ -9,6 +9,8 @@ import {
 import { useState } from 'react';
 import { MarketingHub } from '@/components/marketing/MarketingHub';
 import { CARRIER_HUB } from '@/lib/marketing/hub-links';
+import { T } from '@/lib/type-scale';
+
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const B = {
@@ -25,13 +27,8 @@ const B = {
   white:    '#FFFFFF',
   green:    '#1B9C6B',
 };
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
-const T = {
-  hero: 'clamp(34px, 5vw, 52px)' as string | number,
-  h2:   'clamp(26px, 3.5vw, 34px)' as string | number,
-  h3:   20,
-  body: 16,
-};
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 // ── How it works steps ────────────────────────────────────────────────────────
 
@@ -166,7 +163,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 export default function CarriersPage() {
   return (
-    <div style={{ fontFamily: IBM, background: B.white, color: B.darkCard }}>
+    <div style={{ fontFamily: BODY, background: B.white, color: B.darkCard }}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(135deg, ${B.tealNavy} 0%, ${B.darkSec} 100%)`, padding: 'clamp(64px, 8vw, 112px) 24px' }}>

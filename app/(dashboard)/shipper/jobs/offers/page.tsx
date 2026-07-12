@@ -143,7 +143,7 @@ export default function ShipperOffersPage() {
         {/* Page header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+            <h1 className="page-title">
               Carrier Offers
             </h1>
             <p className="text-sm text-[var(--color-text-faint)] mt-0.5">

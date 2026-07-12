@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { MarketingHub } from '@/components/marketing/MarketingHub';
 import { HOW_IT_WORKS_HUB } from '@/lib/marketing/hub-links';
+import { T } from '@/lib/type-scale';
+
 
 // ── Palette & scale (shared system) ──────────────────────────────────────────
 const B = {
@@ -28,18 +30,9 @@ const B = {
   white:    '#FFFFFF',
 };
 
-const T = {
-  hero:  'clamp(36px, 5.5vw, 56px)' as string | number,
-  h1:    40,
-  h2:    'clamp(26px, 3.5vw, 32px)' as string | number,
-  h3:    22,
-  h4:    17,
-  body:  16,
-  label: 13,
-  fine:  12,
-};
 
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -172,7 +165,7 @@ const VETTING_STEPS = [
 
 export default function HowItWorksPage() {
   return (
-    <div style={{ fontFamily: IBM, WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', background: B.white }}>
+    <div style={{ fontFamily: BODY, WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', background: B.white }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(145deg, ${B.tealNavy} 0%, ${B.tealDeep} 50%, ${B.tealDark} 100%)`, position: 'relative', overflow: 'hidden' }}>
@@ -180,14 +173,14 @@ export default function HowItWorksPage() {
           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
         <div className="relative mx-auto max-w-[1200px] px-6 pt-20 pb-20">
           <div className="max-w-2xl">
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal, marginBottom: 16 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal, marginBottom: 16 }}>
               How it works
             </p>
-            <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.hero, lineHeight: 1.1, letterSpacing: '-0.025em', color: B.white }}>
+            <h1 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.hero, lineHeight: 1.1, letterSpacing: '-0.025em', color: B.white }}>
               Simple for you.<br />
               <span style={{ color: B.tealPale }}>Thorough on our end.</span>
             </h1>
-            <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginTop: 20, maxWidth: 520 }}>
+            <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginTop: 20, maxWidth: 520 }}>
               Four steps stand between you and a verified, tracked, insured delivery — no logistics experience required.
             </p>
           </div>
@@ -197,9 +190,9 @@ export default function HowItWorksPage() {
               <div key={s} className="flex items-center flex-1">
                 <div className="flex flex-col items-center gap-2 flex-1">
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: B.tealDark, border: `2px solid ${B.teal}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 700, color: B.white }}>0{i + 1}</span>
+                    <span style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 700, color: B.white }}>0{i + 1}</span>
                   </div>
-                  <span style={{ fontFamily: IBM, fontSize: T.fine, fontWeight: 500, color: B.tealPale, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</span>
+                  <span style={{ fontFamily: BODY, fontSize: T.fine, fontWeight: 500, color: B.tealPale, textAlign: 'center', whiteSpace: 'nowrap' }}>{s}</span>
                 </div>
                 {i < 3 && <div style={{ height: 2, flex: 1, background: `linear-gradient(90deg, ${B.tealDark}, ${B.teal}40)`, marginBottom: 22 }} />}
               </div>
@@ -223,19 +216,19 @@ export default function HowItWorksPage() {
                 <div style={{ direction: 'ltr' }}>
                   <div className="flex items-start gap-5">
                     <div style={{ width: 56, height: 56, borderRadius: 8, background: B.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h4, color: B.tealDark }}>{step.n}</span>
+                      <span style={{ fontFamily: BODY, fontWeight: 700, fontSize: T.h4, color: B.tealDark }}>{step.n}</span>
                     </div>
                     <div>
-                      <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, lineHeight: 1.2 }}>
+                      <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, lineHeight: 1.2 }}>
                         {step.title}
                       </h2>
-                      <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 12, lineHeight: 1.75 }}>
+                      <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 12, lineHeight: 1.75 }}>
                         {step.summary}
                       </p>
                     </div>
                   </div>
                   <div style={{ marginTop: 28, background: B.tealBg, borderLeft: `3px solid ${B.tealDark}`, borderRadius: 4, padding: '14px 18px' }}>
-                    <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 400, color: B.gray70, lineHeight: 1.65, fontStyle: 'italic' }}>
+                    <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 400, color: B.gray70, lineHeight: 1.65, fontStyle: 'italic' }}>
                       {step.note}
                     </p>
                   </div>
@@ -245,7 +238,7 @@ export default function HowItWorksPage() {
                   {step.detail.map(pt => (
                     <div key={pt} className="flex items-start gap-3">
                       <CheckCircle2 size={18} style={{ color: B.tealDark, marginTop: 2, flexShrink: 0 }} />
-                      <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.68 }}>{pt}</p>
+                      <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.68 }}>{pt}</p>
                     </div>
                   ))}
                 </div>
@@ -259,8 +252,8 @@ export default function HowItWorksPage() {
       <section style={{ background: B.gray10, borderTop: '1px solid #E0E0E0', borderBottom: '1px solid #E0E0E0' }} className="py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-14">
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>What moves on Shipmater</p>
-            <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, marginTop: 10, lineHeight: 1.2 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>What moves on Shipmater</p>
+            <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, marginTop: 10, lineHeight: 1.2 }}>
               From gold to a get-well card.<br />If it matters, we handle it.
             </h2>
           </div>
@@ -270,11 +263,11 @@ export default function HowItWorksPage() {
                 <div style={{ width: 48, height: 48, background: B.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, marginBottom: 18 }}>
                   <uc.icon size={22} style={{ color: B.tealDark }} />
                 </div>
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 10 }}>{uc.title}</h3>
-                <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.68, marginBottom: 16 }}>{uc.desc}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 10 }}>{uc.title}</h3>
+                <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.68, marginBottom: 16 }}>{uc.desc}</p>
                 <div className="flex flex-wrap gap-2">
                   {uc.tags.map(tag => (
-                    <span key={tag} style={{ background: B.tealBg, fontFamily: IBM, fontSize: T.fine, fontWeight: 600, color: B.tealDark, padding: '4px 10px', borderRadius: 4, letterSpacing: '0.03em' }}>
+                    <span key={tag} style={{ background: B.tealBg, fontFamily: BODY, fontSize: T.fine, fontWeight: 600, color: B.tealDark, padding: '4px 10px', borderRadius: 4, letterSpacing: '0.03em' }}>
                       {tag}
                     </span>
                   ))}
@@ -291,11 +284,11 @@ export default function HowItWorksPage() {
           style={{ backgroundImage: `linear-gradient(${B.tealMid} 1px, transparent 1px), linear-gradient(90deg, ${B.tealMid} 1px, transparent 1px)`, backgroundSize: '48px 48px' }} />
         <div className="relative mx-auto max-w-[1200px] px-6">
           <div className="mb-14 max-w-2xl">
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal }}>The vetting standard</p>
-            <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.white, marginTop: 10, lineHeight: 1.2 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal }}>The vetting standard</p>
+            <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.white, marginTop: 10, lineHeight: 1.2 }}>
               Every provider earns their place.<br />None of them self-certify.
             </h2>
-            <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.65)', marginTop: 14, lineHeight: 1.75 }}>
+            <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.65)', marginTop: 14, lineHeight: 1.75 }}>
               Before a provider can accept a single delivery on Shipmater, they go through six layers of independent verification. Here's exactly what that means.
             </p>
           </div>
@@ -305,8 +298,8 @@ export default function HowItWorksPage() {
                 <div style={{ width: 44, height: 44, background: 'rgba(144,224,239,0.12)', border: `1px solid ${B.teal}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, marginBottom: 16 }}>
                   <v.icon size={20} style={{ color: B.teal }} />
                 </div>
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{v.title}</h3>
-                <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.60)', lineHeight: 1.68 }}>{v.desc}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{v.title}</h3>
+                <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.60)', lineHeight: 1.68 }}>{v.desc}</p>
               </div>
             ))}
           </div>
@@ -317,11 +310,11 @@ export default function HowItWorksPage() {
       <section style={{ background: B.white }} className="py-24">
         <div className="mx-auto max-w-[1200px] px-6 grid md:grid-cols-2 gap-16 items-center">
           <div>
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>Live tracking</p>
-            <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, marginTop: 10, lineHeight: 1.2 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>Live tracking</p>
+            <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, marginTop: 10, lineHeight: 1.2 }}>
               You never have<br />to wonder.
             </h2>
-            <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 16, lineHeight: 1.75 }}>
+            <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 16, lineHeight: 1.75 }}>
               The moment your provider picks up, tracking begins. Every location update appears on your live map in real time — and every milestone triggers an automatic notification to you and your recipient.
             </p>
             <div className="mt-8 space-y-5">
@@ -336,8 +329,8 @@ export default function HowItWorksPage() {
                     <item.icon size={18} style={{ color: B.tealDark }} />
                   </div>
                   <div>
-                    <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.gray100 }}>{item.title}</p>
-                    <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 4, lineHeight: 1.65 }}>{item.desc}</p>
+                    <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.h4, color: B.gray100 }}>{item.title}</p>
+                    <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 4, lineHeight: 1.65 }}>{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -346,7 +339,7 @@ export default function HowItWorksPage() {
           {/* Screenshot placeholder */}
           <div style={{ background: B.gray10, border: '1px solid #E0E0E0', borderRadius: 8, aspectRatio: '4/3', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             <MapPin size={32} style={{ color: B.tealDark, opacity: 0.4 }} />
-            <p style={{ fontFamily: IBM, fontSize: T.label, color: B.gray50, letterSpacing: '0.06em' }}>Tracking screenshot</p>
+            <p style={{ fontFamily: BODY, fontSize: T.label, color: B.gray50, letterSpacing: '0.06em' }}>Tracking screenshot</p>
           </div>
         </div>
       </section>
@@ -356,25 +349,25 @@ export default function HowItWorksPage() {
         <div className="absolute inset-0 opacity-[0.04]"
           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
         <div className="relative mx-auto max-w-[1200px] px-6 text-center">
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h1, letterSpacing: '-0.025em', color: B.white, lineHeight: 1.15 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h1, letterSpacing: '-0.025em', color: B.white, lineHeight: 1.15 }}>
             Ready to move what matters?
           </h2>
-          <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.65)', marginTop: 20, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.75 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.65)', marginTop: 20, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.75 }}>
             Free to start. No logistics experience needed. Your first delivery is a few minutes away.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
             <Link href="/register"
-              style={{ background: B.white, fontFamily: IBM, fontSize: T.body, fontWeight: 700, color: B.tealDeep, padding: '16px 36px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
+              style={{ background: B.white, fontFamily: BODY, fontSize: T.body, fontWeight: 700, color: B.tealDeep, padding: '16px 36px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
               className="hover:opacity-95 transition-opacity">
               Get started free <ArrowRight size={16} />
             </Link>
             <Link href="/"
-              style={{ border: '1px solid rgba(255,255,255,0.28)', fontFamily: IBM, fontSize: T.body, fontWeight: 400, color: 'rgba(255,255,255,0.84)', padding: '16px 36px', borderRadius: 6, textDecoration: 'none' }}
+              style={{ border: '1px solid rgba(255,255,255,0.28)', fontFamily: BODY, fontSize: T.body, fontWeight: 400, color: 'rgba(255,255,255,0.84)', padding: '16px 36px', borderRadius: 6, textDecoration: 'none' }}
               className="hover:bg-white/10 transition-colors">
               Back to home
             </Link>
           </div>
-          <p style={{ fontFamily: IBM, fontSize: T.fine, color: 'rgba(255,255,255,0.35)', marginTop: 20 }}>
+          <p style={{ fontFamily: BODY, fontSize: T.fine, color: 'rgba(255,255,255,0.35)', marginTop: 20 }}>
             No setup fees · No long-term commitment · Cancel any time
           </p>
         </div>

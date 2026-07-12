@@ -17,7 +17,7 @@ export default function ReceiverShipmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>My Deliveries</h1>
+      <h1 className="page-title">My Deliveries</h1>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">

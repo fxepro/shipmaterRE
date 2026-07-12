@@ -57,7 +57,7 @@ export default function ShipperBidsPage() {
       )}
 
       <div className="space-y-6">
-        <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>
+        <h1 className="page-title">
           Incoming Bids
         </h1>
 

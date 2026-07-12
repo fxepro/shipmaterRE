@@ -86,12 +86,12 @@ export default function ShipperDashboard() {
               action={{ label: 'New Shipment', onClick: () => {} }}
             />
           ) : (
-            <div className="p-1">
-              <ShipmentTable
-                shipments={shipments.slice(0, 5)}
-                onView={setSelectedId}
-              />
-            </div>
+            <ShipmentTable
+              shipments={shipments.slice(0, 5)}
+              onView={setSelectedId}
+              embedded
+            />
+
           )}
         </div>
 

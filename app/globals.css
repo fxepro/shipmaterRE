@@ -1,13 +1,10 @@
-/* Roboto is self-hosted via next/font (see app/layout.tsx) and exposed as
-   --font-roboto. IBM Plex Sans (marketing pages, inline) stays on the CDN. */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+/* Source Sans 3 (body) + Jost (headings) via next/font — see app/layout.tsx */
 @import "tailwindcss";
 
 /* ============================================================================
    SHIPMATER — DASHBOARD DESIGN SYSTEM
-   Primary-blue sidebar · navy actions · airy surface neutrals · Roboto type.
-   Marketing pages style themselves inline with IBM Plex Sans and do NOT
-   depend on these tokens.
+   Primary-blue sidebar · navy actions · airy surface neutrals.
+   Type: Source Sans 3 body/UI · Jost display/headings.
    ============================================================================ */
 :root {
   /* ── Brand ──────────────────────────────────────────────────────────────── */
@@ -39,7 +36,33 @@
   --info-bg:        #E3F4FC;
 
   /* ── Type & shape ───────────────────────────────────────────────────────── */
-  --font-sans:      var(--font-roboto), system-ui, -apple-system, sans-serif;
+  --font-body:      var(--font-source-sans), system-ui, -apple-system, sans-serif;
+  --font-display:   var(--font-jost), var(--font-source-sans), system-ui, sans-serif;
+  --font-sans:      var(--font-body);
+
+  /* Core six — docs/Font sizes */
+  --text-h1:        48px;
+  --text-h2:        40px;
+  --text-h3:        32px;
+  --text-h4:        28px;
+  --text-h5:        24px;
+  --text-body:      16px;
+  --lh-h1:          1.1;
+  --lh-h2:          1.15;
+  --lh-h3:          1.2;
+  --lh-h4:          1.25;
+  --lh-h5:          1.3;
+  --lh-body:        1.7;
+
+  /* Exceptions */
+  --text-display-xl: 72px;
+  --text-display-l:  60px;
+  --text-h6:         20px;
+  --text-body-lg:    18px;
+  --text-body-sm:    14px;
+  --text-caption:    13px;
+  --text-nav:        15px; /* Navigation — Font design System supporting UI */
+
   --radius-sm:      6px;
   --radius:         10px;
   --radius-lg:      14px;
@@ -51,15 +74,70 @@
 html { font-size: 16px; }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+  font-size: var(--text-body); /* 16px — core Body */
+  font-weight: 400;
+  line-height: var(--lh-body);
   background: var(--bg);
   color: var(--text);
 }
 
-h1, h2, h3, h4, h5 {
-  font-family: var(--font-sans);
+h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3); /* Shipmater: page <h1> = 32px (H3), not 48 — dense headers */
+  font-weight: 700;
+  line-height: var(--lh-h3);
   color: var(--text);
 }
+h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 700;
+  line-height: var(--lh-h2);
+  color: var(--text);
+}
+h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 700;
+  line-height: var(--lh-h3);
+  color: var(--text);
+}
+h4 {
+  font-family: var(--font-display);
+  font-size: var(--text-h4);
+  font-weight: 600;
+  line-height: var(--lh-h4);
+  color: var(--text);
+}
+h5 {
+  font-family: var(--font-display);
+  font-size: var(--text-h5);
+  font-weight: 600;
+  line-height: var(--lh-h5);
+  color: var(--text);
+}
+h6 {
+  font-family: var(--font-display);
+  font-size: var(--text-h6); /* exception */
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.font-display { font-family: var(--font-display); }
+.text-h1 { font-family: var(--font-display); font-size: var(--text-h1); font-weight: 700; line-height: var(--lh-h1); }
+.text-h2 { font-family: var(--font-display); font-size: var(--text-h2); font-weight: 700; line-height: var(--lh-h2); }
+.text-h3 { font-family: var(--font-display); font-size: var(--text-h3); font-weight: 700; line-height: var(--lh-h3); }
+.text-h4 { font-family: var(--font-display); font-size: var(--text-h4); font-weight: 600; line-height: var(--lh-h4); }
+.text-h5 { font-family: var(--font-display); font-size: var(--text-h5); font-weight: 600; line-height: var(--lh-h5); }
+.text-body { font-family: var(--font-body); font-size: var(--text-body); font-weight: 400; line-height: var(--lh-body); }
+.text-body-lg { font-family: var(--font-body); font-size: var(--text-body-lg); font-weight: 400; line-height: 1.7; }
+.text-body-sm { font-family: var(--font-body); font-size: var(--text-body-sm); font-weight: 400; line-height: 1.6; }
+.text-caption { font-family: var(--font-body); font-size: var(--text-caption); font-weight: 400; line-height: 1.5; }
+.text-fine { font-family: var(--font-body); font-size: var(--text-fine); font-weight: 400; line-height: 1.5; }
+.text-display-l { font-family: var(--font-display); font-size: var(--text-display-l); font-weight: 700; line-height: 1.05; }
+.text-display-xl { font-family: var(--font-display); font-size: var(--text-display-xl); font-weight: 700; line-height: 1.0; }
 
 /* ── Animations ───────────────────────────────────────────────────────────── */
 @keyframes shimmer {
@@ -81,6 +159,15 @@ h1, h2, h3, h4, h5 {
 /* ── MapLibre base ────────────────────────────────────────────────────────── */
 .maplibregl-map { font-family: var(--font-sans) !important; }
 
+/* Sidebar: keep scroll if viewport is short, hide the bar */
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* ============================================================================
    COMPONENT LAYER
    Reusable building blocks. Pages reference these by class name and own NO
@@ -92,11 +179,18 @@ h1, h2, h3, h4, h5 {
 
   /* ── Page scaffolding ─────────────────────────────────────────────────── */
   .page-header   { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .page-title    { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-  .page-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-top: 2px; }
+  .page-title    {
+    font-family: var(--font-display);
+    font-size: var(--text-h3); /* 32px — Shipmater page titles (dense UI; not H1 48) */
+    font-weight: 700;
+    line-height: var(--lh-h3);
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .page-subtitle { font-size: var(--text-body-sm); color: var(--text-muted); margin-top: 2px; line-height: 1.6; } /* Small — exception */
   .overline {
-    font-size: 11px; font-weight: 500; text-transform: uppercase;
-    letter-spacing: 0.08em; color: var(--text-faint);
+    font-size: var(--text-caption); font-weight: 500; text-transform: uppercase; /* exception */
+    letter-spacing: 0.08em; color: var(--text-faint); line-height: 1.5;
   }
 
   /* ── Card ─────────────────────────────────────────────────────────────── */
@@ -122,13 +216,13 @@ h1, h2, h3, h4, h5 {
     border-bottom-color: #FECACA;
   }
   .card-head-danger .card-title { color: var(--danger); font-weight: 600; }
-  .card-title { font-size: 0.9375rem; font-weight: 500; color: var(--text); }
+  .card-title { font-size: var(--text-h6); font-weight: 600; color: var(--text); line-height: 1.35; font-family: var(--font-display); } /* Card title = H6 */
   .card-body  { padding: 20px; }
 
   /* ── Buttons ──────────────────────────────────────────────────────────── */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500;
+    font-family: var(--font-sans); font-size: var(--text-body); font-weight: 600; /* Primary button 16/600 */
     line-height: 1; white-space: nowrap; cursor: pointer;
     padding: 9px 16px; border-radius: var(--radius-sm);
     border: 1px solid transparent;
@@ -143,7 +237,7 @@ h1, h2, h3, h4, h5 {
   .btn-outline:hover:not(:disabled) { background: var(--surface); }
   .btn-ghost   { background: transparent; color: var(--text-muted); }
   .btn-ghost:hover:not(:disabled)   { background: var(--surface); color: var(--text); }
-  .btn-sm { padding: 6px 12px; font-size: 0.8125rem; }
+  .btn-sm { padding: 6px 12px; font-size: var(--text-body-sm); font-weight: 600; } /* Small button 14/600 */
   .btn-block { width: 100%; }
 
   /* ── Inline link ──────────────────────────────────────────────────────── */
@@ -158,16 +252,17 @@ h1, h2, h3, h4, h5 {
   .stat-accent { height: 3px; background: var(--primary); }
   .stat-body   { padding: 20px; }
   .stat-label  {
-    font-size: 11px; font-weight: 500; text-transform: uppercase;
-    letter-spacing: 0.07em; color: var(--text-faint); margin-bottom: 8px;
+    font-size: var(--text-caption); font-weight: 500; text-transform: uppercase; /* exception */
+    letter-spacing: 0.07em; color: var(--text-faint); margin-bottom: 8px; line-height: 1.5;
   }
-  .stat-value  { font-size: 1.875rem; font-weight: 700; color: var(--text); line-height: 1.1; }
-  .stat-sub    { margin-top: 4px; font-size: 0.875rem; color: var(--text-muted); }
+  .stat-value  { font-size: var(--text-h3); font-weight: 700; color: var(--text); line-height: var(--lh-h3); font-family: var(--font-display); }
+  .stat-sub    { margin-top: 4px; font-size: var(--text-body-sm); color: var(--text-muted); line-height: 1.6; } /* exception */
 
   /* ── Badge / status pill ──────────────────────────────────────────────── */
   .badge {
     display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 999px;
+    font-size: var(--text-caption); font-weight: 500; padding: 3px 9px; border-radius: 999px; /* exception */
+    line-height: 1.5;
   }
   .badge-primary { background: var(--primary-soft); color: var(--primary); }
   .badge-info    { background: var(--info-bg);     color: var(--info); }
@@ -178,11 +273,11 @@ h1, h2, h3, h4, h5 {
 
   /* ── Form controls ────────────────────────────────────────────────────── */
   .field-label {
-    display: block; font-size: 13px; font-weight: 500;
-    color: var(--text-muted); margin-bottom: 6px;
+    display: block; font-size: var(--text-body-sm); font-weight: 500; /* exception */
+    color: var(--text-muted); margin-bottom: 6px; line-height: 1.6;
   }
   .input, .select, .textarea {
-    width: 100%; font-family: var(--font-sans); font-size: 14px; color: var(--text);
+    width: 100%; font-family: var(--font-sans); font-size: var(--text-body); color: var(--text);
     background: var(--card); border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm); padding: 9px 12px; outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -196,16 +291,17 @@ h1, h2, h3, h4, h5 {
   .profile-label {
     display: block;
     margin-bottom: 6px;
-    font-size: 12px;
+    font-size: var(--text-fine); /* exception */
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: var(--text-muted);
+    line-height: 1.5;
   }
   .profile-input, .profile-select {
     width: 100%;
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: var(--text-body);
     color: var(--text);
     background: var(--card);
     border: 1px solid var(--border-strong);
@@ -237,11 +333,11 @@ h1, h2, h3, h4, h5 {
   }
 
   /* ── Data table ───────────────────────────────────────────────────────── */
-  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: var(--text-body-sm); } /* exception */
   .data-table thead th {
-    text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase;
+    text-align: left; font-size: var(--text-caption); font-weight: 500; text-transform: uppercase; /* exception */
     letter-spacing: 0.06em; color: var(--navy); background: var(--primary-soft);
-    padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; line-height: 1.5;
   }
   .data-table tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); }
   .data-table tbody tr:last-child td { border-bottom: none; }
@@ -285,6 +381,4 @@ h1, h2, h3, h4, h5 {
   --color-success:     var(--success);
   --color-danger:      var(--danger);
   --color-warning:     var(--warning);
-  --font-display:      var(--font-sans);
-  --font-body:         var(--font-sans);
 }

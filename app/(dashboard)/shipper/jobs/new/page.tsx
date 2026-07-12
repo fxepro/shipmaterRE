@@ -95,7 +95,7 @@ export default function CreateJobPage() {
 
   return (
     <div className="w-[75%] min-w-[560px] space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>Create Job</h1>
+      <h1 className="page-title">Create Job</h1>
 
       {/* Job type selector */}
       <div className="grid grid-cols-2 gap-4">

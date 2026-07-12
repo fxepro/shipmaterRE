@@ -26,7 +26,7 @@ export function Topbar({ role, userName, onLogout }: TopbarProps) {
         fontFamily: 'var(--font-sans)',
       }}
     >
-      <p className="text-sm font-medium" style={{ color: 'var(--navy)' }}>
+      <p className="text-body font-medium" style={{ color: 'var(--navy)' }}>
         {ROLE_TITLE[role]}
       </p>
       <div className="flex items-center gap-2">
@@ -38,14 +38,14 @@ export function Topbar({ role, userName, onLogout }: TopbarProps) {
           <Bell size={17} />
         </button>
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-caption font-medium"
           style={{ background: 'var(--navy)', color: 'var(--on-dark)' }}
         >
           {userName.charAt(0).toUpperCase()}
         </div>
         <button
           onClick={onLogout}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--border)]"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-body-sm font-medium transition-colors hover:bg-[var(--border)]"
           style={{ color: 'var(--text-faint)' }}
           aria-label="Log out"
         >

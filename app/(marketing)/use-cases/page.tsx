@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { MarketingHub } from '@/components/marketing/MarketingHub';
 import { USE_CASES_HUB } from '@/lib/marketing/hub-links';
+import { T } from '@/lib/type-scale';
+
 
 // ── Palette & scale ───────────────────────────────────────────────────────────
 const B = {
@@ -28,18 +30,9 @@ const B = {
   white:    '#FFFFFF',
 };
 
-const T = {
-  hero:  'clamp(36px, 5.5vw, 56px)' as string | number,
-  h1:    40,
-  h2:    'clamp(26px, 3.5vw, 32px)' as string | number,
-  h3:    22,
-  h4:    17,
-  body:  16,
-  label: 13,
-  fine:  12,
-};
 
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 // ── Industries ────────────────────────────────────────────────────────────────
 
@@ -211,9 +204,9 @@ function ScenarioCard({ scenario }: { scenario: typeof INDUSTRIES[0]['scenario']
       <div style={{ background: `linear-gradient(135deg, ${B.tealNavy} 0%, ${B.darkSec} 100%)`, padding: '24px 28px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-2 mb-3">
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E' }} />
-          <span style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Live delivery</span>
+          <span style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Live delivery</span>
         </div>
-        <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.white, lineHeight: 1.4 }}>{scenario.title}</p>
+        <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.h4, color: B.white, lineHeight: 1.4 }}>{scenario.title}</p>
       </div>
       {/* Timeline */}
       <div style={{ padding: '24px 28px' }}>
@@ -226,15 +219,15 @@ function ScenarioCard({ scenario }: { scenario: typeof INDUSTRIES[0]['scenario']
               )}
             </div>
             <div style={{ paddingBottom: 2 }}>
-              <span style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 700, color: B.tealMid }}>{item.time}</span>
-              <p style={{ fontFamily: IBM, fontSize: T.body, color: 'rgba(255,255,255,0.72)', marginTop: 3, lineHeight: 1.55 }}>{item.text}</p>
+              <span style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 700, color: B.tealMid }}>{item.time}</span>
+              <p style={{ fontFamily: BODY, fontSize: T.body, color: 'rgba(255,255,255,0.72)', marginTop: 3, lineHeight: 1.55 }}>{item.text}</p>
             </div>
           </div>
         ))}
       </div>
       {/* Footer tag */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 28px' }}>
-        <span style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, color: B.teal }}>{scenario.tag}</span>
+        <span style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, color: B.teal }}>{scenario.tag}</span>
       </div>
     </div>
   );
@@ -244,7 +237,7 @@ function ScenarioCard({ scenario }: { scenario: typeof INDUSTRIES[0]['scenario']
 
 export default function UseCasesPage() {
   return (
-    <div style={{ fontFamily: IBM, WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', background: B.white }}>
+    <div style={{ fontFamily: BODY, WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', background: B.white }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(145deg, ${B.tealNavy} 0%, ${B.tealDeep} 50%, ${B.tealDark} 100%)`, position: 'relative', overflow: 'hidden' }}>
@@ -252,22 +245,22 @@ export default function UseCasesPage() {
           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
         <div className="relative mx-auto max-w-[1200px] px-6 pt-20 pb-20">
           <div className="max-w-2xl">
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal, marginBottom: 16 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal, marginBottom: 16 }}>
               Industries
             </p>
-            <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.hero, lineHeight: 1.1, letterSpacing: '-0.025em', color: B.white }}>
+            <h1 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.hero, lineHeight: 1.1, letterSpacing: '-0.025em', color: B.white }}>
               Built for the industries<br />
               <span style={{ color: B.tealPale }}>that can't afford to get it wrong.</span>
             </h1>
-            <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginTop: 20, maxWidth: 540 }}>
+            <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.75)', marginTop: 20, maxWidth: 540 }}>
               Six industries. Different requirements, different stakes — one platform built to handle all of them with the same standard of vetting, tracking and accountability.
             </p>
           </div>
-          {/* Industry jump links */}
+          {/* Industry jump links (in-page anchors — use-cases stays as one long page) */}
           <div className="flex flex-wrap gap-2 mt-12">
             {INDUSTRIES.map(ind => (
               <a key={ind.id} href={`#${ind.id}`}
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', fontFamily: IBM, fontSize: T.label, fontWeight: 500, color: 'rgba(255,255,255,0.80)', padding: '8px 16px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', fontFamily: BODY, fontSize: T.label, fontWeight: 500, color: 'rgba(255,255,255,0.80)', padding: '8px 16px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 className="hover:bg-white/15 transition-colors">
                 <ind.icon size={13} />
                 {ind.label}
@@ -277,7 +270,7 @@ export default function UseCasesPage() {
         </div>
       </section>
 
-      <MarketingHub heading="Industries" pages={USE_CASES_HUB.map(p => ({ ...p, active: p.href === '/use-cases' }))} />
+      <MarketingHub heading="Use Cases" pages={USE_CASES_HUB.map(p => ({ ...p, active: p.href === '/use-cases' }))} />
 
       {/* ── INDUSTRY SECTIONS ────────────────────────────────────────────── */}
       {INDUSTRIES.map((ind, i) => {
@@ -296,25 +289,25 @@ export default function UseCasesPage() {
                     <div style={{ width: 48, height: 48, background: B.tealBg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <ind.icon size={22} style={{ color: B.tealDark }} />
                     </div>
-                    <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>{ind.label}</p>
+                    <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.tealDark }}>{ind.label}</p>
                   </div>
-                  <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, lineHeight: 1.2, whiteSpace: 'pre-line' }}>
+                  <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.gray100, lineHeight: 1.2, whiteSpace: 'pre-line' }}>
                     {ind.headline}
                   </h2>
-                  <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 16, lineHeight: 1.75 }}>
+                  <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 16, lineHeight: 1.75 }}>
                     {ind.intro}
                   </p>
                   <div className="mt-8 space-y-3">
                     {ind.points.map(pt => (
                       <div key={pt} className="flex items-start gap-3">
                         <CheckCircle2 size={18} style={{ color: B.tealDark, marginTop: 2, flexShrink: 0 }} />
-                        <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{pt}</p>
+                        <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{pt}</p>
                       </div>
                     ))}
                   </div>
                   <div style={{ marginTop: 28 }}>
                     <Link href="/register"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: B.tealDark, fontFamily: IBM, fontSize: T.body, fontWeight: 600, color: B.white, padding: '12px 22px', borderRadius: 6, textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: B.tealDark, fontFamily: BODY, fontSize: T.body, fontWeight: 600, color: B.white, padding: '12px 22px', borderRadius: 6, textDecoration: 'none' }}
                       className="hover:opacity-90 transition-opacity">
                       Get started <ArrowRight size={15} />
                     </Link>
@@ -336,8 +329,8 @@ export default function UseCasesPage() {
       <section style={{ background: `linear-gradient(160deg, #051520 0%, ${B.darkSec} 55%, ${B.tealDeep} 100%)` }} className="py-24">
         <div className="mx-auto max-w-[1200px] px-6">
           <div className="mb-14 text-center max-w-2xl mx-auto">
-            <p style={{ fontFamily: IBM, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal }}>Across every industry</p>
-            <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.white, marginTop: 10, lineHeight: 1.2 }}>
+            <p style={{ fontFamily: BODY, fontSize: T.label, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: B.teal }}>Across every industry</p>
+            <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, letterSpacing: '-0.02em', color: B.white, marginTop: 10, lineHeight: 1.2 }}>
               The platform standard doesn't change.<br />The industry requirements do.
             </h2>
           </div>
@@ -352,8 +345,8 @@ export default function UseCasesPage() {
                 <div style={{ width: 44, height: 44, background: 'rgba(144,224,239,0.10)', border: `1px solid ${B.teal}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, marginBottom: 16 }}>
                   <item.icon size={20} style={{ color: B.teal }} />
                 </div>
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{item.title}</h3>
-                <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.55)', lineHeight: 1.65 }}>{item.desc}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{item.title}</h3>
+                <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: 'rgba(255,255,255,0.55)', lineHeight: 1.65 }}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -363,25 +356,25 @@ export default function UseCasesPage() {
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section style={{ background: B.tealBg, borderTop: `1px solid #B0DDE8` }} className="py-24">
         <div className="mx-auto max-w-[1200px] px-6 text-center">
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h1, letterSpacing: '-0.025em', color: B.gray100, lineHeight: 1.15 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h1, letterSpacing: '-0.025em', color: B.gray100, lineHeight: 1.15 }}>
             Your industry. Your requirements.<br />Our platform.
           </h2>
-          <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 20, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.75 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, color: B.gray70, marginTop: 20, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.75 }}>
             Free to start. Tell us what you need to move and we'll show you who can handle it.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
             <Link href="/register"
-              style={{ background: B.tealDark, fontFamily: IBM, fontSize: T.body, fontWeight: 700, color: B.white, padding: '16px 36px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
+              style={{ background: B.tealDark, fontFamily: BODY, fontSize: T.body, fontWeight: 700, color: B.white, padding: '16px 36px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
               className="hover:opacity-90 transition-opacity">
               Get started free <ArrowRight size={16} />
             </Link>
             <Link href="/how-it-works"
-              style={{ border: `2px solid ${B.tealDark}`, fontFamily: IBM, fontSize: T.body, fontWeight: 600, color: B.tealDark, padding: '14px 36px', borderRadius: 6, textDecoration: 'none' }}
+              style={{ border: `2px solid ${B.tealDark}`, fontFamily: BODY, fontSize: T.body, fontWeight: 600, color: B.tealDark, padding: '14px 36px', borderRadius: 6, textDecoration: 'none' }}
               className="hover:bg-white transition-colors">
               See how it works
             </Link>
           </div>
-          <p style={{ fontFamily: IBM, fontSize: T.fine, color: B.gray50, marginTop: 20 }}>
+          <p style={{ fontFamily: BODY, fontSize: T.fine, color: B.gray50, marginTop: 20 }}>
             No setup fees · No long-term commitment
           </p>
         </div>

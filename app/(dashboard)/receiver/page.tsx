@@ -23,7 +23,7 @@ export default function ReceiverDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl text-[var(--color-slate)]" style={{ fontFamily: 'var(--font-display)' }}>My Deliveries</h1>
+      <h1 className="page-title">My Deliveries</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

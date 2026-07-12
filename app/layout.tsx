@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
-import { Roboto } from 'next/font/google';
+import { Source_Sans_3, Jost } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { getTenantConfig } from '@/lib/tenant';
 
-const roboto = Roboto({
+const sourceSans = Source_Sans_3({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-roboto',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-source-sans',
+  display: 'swap',
+});
+
+const jost = Jost({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-jost',
   display: 'swap',
 });
 
@@ -23,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={roboto.variable}>
+    <html lang="en" className={`${sourceSans.variable} ${jost.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>

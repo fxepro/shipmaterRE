@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { MarketingHub } from '@/components/marketing/MarketingHub';
 import { SHIPPER_HUB } from '@/lib/marketing/hub-links';
+import { T } from '@/lib/type-scale';
+
 
 // ── Palette & scale (matches marketing system) ────────────────────────────────
 const B = {
@@ -28,18 +30,9 @@ const B = {
   white:    '#FFFFFF',
 };
 
-const T = {
-  hero:  'clamp(36px, 5.5vw, 56px)' as string | number,
-  h1:    40,
-  h2:    'clamp(26px, 3.5vw, 32px)' as string | number,
-  h3:    22,
-  h4:    17,
-  body:  16,
-  label: 13,
-  fine:  12,
-};
 
-const IBM = "'IBM Plex Sans', system-ui, sans-serif";
+const BODY = 'var(--font-body)';
+const DISPLAY = 'var(--font-display)';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -110,9 +103,14 @@ const FEATURES = [
 ];
 
 const INDUSTRIES = [
-  'Healthcare & Pharma', 'Auto & Dealerships', 'Food & Beverage',
-  'Construction & Equipment', 'Retail & E-Commerce', 'Manufacturing',
-  'Government & Public Sector', 'Arts & Specialty',
+  { label: 'Healthcare & Pharma',          href: '/industries/healthcare-pharma' },
+  { label: 'Auto & Dealerships',           href: '/industries/auto-dealerships' },
+  { label: 'Food & Beverage',              href: '/industries/food-beverage' },
+  { label: 'Construction & Equipment',     href: '/industries/construction-equipment' },
+  { label: 'Retail & E-Commerce',          href: '/industries/retail-ecommerce' },
+  { label: 'Manufacturing',                href: '/industries/manufacturing' },
+  { label: 'Government & Public Sector',   href: '/industries/government' },
+  { label: 'Arts & Specialty',             href: '/industries/arts-specialty' },
 ];
 
 const VETTING = [
@@ -125,32 +123,32 @@ const VETTING = [
 
 export default function ShippersPage() {
   return (
-    <div style={{ fontFamily: IBM, WebkitFontSmoothing: 'antialiased', background: B.white }}>
+    <div style={{ fontFamily: BODY, WebkitFontSmoothing: 'antialiased', background: B.white }}>
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(145deg, ${B.tealNavy} 0%, ${B.tealDark} 55%, ${B.teal} 100%)`, position: 'relative', overflow: 'hidden' }}>
         <div className="absolute inset-0 opacity-[0.05]"
           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
         <div className="relative mx-auto max-w-[1200px] px-6 pt-24 pb-24 text-center">
-          <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.label, letterSpacing: '0.12em', textTransform: 'uppercase', color: B.tealPale, marginBottom: 20 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.label, letterSpacing: '0.12em', textTransform: 'uppercase', color: B.tealPale, marginBottom: 20 }}>
             For Shippers
           </p>
-          <h1 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.hero, lineHeight: 1.07, letterSpacing: '-0.025em', color: B.white, maxWidth: 760, margin: '0 auto' }}>
+          <h1 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.hero, lineHeight: 1.07, letterSpacing: '-0.025em', color: B.white, maxWidth: 760, margin: '0 auto' }}>
             Ship anything.<br />
             <span style={{ color: B.tealPale }}>Track it live.</span><br />
             Pay only on delivery.
           </h1>
-          <p style={{ fontFamily: IBM, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.80)', marginTop: 24, maxWidth: 600, margin: '24px auto 0' }}>
+          <p style={{ fontFamily: BODY, fontWeight: 400, fontSize: T.body, lineHeight: 1.75, color: 'rgba(255,255,255,0.80)', marginTop: 24, maxWidth: 600, margin: '24px auto 0' }}>
             Shipmater connects you to verified providers across every service type — from general freight to medical courier to white glove. Post a job in minutes, track it in real time, pay with escrow protection.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
             <Link href="/register"
-              style={{ background: B.tealDark, fontFamily: IBM, fontSize: T.body, fontWeight: 600, color: B.white, padding: '13px 28px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              style={{ background: B.tealDark, fontFamily: BODY, fontSize: T.body, fontWeight: 600, color: B.white, padding: '13px 28px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
               className="hover:opacity-90 transition-opacity">
               Start shipping free <ArrowRight size={16} />
             </Link>
             <Link href="/how-it-works"
-              style={{ fontFamily: IBM, fontSize: T.body, fontWeight: 500, color: 'rgba(255,255,255,0.80)', padding: '13px 24px', borderRadius: 6, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              style={{ fontFamily: BODY, fontSize: T.body, fontWeight: 500, color: 'rgba(255,255,255,0.80)', padding: '13px 24px', borderRadius: 6, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', gap: 8 }}
               className="hover:border-white hover:text-white transition-colors">
               See how it works
             </Link>
@@ -168,8 +166,8 @@ export default function ShippersPage() {
             { value: '5s',   label: 'GPS update interval' },
           ].map(({ value, label }) => (
             <div key={label}>
-              <p style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.tealDark }}>{value}</p>
-              <p style={{ fontFamily: IBM, fontSize: T.label, color: B.gray50, marginTop: 4 }}>{label}</p>
+              <p style={{ fontFamily: BODY, fontWeight: 700, fontSize: T.h2, color: B.tealDark }}>{value}</p>
+              <p style={{ fontFamily: BODY, fontSize: T.label, color: B.gray50, marginTop: 4 }}>{label}</p>
             </div>
           ))}
         </div>
@@ -180,18 +178,18 @@ export default function ShippersPage() {
       {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
       <section style={{ background: B.gray10 }}>
         <div className="mx-auto max-w-[1200px] px-6 py-24">
-          <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.tealDark, textAlign: 'center', marginBottom: 12 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.tealDark, textAlign: 'center', marginBottom: 12 }}>
             Process
           </p>
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.gray100, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 56 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, color: B.gray100, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 56 }}>
             From post to delivery in four steps
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {STEPS.map(({ n, title, desc }) => (
               <div key={n} style={{ background: B.white, borderRadius: 8, padding: '28px 24px', border: `1px solid rgba(0,150,199,0.12)` }}>
-                <p style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.tealBg, lineHeight: 1, marginBottom: 16 }}>{n}</p>
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 10 }}>{title}</h3>
-                <p style={{ fontFamily: IBM, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{desc}</p>
+                <p style={{ fontFamily: BODY, fontWeight: 700, fontSize: T.h2, color: B.tealBg, lineHeight: 1, marginBottom: 16 }}>{n}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 10 }}>{title}</h3>
+                <p style={{ fontFamily: BODY, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -201,10 +199,10 @@ export default function ShippersPage() {
       {/* ── FEATURES ─────────────────────────────────────────────────────── */}
       <section style={{ background: B.white }}>
         <div className="mx-auto max-w-[1200px] px-6 py-24">
-          <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.tealDark, textAlign: 'center', marginBottom: 12 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.tealDark, textAlign: 'center', marginBottom: 12 }}>
             Features
           </p>
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.gray100, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 56 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, color: B.gray100, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 56 }}>
             Everything a shipper needs
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -213,8 +211,8 @@ export default function ShippersPage() {
                 <div style={{ width: 40, height: 40, borderRadius: 8, background: B.tealBg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <Icon size={18} color={B.tealDark} />
                 </div>
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 8 }}>{title}</h3>
-                <p style={{ fontFamily: IBM, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{desc}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.gray100, marginBottom: 8 }}>{title}</h3>
+                <p style={{ fontFamily: BODY, fontSize: T.body, color: B.gray70, lineHeight: 1.65 }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -224,18 +222,18 @@ export default function ShippersPage() {
       {/* ── VETTING ──────────────────────────────────────────────────────── */}
       <section style={{ background: B.darkSec }}>
         <div className="mx-auto max-w-[1200px] px-6 py-20">
-          <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.teal, textAlign: 'center', marginBottom: 12 }}>
+          <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.label, letterSpacing: '0.10em', textTransform: 'uppercase', color: B.teal, textAlign: 'center', marginBottom: 12 }}>
             Trust & Safety
           </p>
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.white, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 48 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, color: B.white, textAlign: 'center', letterSpacing: '-0.02em', marginBottom: 48 }}>
             Who's handling your delivery
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             {VETTING.map(({ icon: Icon, title, desc }) => (
               <div key={title} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '28px 24px', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <Icon size={24} color={B.teal} style={{ marginBottom: 16 }} />
-                <h3 style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{title}</h3>
-                <p style={{ fontFamily: IBM, fontSize: T.body, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>{desc}</p>
+                <h3 style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: T.h4, color: B.white, marginBottom: 10 }}>{title}</h3>
+                <p style={{ fontFamily: BODY, fontSize: T.body, color: 'rgba(255,255,255,0.65)', lineHeight: 1.65 }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -246,18 +244,19 @@ export default function ShippersPage() {
       <section style={{ background: B.tealBg }}>
         <div className="mx-auto max-w-[1200px] px-6 py-20 text-center">
           <Building2 size={28} color={B.tealDark} style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 32 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, color: B.gray100, letterSpacing: '-0.02em', marginBottom: 32 }}>
             Built for your industry
           </h2>
           <div className="flex flex-wrap justify-center gap-3">
             {INDUSTRIES.map(i => (
-              <span key={i} style={{ fontFamily: IBM, fontSize: T.body, color: B.gray70, background: B.white, border: `1px solid rgba(0,150,199,0.20)`, borderRadius: 999, padding: '8px 18px' }}>
-                {i}
-              </span>
+              <Link key={i.href} href={i.href} style={{ fontFamily: BODY, fontSize: T.body, color: B.gray70, background: B.white, border: `1px solid rgba(0,150,199,0.20)`, borderRadius: 999, padding: '8px 18px', textDecoration: 'none' }}
+                className="hover:border-[#0096C7] hover:text-[#0096C7] transition-colors">
+                {i.label}
+              </Link>
             ))}
           </div>
-          <p style={{ fontFamily: IBM, fontSize: T.body, color: B.gray70, marginTop: 28 }}>
-            <Link href="/use-cases" style={{ color: B.tealDark, textDecoration: 'none', fontWeight: 500 }}>
+          <p style={{ fontFamily: BODY, fontSize: T.body, color: B.gray70, marginTop: 28 }}>
+            <Link href="/industries" style={{ color: B.tealDark, textDecoration: 'none', fontWeight: 500 }}>
               See industry-specific details →
             </Link>
           </p>
@@ -270,8 +269,8 @@ export default function ShippersPage() {
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '28px 32px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
             <ShieldCheck size={24} color="#16a34a" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <p style={{ fontFamily: IBM, fontWeight: 600, fontSize: T.h4, color: '#14532d', marginBottom: 8 }}>HIPAA-aligned for medical shippers</p>
-              <p style={{ fontFamily: IBM, fontSize: T.body, color: '#166534', lineHeight: 1.65 }}>
+              <p style={{ fontFamily: BODY, fontWeight: 600, fontSize: T.h4, color: '#14532d', marginBottom: 8 }}>HIPAA-aligned for medical shippers</p>
+              <p style={{ fontFamily: BODY, fontSize: T.body, color: '#166534', lineHeight: 1.65 }}>
                 If you ship medical specimens, pharmaceuticals, or healthcare supplies, Shipmater enforces HIPAA-trained carriers, chain-of-custody GPS logging, and contracted-only provider pools.{' '}
                 <Link href="/compliance" style={{ color: '#16a34a', fontWeight: 500 }}>Read our compliance page</Link>.
               </p>
@@ -284,14 +283,14 @@ export default function ShippersPage() {
       <section style={{ background: `linear-gradient(135deg, ${B.tealNavy} 0%, ${B.darkSec} 100%)` }}>
         <div className="mx-auto max-w-[1200px] px-6 py-24 text-center">
           <Clock size={36} color={B.teal} style={{ margin: '0 auto 20px' }} />
-          <h2 style={{ fontFamily: IBM, fontWeight: 700, fontSize: T.h2, color: B.white, letterSpacing: '-0.02em', marginBottom: 16 }}>
+          <h2 style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: T.h2, color: B.white, letterSpacing: '-0.02em', marginBottom: 16 }}>
             Post your first shipment today
           </h2>
-          <p style={{ fontFamily: IBM, fontSize: T.body, color: 'rgba(255,255,255,0.70)', marginBottom: 36, maxWidth: 440, margin: '0 auto 36px' }}>
+          <p style={{ fontFamily: BODY, fontSize: T.body, color: 'rgba(255,255,255,0.70)', marginBottom: 36, maxWidth: 440, margin: '0 auto 36px' }}>
             No setup fee. No monthly minimum. Pay only when a provider is assigned.
           </p>
           <Link href="/register"
-            style={{ background: B.tealDark, fontFamily: IBM, fontSize: T.body, fontWeight: 600, color: B.white, padding: '14px 32px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            style={{ background: B.tealDark, fontFamily: BODY, fontSize: T.body, fontWeight: 600, color: B.white, padding: '14px 32px', borderRadius: 6, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
             className="hover:opacity-90 transition-opacity">
             Create free shipper account <ArrowRight size={16} />
           </Link>
